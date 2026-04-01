@@ -20,7 +20,15 @@ import '../../presentation/academic_year/screens/rollover_screen.dart';
 import '../../presentation/masters/screens/standards_screen.dart';
 import '../../presentation/masters/screens/subjects_screen.dart';
 import '../../presentation/masters/screens/grade_master_screen.dart';
+import '../../presentation/teachers/screens/teacher_list_screen.dart';
+import '../../presentation/teachers/screens/teacher_detail_screen.dart';
+import '../../presentation/teachers/screens/create_teacher_screen.dart';
+import '../../presentation/students/screens/student_list_screen.dart';
+import '../../presentation/students/screens/student_detail_screen.dart';
+import '../../presentation/students/screens/create_student_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
+import '../../data/models/teacher/teacher_model.dart';
+import '../../data/models/student/student_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../data/models/auth/current_user.dart';
 import 'route_names.dart';
@@ -231,20 +239,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Teachers ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.teachers,
-            builder: (_, __) =>
-                const PlaceholderScreen('Teachers'),
+            builder: (_, __) => const TeacherListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Teacher',
-                    showBack: true),
+                builder: (_, __) => const CreateTeacherScreen(),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) => PlaceholderScreen(
-                    'Teacher ${state.pathParameters['id']}',
-                    showBack: true),
+                builder: (context, state) {
+                  final teacher = state.extra as TeacherModel?;
+                  return TeacherDetailScreen(
+                    teacherId: state.pathParameters['id']!,
+                    initialTeacher: teacher,
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final teacher = state.extra as TeacherModel?;
+                      return CreateTeacherScreen(existing: teacher);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -252,20 +270,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Students ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.students,
-            builder: (_, __) =>
-                const PlaceholderScreen('Students'),
+            builder: (_, __) => const StudentListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Student',
-                    showBack: true),
+                builder: (_, __) => const CreateStudentScreen(),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) => PlaceholderScreen(
-                    'Student ${state.pathParameters['id']}',
-                    showBack: true),
+                builder: (context, state) {
+                  final student = state.extra as StudentModel?;
+                  return StudentDetailScreen(
+                    studentId: state.pathParameters['id']!,
+                    initialStudent: student,
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final student = state.extra as StudentModel?;
+                      return CreateStudentScreen(existing: student);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
