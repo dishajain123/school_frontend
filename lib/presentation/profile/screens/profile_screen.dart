@@ -12,6 +12,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_avatar.dart';
 import '../../common/widgets/app_button.dart';

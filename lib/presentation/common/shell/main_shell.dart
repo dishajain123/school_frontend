@@ -6,14 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../providers/notification_provider.dart';
 import 'role_shell_config.dart';
 
-/// Provider that exposes the current tab index (read from shell state).
-/// Used by screens to read the active tab without coupling to the shell widget.
 final shellTabIndexProvider = StateProvider<int>((ref) => 0);
 
-/// The authenticated navigation shell. Renders the bottom navigation bar
-/// and an [IndexedStack] so every tab preserves its state between switches.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({
     super.key,
@@ -32,14 +29,8 @@ class _MainShellState extends ConsumerState<MainShell>
     with TickerProviderStateMixin {
   late final List<ShellTabItem> _tabs;
   late int _currentIndex;
-
-  // One navigator key per tab so each tab has its own navigation stack.
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
-
-  // Tracks whether each tab has been loaded at least once (for IndexedStack).
   late final List<bool> _tabInitialized;
-
-  // Animation controller for the indicator dot.
   late AnimationController _indicatorController;
 
   @override
@@ -56,6 +47,11 @@ class _MainShellState extends ConsumerState<MainShell>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     )..forward();
+
+    // Load notification count on shell init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationNotifierProvider.notifier).loadUnreadCount();
+    });
   }
 
   @override
@@ -66,7 +62,6 @@ class _MainShellState extends ConsumerState<MainShell>
 
   void _onTabTapped(int index, BuildContext context) {
     if (index == _currentIndex) {
-      // Tap current tab → pop to root of that tab's stack.
       _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
       return;
     }
@@ -83,7 +78,6 @@ class _MainShellState extends ConsumerState<MainShell>
       ..reset()
       ..forward();
 
-    // Navigate GoRouter to the tab's root path.
     context.go(_tabs[index].rootPath);
   }
 
@@ -102,7 +96,6 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 }
 
-/// The custom bottom navigation bar.
 class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.tabs,
@@ -118,8 +111,6 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
-
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.white,
@@ -153,7 +144,6 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-/// A single bottom nav item with animated indicator dot and label.
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.tab,
@@ -180,7 +170,6 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Animated indicator pill above icon
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutCubic,
@@ -189,28 +178,26 @@ class _NavItem extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: AppDimensions.space4),
               decoration: BoxDecoration(
                 color: AppColors.goldPrimary,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderRadius:
+                    BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
-
-            // Icon with animated color
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Icon(
                 isSelected ? tab.activeIcon : tab.icon,
                 key: ValueKey(isSelected),
                 size: AppDimensions.iconMD,
-                color: isSelected ? AppColors.navyDeep : AppColors.grey400,
+                color:
+                    isSelected ? AppColors.navyDeep : AppColors.grey400,
               ),
             ),
-
             const SizedBox(height: AppDimensions.space4),
-
-            // Label
             Text(
               tab.label,
               style: AppTypography.labelSmall.copyWith(
-                color: isSelected ? AppColors.navyDeep : AppColors.grey400,
+                color:
+                    isSelected ? AppColors.navyDeep : AppColors.grey400,
                 fontWeight:
                     isSelected ? FontWeight.w600 : FontWeight.w400,
                 fontSize: 10,

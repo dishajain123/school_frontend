@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../providers/notification_provider.dart';
 import 'app_badge.dart';
 
-/// Custom [AppBar] that enforces the design system consistently across all screens.
-///
-/// Features:
-/// - Navy deep background with white text/icons
-/// - Optional back button using [GoRouter.pop]
-/// - Optional subtitle below the title
-/// - Notification bell with unread count badge
-/// - Optional [TabBar] via [bottom]
-class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const AppAppBar({
     super.key,
     required this.title,
@@ -23,8 +18,7 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.subtitle,
     this.bottom,
-    this.notificationCount = 0,
-    this.onNotificationTap,
+    this.showNotificationBell = true,
     this.backgroundColor,
     this.centerTitle = false,
     this.onBackPressed,
@@ -34,22 +28,13 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
           'Either title or titleWidget must be provided',
         );
 
-  /// Plain string title — mutually exclusive with [titleWidget].
   final String? title;
-
-  /// Custom widget title — takes precedence over [title] if both provided.
   final Widget? titleWidget;
-
   final bool showBack;
   final List<Widget> actions;
   final String? subtitle;
-
-  /// Optional [TabBar] pinned below the AppBar.
   final PreferredSizeWidget? bottom;
-
-  /// When > 0, renders a badge over the notification bell icon.
-  final int notificationCount;
-  final VoidCallback? onNotificationTap;
+  final bool showNotificationBell;
   final Color? backgroundColor;
   final bool centerTitle;
   final VoidCallback? onBackPressed;
@@ -63,7 +48,9 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadCountProvider);
+
     final effectiveTitle = titleWidget ??
         Column(
           crossAxisAlignment: centerTitle
@@ -92,10 +79,18 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     final effectiveActions = <Widget>[
       ...actions,
-      if (onNotificationTap != null)
-        _NotificationBell(
-          count: notificationCount,
-          onTap: onNotificationTap!,
+      if (showNotificationBell)
+        IconButton(
+          tooltip: 'Notifications',
+          icon: AppBadge(
+            count: unreadCount,
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: AppColors.white,
+              size: AppDimensions.iconMD,
+            ),
+          ),
+          onPressed: () => context.push(RouteNames.notifications),
         ),
       const SizedBox(width: AppDimensions.space4),
     ];
@@ -127,35 +122,8 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: effectiveTitle,
       actions: effectiveActions,
       bottom: bottom,
-      toolbarHeight: AppDimensions.appBarHeight +
-          (subtitle != null ? 18 : 0),
-    );
-  }
-}
-
-/// Notification bell icon with optional badge overlay.
-class _NotificationBell extends StatelessWidget {
-  const _NotificationBell({
-    required this.count,
-    required this.onTap,
-  });
-
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: 'Notifications',
-      icon: AppBadge(
-        count: count,
-        child: const Icon(
-          Icons.notifications_outlined,
-          color: AppColors.white,
-          size: AppDimensions.iconMD,
-        ),
-      ),
-      onPressed: onTap,
+      toolbarHeight:
+          AppDimensions.appBarHeight + (subtitle != null ? 18 : 0),
     );
   }
 }
