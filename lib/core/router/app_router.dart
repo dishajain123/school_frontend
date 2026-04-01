@@ -26,11 +26,15 @@ import '../../presentation/teachers/screens/create_teacher_screen.dart';
 import '../../presentation/students/screens/student_list_screen.dart';
 import '../../presentation/students/screens/student_detail_screen.dart';
 import '../../presentation/students/screens/create_student_screen.dart';
+import '../../presentation/parents/screens/parent_list_screen.dart';
+import '../../presentation/parents/screens/parent_detail_screen.dart';
+import '../../presentation/parents/screens/create_parent_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
-import '../../providers/auth_provider.dart';
+import '../../data/models/parent/parent_model.dart';
 import '../../data/models/auth/current_user.dart';
+import '../../providers/auth_provider.dart';
 import 'route_names.dart';
 
 class PlaceholderScreen extends StatelessWidget {
@@ -298,17 +302,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ── Parents ────────────────────────────────────────────────────
+          // ── Parents (FM13) ─────────────────────────────────────────────
           GoRoute(
             path: RouteNames.parents,
-            builder: (_, __) =>
-                const PlaceholderScreen('Parents'),
+            builder: (_, __) => const ParentListScreen(),
             routes: [
               GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateParentScreen(),
+              ),
+              GoRoute(
                 path: ':id',
-                builder: (context, state) => PlaceholderScreen(
-                    'Parent ${state.pathParameters['id']}',
-                    showBack: true),
+                builder: (context, state) {
+                  final parent = state.extra as ParentModel?;
+                  return ParentDetailScreen(
+                    parentId: state.pathParameters['id']!,
+                    initialParent: parent,
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final parent = state.extra as ParentModel?;
+                      return CreateParentScreen(existing: parent);
+                    },
+                  ),
+                ],
               ),
             ],
           ),

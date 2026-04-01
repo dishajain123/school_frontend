@@ -35,6 +35,7 @@ class RouteNames {
 
   static const String parents = '/parents';
   static const String parentDetail = '/parents/:id';
+  static const String createParent = '/parents/create';
 
   static const String attendance = '/attendance';
   static const String markAttendance = '/attendance/mark';
@@ -96,6 +97,7 @@ class RouteNames {
   static const String createSchool = '/schools/create';
   static const String schoolSettings = '/settings';
 
+  // ── Path helpers ──────────────────────────────────────────────────────────
   static String announcementDetailPath(String id) => '/announcements/$id';
   static String teacherDetailPath(String id) => '/teachers/$id';
   static String studentDetailPath(String id) => '/students/$id';
