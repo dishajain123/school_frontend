@@ -19,27 +19,21 @@ class AcademicYearRepository {
   }
 
   Future<AcademicYearModel> create(Map<String, dynamic> payload) async {
-    final response =
-        await _dio.post(ApiConstants.academicYears, data: payload);
+    final response = await _dio.post(ApiConstants.academicYears, data: payload);
     return AcademicYearModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<AcademicYearModel> update(
-      String id, Map<String, dynamic> payload) async {
-    final response = await _dio.patch(
-        ApiConstants.academicYearById(id),
-        data: payload);
+  Future<AcademicYearModel> update(String id, Map<String, dynamic> payload) async {
+    final response = await _dio.patch(ApiConstants.academicYearById(id), data: payload);
     return AcademicYearModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<AcademicYearModel> activate(String id) async {
-    final response =
-        await _dio.patch(ApiConstants.academicYearActivate(id));
+    final response = await _dio.patch(ApiConstants.academicYearActivate(id));
     return AcademicYearModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<Map<String, int>> rollover(String oldYearId,
-      {String? newYearId}) async {
+  Future<Map<String, int>> rollover(String oldYearId, {String? newYearId}) async {
     final uri = newYearId != null
         ? '${ApiConstants.academicYearRollover(oldYearId)}?new_year_id=$newYearId'
         : ApiConstants.academicYearRollover(oldYearId);
@@ -52,7 +46,6 @@ class AcademicYearRepository {
   }
 }
 
-final academicYearRepositoryProvider =
-    Provider<AcademicYearRepository>((ref) {
+final academicYearRepositoryProvider = Provider<AcademicYearRepository>((ref) {
   return AcademicYearRepository(ref.read(dioClientProvider));
 });

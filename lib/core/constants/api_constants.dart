@@ -60,8 +60,7 @@ class ApiConstants {
   // ── Students ──────────────────────────────────────────────────────────────
   static const String students = '/students';
   static String studentById(String id) => '/students/$id';
-  static String studentPromotionStatus(String id) =>
-      '/students/$id/promotion-status';
+  static String studentPromotionStatus(String id) => '/students/$id/promotion-status';
 
   // ── Parents ───────────────────────────────────────────────────────────────
   static const String parents = '/parents';
@@ -75,8 +74,7 @@ class ApiConstants {
       '/attendance/analytics/student/$studentId';
   static String attendanceClassSnapshot(String standardId) =>
       '/attendance/analytics/class/$standardId';
-  static const String attendanceBelowThreshold =
-      '/attendance/analytics/below-threshold';
+  static const String attendanceBelowThreshold = '/attendance/analytics/below-threshold';
 
   // ── Assignments ───────────────────────────────────────────────────────────
   static const String assignments = '/assignments';
@@ -94,43 +92,34 @@ class ApiConstants {
 
   // ── Timetable ─────────────────────────────────────────────────────────────
   static const String timetable = '/timetable';
-  static String timetableByStandard(String standardId) =>
-      '/timetable/$standardId';
+  static String timetableByStandard(String standardId) => '/timetable/$standardId';
 
   // ── Exam Schedule ─────────────────────────────────────────────────────────
   static const String examSchedule = '/exam-schedule';
   static String examScheduleById(String id) => '/exam-schedule/$id';
-  static String examScheduleEntries(String seriesId) =>
-      '/exam-schedule/$seriesId/entries';
-  static String examSchedulePublish(String seriesId) =>
-      '/exam-schedule/$seriesId/publish';
-  static String examScheduleEntryCancel(String entryId) =>
-      '/exam-schedule/entries/$entryId/cancel';
+  static String examScheduleEntries(String seriesId) => '/exam-schedule/$seriesId/entries';
+  static String examSchedulePublish(String seriesId) => '/exam-schedule/$seriesId/publish';
+  static String examScheduleEntryCancel(String entryId) => '/exam-schedule/entries/$entryId/cancel';
 
   // ── Results ───────────────────────────────────────────────────────────────
   static const String resultExams = '/results/exams';
   static const String resultEntries = '/results/entries';
-  static String resultExamPublish(String examId) =>
-      '/results/exams/$examId/publish';
+  static String resultExamPublish(String examId) => '/results/exams/$examId/publish';
   static const String results = '/results';
-  static String reportCard(String studentId) =>
-      '/results/report-card/$studentId';
+  static String reportCard(String studentId) => '/results/report-card/$studentId';
 
   // ── Fees ──────────────────────────────────────────────────────────────────
   static const String feeStructures = '/fees/structures';
   static const String feeLedgerGenerate = '/fees/ledger/generate';
   static const String feePayments = '/fees/payments';
   static const String feeDashboard = '/fees';
-  static String feeReceiptUrl(String paymentId) =>
-      '/fees/payments/$paymentId/receipt';
+  static String feeReceiptUrl(String paymentId) => '/fees/payments/$paymentId/receipt';
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String notifications = '/notifications';
-  static const String notificationsUnreadCount =
-      '/notifications/unread-count';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
   static const String notificationsMarkRead = '/notifications/mark-read';
-  static const String notificationsMarkAllRead =
-      '/notifications/mark-all-read';
+  static const String notificationsMarkAllRead = '/notifications/mark-all-read';
   static const String notificationsClearRead = '/notifications/clear-read';
 
   // ── Announcements ─────────────────────────────────────────────────────────
@@ -145,8 +134,6 @@ class ApiConstants {
       '/chat/conversations/$conversationId/read';
   static String chatUploadFile(String conversationId) =>
       '/chat/conversations/$conversationId/files';
-
-  // WebSocket
   static String chatWebSocket(String token, String conversationId) =>
       '${baseUrl.replaceFirst('http', 'ws')}/api/v1/ws/chat?token=$token&conversation_id=$conversationId';
 
@@ -159,10 +146,8 @@ class ApiConstants {
   // ── Gallery ───────────────────────────────────────────────────────────────
   static const String galleryAlbums = '/gallery/albums';
   static String galleryAlbumById(String id) => '/gallery/albums/$id';
-  static String galleryAlbumPhotos(String albumId) =>
-      '/gallery/albums/$albumId/photos';
-  static String galleryPhotoFeature(String photoId) =>
-      '/gallery/photos/$photoId/feature';
+  static String galleryAlbumPhotos(String albumId) => '/gallery/albums/$albumId/photos';
+  static String galleryPhotoFeature(String photoId) => '/gallery/photos/$photoId/feature';
 
   // ── Documents ─────────────────────────────────────────────────────────────
   static const String documentRequest = '/documents/request';

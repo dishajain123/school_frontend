@@ -26,8 +26,7 @@ class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
     return created;
   }
 
-  Future<AcademicYearModel> updateAcademicYear(
-      String id, Map<String, dynamic> payload) async {
+  Future<AcademicYearModel> updateAcademicYear(String id, Map<String, dynamic> payload) async {
     final repo = ref.read(academicYearRepositoryProvider);
     final updated = await repo.update(id, payload);
     final current = state.valueOrNull ?? [];
@@ -39,9 +38,19 @@ class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
     final repo = ref.read(academicYearRepositoryProvider);
     final activated = await repo.activate(id);
     final current = state.valueOrNull ?? [];
-    state = AsyncData(current
-        .map((y) => y.id == id ? activated : AcademicYearModel.fromJson({...y.toJson(), 'is_active': false}))
-        .toList());
+    state = AsyncData(current.map((y) {
+      if (y.id == id) return activated;
+      return AcademicYearModel(
+        id: y.id,
+        name: y.name,
+        startDate: y.startDate,
+        endDate: y.endDate,
+        isActive: false,
+        schoolId: y.schoolId,
+        createdAt: y.createdAt,
+        updatedAt: y.updatedAt,
+      );
+    }).toList());
     return activated;
   }
 
