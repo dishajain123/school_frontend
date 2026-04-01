@@ -4,25 +4,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/login_form.dart';
 
-/// Login screen stub for FM04.
-/// FM05 will populate the actual auth logic via [AuthProvider].
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Listen for auth error to show snackbar (GoRouter handles navigation on success)
+    ref.listen<AuthState>(authNotifierProvider, (prev, next) {
+      if (next.status == AuthStatus.error && next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Clear the error so it doesn't persist
+        ref.read(authNotifierProvider.notifier).clearError();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.surface50,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Header gradient strip
               _LoginHeader(),
-
-              // Form card
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppDimensions.pageHorizontal,

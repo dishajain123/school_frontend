@@ -3,7 +3,7 @@ import '../../constants/api_constants.dart';
 import '../../storage/secure_storage.dart';
 
 /// Attaches Bearer token to every request.
-/// On 401, attempts a silent token refresh and retries.
+/// On 401, attempts a silent token refresh and retries the original request.
 /// On refresh failure, clears tokens and triggers logout.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
@@ -14,7 +14,6 @@ class AuthInterceptor extends Interceptor {
   final SecureStorage secureStorage;
   final void Function() onLogout;
 
-  // Used to prevent infinite refresh loops.
   bool _isRefreshing = false;
 
   @override
@@ -22,7 +21,6 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Skip auth header for auth endpoints that don't need it.
     final path = options.path;
     if (path == ApiConstants.login ||
         path == ApiConstants.forgotPassword ||
@@ -52,7 +50,7 @@ class AuthInterceptor extends Interceptor {
           return handler.next(err);
         }
 
-        // Attempt refresh
+        // Use a fresh Dio instance scoped only for the refresh call
         final refreshDio = Dio(
           BaseOptions(
             baseUrl: ApiConstants.baseUrl + ApiConstants.apiPrefix,
@@ -72,14 +70,27 @@ class AuthInterceptor extends Interceptor {
           return handler.next(err);
         }
 
-        // Persist new token
         await secureStorage.writeToken(newAccessToken);
 
-        // Retry original request
-        final retryOptions = err.requestOptions
-          ..headers['Authorization'] = 'Bearer $newAccessToken';
+        // Retry the original request with the new token
+        // Build a new RequestOptions with the updated Authorization header
+        final retryOptions = err.requestOptions.copyWith(
+          headers: {
+            ...err.requestOptions.headers,
+            'Authorization': 'Bearer $newAccessToken',
+          },
+        );
 
-        final retryResponse = await refreshDio.fetch(retryOptions);
+        // Use a fresh Dio to retry — its baseUrl is the same so path works
+        final retryDio = Dio(
+          BaseOptions(
+            baseUrl: ApiConstants.baseUrl + ApiConstants.apiPrefix,
+            connectTimeout: const Duration(milliseconds: 15000),
+            receiveTimeout: const Duration(milliseconds: 30000),
+          ),
+        );
+
+        final retryResponse = await retryDio.fetch(retryOptions);
         return handler.resolve(retryResponse);
       } catch (_) {
         _handleLogout();

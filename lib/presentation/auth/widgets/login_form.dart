@@ -7,13 +7,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/validators.dart';
+import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
 
-/// Login form widget.
-///
-/// FM05 will connect this to [AuthProvider.login].
-/// For now the form validates and shows a loading state.
 class LoginForm extends ConsumerStatefulWidget {
   const LoginForm({super.key});
 
@@ -24,15 +21,11 @@ class LoginForm extends ConsumerStatefulWidget {
 class _LoginFormState extends ConsumerState<LoginForm>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _isLoading = false;
   bool _usePhone = false;
   bool _rememberMe = false;
-  String? _errorMessage;
-
-  // Tab animation
   late TabController _tabController;
 
   @override
@@ -40,18 +33,18 @@ class _LoginFormState extends ConsumerState<LoginForm>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) return;
       setState(() {
         _usePhone = _tabController.index == 1;
-        _errorMessage = null;
-        _emailController.clear();
+        _identifierController.clear();
+        _formKey.currentState?.reset();
       });
     });
   }
 
   @override
   void dispose() {
-    _formKey.currentState?.reset();
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -61,31 +54,27 @@ class _LoginFormState extends ConsumerState<LoginForm>
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    // FM05 will call AuthProvider.login here.
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // For FM04 stub: show placeholder error (FM05 replaces this).
-    setState(() => _errorMessage =
-        'Authentication not yet implemented. FM05 will wire this up.');
+    final identifier = _identifierController.text.trim();
+    await ref.read(authNotifierProvider.notifier).login(
+          email: _usePhone ? null : identifier.toLowerCase(),
+          phone: _usePhone ? identifier : null,
+          password: _passwordController.text,
+        );
+    // Navigation is handled by GoRouter redirect on auth state change
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider);
+    final isLoading = authState.status == AuthStatus.loading;
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Email / Phone tab switch
+          // Email / Phone toggle
           Container(
             height: 44,
             decoration: BoxDecoration(
@@ -108,30 +97,25 @@ class _LoginFormState extends ConsumerState<LoginForm>
                 ],
               ),
               indicatorSize: TabBarIndicatorSize.tab,
-              labelStyle: AppTypography.labelMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              labelStyle: AppTypography.labelMedium
+                  .copyWith(fontWeight: FontWeight.w600),
               unselectedLabelStyle: AppTypography.labelMedium,
               labelColor: AppColors.navyDeep,
               unselectedLabelColor: AppColors.grey400,
               dividerColor: Colors.transparent,
               padding: const EdgeInsets.all(3),
-              tabs: const [
-                Tab(text: 'Email'),
-                Tab(text: 'Phone'),
-              ],
+              tabs: const [Tab(text: 'Email'), Tab(text: 'Phone')],
             ),
           ),
 
           const SizedBox(height: AppDimensions.space24),
 
-          // Email or Phone field
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _usePhone
                 ? AppTextField(
                     key: const ValueKey('phone'),
-                    controller: _emailController,
+                    controller: _identifierController,
                     label: 'Phone Number',
                     hint: '+91 9876543210',
                     keyboardType: TextInputType.phone,
@@ -141,7 +125,7 @@ class _LoginFormState extends ConsumerState<LoginForm>
                   )
                 : AppTextField(
                     key: const ValueKey('email'),
-                    controller: _emailController,
+                    controller: _identifierController,
                     label: 'Email Address',
                     hint: 'you@school.com',
                     keyboardType: TextInputType.emailAddress,
@@ -170,7 +154,6 @@ class _LoginFormState extends ConsumerState<LoginForm>
 
           const SizedBox(height: AppDimensions.space12),
 
-          // Remember me + Forgot password
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -192,81 +175,40 @@ class _LoginFormState extends ConsumerState<LoginForm>
                     ),
                   ),
                   const SizedBox(width: AppDimensions.space8),
-                  Text(
-                    'Remember me',
-                    style: AppTypography.labelMedium,
-                  ),
+                  Text('Remember me', style: AppTypography.labelMedium),
                 ],
               ),
               GestureDetector(
                 onTap: () => context.push(RouteNames.forgotPassword),
-                child: Text(
-                  'Forgot password?',
-                  style: AppTypography.bodyMediumLink,
-                ),
+                child: Text('Forgot password?',
+                    style: AppTypography.bodyMediumLink),
               ),
             ],
           ),
-
-          // Error message
-          if (_errorMessage != null) ...[
-            const SizedBox(height: AppDimensions.space16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppDimensions.space12),
-              decoration: BoxDecoration(
-                color: AppColors.errorLight,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusSmall),
-                border: Border.all(
-                    color: AppColors.errorRed.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 16, color: AppColors.errorRed),
-                  const SizedBox(width: AppDimensions.space8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.errorDark,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
 
           const SizedBox(height: AppDimensions.space32),
 
           AppButton.primary(
             label: 'Sign In',
-            onTap: _isLoading ? null : _submit,
-            isLoading: _isLoading,
+            onTap: isLoading ? null : _submit,
+            isLoading: isLoading,
             icon: Icons.login_rounded,
           ),
 
           const SizedBox(height: AppDimensions.space16),
 
-          // Divider
           Row(
             children: [
               const Expanded(
-                child: Divider(color: AppColors.surface200),
-              ),
+                  child: Divider(color: AppColors.surface200)),
               Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.space12),
-                child: Text(
-                  'Need help?',
-                  style: AppTypography.labelMedium,
-                ),
+                child:
+                    Text('Need help?', style: AppTypography.labelMedium),
               ),
               const Expanded(
-                child: Divider(color: AppColors.surface200),
-              ),
+                  child: Divider(color: AppColors.surface200)),
             ],
           ),
 

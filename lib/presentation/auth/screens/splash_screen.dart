@@ -6,12 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../providers/auth_provider.dart';
 
-/// Branded splash screen shown on cold start.
-///
-/// In FM05, this will call `authProvider.initialize()` which validates the
-/// stored token and routes to login or dashboard accordingly.
-/// For now (FM04), it routes to login after a short delay.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -46,14 +42,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       parent: _controller,
       curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
     );
-
     _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
-
     _subtitleFade = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
@@ -61,8 +55,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after splash duration.
-    Future.delayed(const Duration(milliseconds: 2200), _navigate);
+    // Initialize auth state after minimum splash duration
+    Future.delayed(const Duration(milliseconds: 1500), _initialize);
   }
 
   @override
@@ -71,11 +65,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.dispose();
   }
 
-  Future<void> _navigate() async {
+  Future<void> _initialize() async {
     if (!mounted) return;
-    // FM05 will replace this with real auth check.
-    // For now, always go to login.
-    context.go(RouteNames.login);
+    // This sets status to loading then authenticated/unauthenticated,
+    // which triggers the GoRouter redirect automatically.
+    await ref.read(authNotifierProvider.notifier).initialize();
   }
 
   @override
@@ -93,7 +87,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              // Background decoration circles
               Positioned(
                 top: -60,
                 right: -40,
@@ -118,13 +111,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                 ),
               ),
-
-              // Content
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo mark
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: ScaleTransition(
@@ -132,10 +122,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         child: _LogoMark(),
                       ),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // App name
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Text(
@@ -147,10 +134,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
-                    // Tagline
                     FadeTransition(
                       opacity: _subtitleFade,
                       child: Text(
@@ -164,8 +148,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ],
                 ),
               ),
-
-              // Version & loader at bottom
               Positioned(
                 bottom: 48,
                 left: 0,
@@ -203,7 +185,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 }
 
-/// The app logo mark — a stylized shield/book icon built with Canvas.
 class _LogoMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -226,11 +207,7 @@ class _LogoMark extends StatelessWidget {
         ],
       ),
       child: const Center(
-        child: Icon(
-          Icons.school_rounded,
-          size: 52,
-          color: AppColors.navyDeep,
-        ),
+        child: Icon(Icons.school_rounded, size: 52, color: AppColors.navyDeep),
       ),
     );
   }

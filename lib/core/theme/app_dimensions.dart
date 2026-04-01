@@ -8,6 +8,9 @@ abstract final class AppDimensions {
   /// 4px — icon-to-text gaps, internal chip padding
   static const double space4 = 4.0;
 
+  /// 6px — micro chip padding, badge spacing
+  static const double space6 = 6.0;
+
   /// 8px — between related elements, icon margins
   static const double space8 = 8.0;
 

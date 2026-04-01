@@ -15,19 +15,10 @@ import '../data/repositories/auth_repository.dart';
 // ── Auth Status ───────────────────────────────────────────────────────────────
 
 enum AuthStatus {
-  /// App just launched; no attempt to restore session yet.
   initial,
-
-  /// Restoring or refreshing session.
   loading,
-
-  /// Valid session exists.
   authenticated,
-
-  /// No session / session expired.
   unauthenticated,
-
-  /// Login / OTP / reset call returned an error.
   error,
 }
 
@@ -42,11 +33,7 @@ class AuthState {
 
   final AuthStatus status;
   final CurrentUser? currentUser;
-
-  /// Non-null when [status] is [AuthStatus.error].
   final String? error;
-
-  // ── Convenience getters ──────────────────────────────────────────────────
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get isLoading =>
@@ -89,8 +76,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final LocalStorage _localStorage;
   StreamSubscription<void>? _logoutSubscription;
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-
   void _subscribeToLogoutBus() {
     _logoutSubscription = AuthLogoutBus.instance.stream.listen((_) {
       if (state.isAuthenticated) {
@@ -106,7 +91,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     super.dispose();
   }
 
-  // ── Initialize (called from SplashScreen) ─────────────────────────────────
+  // ── Initialize ────────────────────────────────────────────────────────────
 
   Future<void> initialize() async {
     if (state.status == AuthStatus.loading) return;
@@ -119,22 +104,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return;
       }
 
-      // Try to restore user from local storage first (fast path).
-      final cachedUserJson = _localStorage.getString(StorageKeys.currentUser);
-      CurrentUser? cachedUser;
-      if (cachedUserJson != null && cachedUserJson.isNotEmpty) {
-        try {
-          cachedUser =
-              CurrentUser.fromJson(jsonDecode(cachedUserJson) as Map<String, dynamic>);
-        } catch (_) {}
-      }
-
-      // Validate token by fetching fresh user from the server.
       final user = await _authRepo.getMe();
       await _persistUser(user);
       state = AuthState(status: AuthStatus.authenticated, currentUser: user);
     } on AppException {
-      // Token invalid / expired / server error → force unauthenticated.
       await _clearLocalData();
       state = const AuthState(status: AuthStatus.unauthenticated);
     } catch (_) {
@@ -172,8 +145,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.error,
         error: e.message,
       );
-    } catch (e) {
-      state = AuthState(
+    } catch (_) {
+      state = const AuthState(
         status: AuthStatus.error,
         error: 'An unexpected error occurred. Please try again.',
       );
@@ -187,7 +160,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final refreshToken = await _secureStorage.readRefreshToken();
       await _authRepo.logout(refreshToken: refreshToken);
     } catch (_) {
-      // Logout is best-effort; always clear local state.
+      // Best-effort — always clear local state regardless
     } finally {
       await _clearLocalData();
       state = const AuthState(status: AuthStatus.unauthenticated);
@@ -216,6 +189,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _localStorage.setString(StorageKeys.parentId, user.parentId!);
     }
     await _localStorage.setString(StorageKeys.userRole, user.role.backendValue);
+    await _localStorage.setStringList(
+        StorageKeys.userPermissions, user.permissions);
   }
 
   Future<void> _clearLocalData() async {
@@ -224,11 +199,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _localStorage.remove(StorageKeys.schoolId);
     await _localStorage.remove(StorageKeys.parentId);
     await _localStorage.remove(StorageKeys.userRole);
+    await _localStorage.remove(StorageKeys.userPermissions);
     await _localStorage.remove(StorageKeys.selectedChildId);
   }
 }
 
-// ── Provider ──────────────────────────────────────────────────────────────────
+// ── Providers ─────────────────────────────────────────────────────────────────
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
@@ -239,7 +215,6 @@ final authNotifierProvider =
   );
 });
 
-/// Convenience provider to access only the [CurrentUser] (nullable).
 final currentUserProvider = Provider<CurrentUser?>((ref) {
   return ref.watch(authNotifierProvider).currentUser;
 });
