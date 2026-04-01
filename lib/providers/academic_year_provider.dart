@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/academic_year/academic_year_model.dart';
 import '../data/repositories/academic_year_repository.dart';
 
-class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
+class AcademicYearNotifier
+    extends AsyncNotifier<List<AcademicYearModel>> {
   @override
   Future<List<AcademicYearModel>> build() async {
     return _fetch();
@@ -26,11 +27,13 @@ class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
     return created;
   }
 
-  Future<AcademicYearModel> updateAcademicYear(String id, Map<String, dynamic> payload) async {
+  Future<AcademicYearModel> updateAcademicYear(
+      String id, Map<String, dynamic> payload) async {
     final repo = ref.read(academicYearRepositoryProvider);
     final updated = await repo.update(id, payload);
     final current = state.valueOrNull ?? [];
-    state = AsyncData(current.map((y) => y.id == id ? updated : y).toList());
+    state = AsyncData(
+        current.map((y) => y.id == id ? updated : y).toList());
     return updated;
   }
 
@@ -38,6 +41,7 @@ class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
     final repo = ref.read(academicYearRepositoryProvider);
     final activated = await repo.activate(id);
     final current = state.valueOrNull ?? [];
+    // Deactivate all others, activate the one with matching id
     state = AsyncData(current.map((y) {
       if (y.id == id) return activated;
       return AcademicYearModel(
@@ -54,7 +58,10 @@ class AcademicYearNotifier extends AsyncNotifier<List<AcademicYearModel>> {
     return activated;
   }
 
-  Future<Map<String, int>> rollover(String oldYearId, {String? newYearId}) async {
+  Future<Map<String, int>> rollover(
+      String oldYearId, {
+      String? newYearId,
+    }) async {
     final repo = ref.read(academicYearRepositoryProvider);
     return repo.rollover(oldYearId, newYearId: newYearId);
   }
@@ -66,7 +73,8 @@ final academicYearNotifierProvider =
 );
 
 final activeYearProvider = Provider<AcademicYearModel?>((ref) {
-  final years = ref.watch(academicYearNotifierProvider).valueOrNull ?? [];
+  final years =
+      ref.watch(academicYearNotifierProvider).valueOrNull ?? [];
   try {
     return years.firstWhere((y) => y.isActive);
   } catch (_) {

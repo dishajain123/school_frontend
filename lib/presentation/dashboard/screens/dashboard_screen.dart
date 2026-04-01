@@ -7,6 +7,7 @@ import 'teacher_dashboard.dart';
 import 'student_dashboard.dart';
 import 'parent_dashboard.dart';
 import 'principal_dashboard.dart';
+import 'trustee_dashboard.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -24,8 +25,9 @@ class DashboardScreen extends ConsumerWidget {
       case UserRole.parent:
         return const ParentDashboard();
       case UserRole.principal:
-      case UserRole.trustee:
         return const PrincipalDashboard();
+      case UserRole.trustee:
+        return const TrusteeDashboard();
       case UserRole.superadmin:
         return const PrincipalDashboard();
     }

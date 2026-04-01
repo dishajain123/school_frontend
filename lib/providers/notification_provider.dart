@@ -48,9 +48,10 @@ class NotificationState {
       page: page ?? this.page,
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      error: clearError ? null : error ?? this.error,
-      typeFilter: clearTypeFilter ? null : typeFilter ?? this.typeFilter,
-      isReadFilter: clearIsReadFilter ? null : isReadFilter ?? this.isReadFilter,
+      error: clearError ? null : (error ?? this.error),
+      typeFilter: clearTypeFilter ? null : (typeFilter ?? this.typeFilter),
+      isReadFilter:
+          clearIsReadFilter ? null : (isReadFilter ?? this.isReadFilter),
     );
   }
 }
@@ -63,22 +64,25 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
 
   Future<void> loadInbox({bool refresh = false}) async {
     final current = state.valueOrNull ?? const NotificationState();
+
     if (refresh) {
-      state = AsyncData(current.copyWith(isLoading: true, page: 1, clearError: true));
-    } else if (current.isLoadingMore || (!current.hasMore && current.page > 1)) {
-      return;
+      state = AsyncData(
+        current.copyWith(isLoading: true, page: 1, clearError: true),
+      );
     } else {
+      if (current.isLoadingMore) return;
+      if (!current.hasMore && current.page > 1) return;
       state = AsyncData(current.copyWith(isLoadingMore: true));
     }
 
     try {
       final repo = ref.read(notificationRepositoryProvider);
-      final currentState = state.valueOrNull ?? const NotificationState();
-      final nextPage = refresh ? 1 : currentState.page;
+      final latestState = state.valueOrNull ?? const NotificationState();
+      final nextPage = refresh ? 1 : latestState.page;
 
       final result = await repo.getInbox(
-        isRead: currentState.isReadFilter,
-        type: currentState.typeFilter,
+        isRead: latestState.isReadFilter,
+        type: latestState.typeFilter,
         page: nextPage,
         pageSize: 20,
       );
@@ -87,23 +91,27 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
           ? result.items
           : [...(state.valueOrNull?.items ?? []), ...result.items];
 
-      state = AsyncData(NotificationState(
-        items: newItems,
-        total: result.total,
-        unreadCount: result.unreadCount,
-        page: nextPage + 1,
-        isLoading: false,
-        isLoadingMore: false,
-        typeFilter: currentState.typeFilter,
-        isReadFilter: currentState.isReadFilter,
-      ));
+      state = AsyncData(
+        NotificationState(
+          items: newItems,
+          total: result.total,
+          unreadCount: result.unreadCount,
+          page: nextPage + 1,
+          isLoading: false,
+          isLoadingMore: false,
+          typeFilter: latestState.typeFilter,
+          isReadFilter: latestState.isReadFilter,
+        ),
+      );
     } catch (e) {
-      final current = state.valueOrNull ?? const NotificationState();
-      state = AsyncData(current.copyWith(
-        isLoading: false,
-        isLoadingMore: false,
-        error: e.toString(),
-      ));
+      final cur = state.valueOrNull ?? const NotificationState();
+      state = AsyncData(
+        cur.copyWith(
+          isLoading: false,
+          isLoadingMore: false,
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -113,14 +121,21 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
     await loadInbox();
   }
 
-  Future<void> setFilter({String? typeFilter, bool? isReadFilter, bool clearType = false, bool clearRead = false}) async {
+  Future<void> setFilter({
+    String? typeFilter,
+    bool? isReadFilter,
+    bool clearType = false,
+    bool clearRead = false,
+  }) async {
     final current = state.valueOrNull ?? const NotificationState();
-    state = AsyncData(current.copyWith(
-      typeFilter: typeFilter,
-      isReadFilter: isReadFilter,
-      clearTypeFilter: clearType,
-      clearIsReadFilter: clearRead,
-    ));
+    state = AsyncData(
+      current.copyWith(
+        typeFilter: typeFilter,
+        isReadFilter: isReadFilter,
+        clearTypeFilter: clearType,
+        clearIsReadFilter: clearRead,
+      ),
+    );
     await loadInbox(refresh: true);
   }
 
@@ -133,11 +148,15 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
         if (ids.contains(n.id)) return n.copyWith(isRead: true);
         return n;
       }).toList();
-      final markedCount = updatedItems.where((n) => ids.contains(n.id) && !current.items.firstWhere((i) => i.id == n.id).isRead).length;
-      state = AsyncData(current.copyWith(
-        items: updatedItems,
-        unreadCount: (current.unreadCount - ids.length).clamp(0, current.total),
-      ));
+      final newlyRead = current.items
+          .where((n) => ids.contains(n.id) && !n.isRead)
+          .length;
+      state = AsyncData(
+        current.copyWith(
+          items: updatedItems,
+          unreadCount: (current.unreadCount - newlyRead).clamp(0, current.total),
+        ),
+      );
     } catch (_) {}
   }
 
@@ -146,8 +165,11 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
       final repo = ref.read(notificationRepositoryProvider);
       await repo.markAllRead();
       final current = state.valueOrNull ?? const NotificationState();
-      final updatedItems = current.items.map((n) => n.copyWith(isRead: true)).toList();
-      state = AsyncData(current.copyWith(items: updatedItems, unreadCount: 0));
+      final updatedItems =
+          current.items.map((n) => n.copyWith(isRead: true)).toList();
+      state = AsyncData(
+        current.copyWith(items: updatedItems, unreadCount: 0),
+      );
     } catch (_) {}
   }
 

@@ -15,6 +15,11 @@ import '../../presentation/notifications/screens/notification_inbox_screen.dart'
 import '../../presentation/announcements/screens/announcement_list_screen.dart';
 import '../../presentation/announcements/screens/announcement_detail_screen.dart';
 import '../../presentation/announcements/screens/create_announcement_screen.dart';
+import '../../presentation/academic_year/screens/academic_year_list_screen.dart';
+import '../../presentation/academic_year/screens/rollover_screen.dart';
+import '../../presentation/masters/screens/standards_screen.dart';
+import '../../presentation/masters/screens/subjects_screen.dart';
+import '../../presentation/masters/screens/grade_master_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../data/models/auth/current_user.dart';
@@ -42,15 +47,19 @@ class PlaceholderScreen extends StatelessWidget {
             const Icon(Icons.construction_rounded,
                 size: 48, color: Color(0xFF9BA5B4)),
             const SizedBox(height: 16),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748))),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text('Coming soon',
-                style:
-                    TextStyle(fontSize: 13, color: Color(0xFF637082))),
+            const Text(
+              'Coming soon',
+              style: TextStyle(fontSize: 13, color: Color(0xFF637082)),
+            ),
           ],
         ),
       ),
@@ -160,13 +169,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ── Notifications ─────────────────────────────────────────────
+          // ── Notifications ──────────────────────────────────────────────
           GoRoute(
             path: RouteNames.notifications,
             builder: (_, __) => const NotificationInboxScreen(),
           ),
 
-          // ── Announcements ─────────────────────────────────────────────
+          // ── Announcements ──────────────────────────────────────────────
           GoRoute(
             path: RouteNames.announcements,
             builder: (_, __) => const AnnouncementListScreen(),
@@ -193,38 +202,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Academic Years ─────────────────────────────────────────────
           GoRoute(
             path: RouteNames.academicYears,
-            builder: (_, __) =>
-                const PlaceholderScreen('Academic Years'),
+            builder: (_, __) => const AcademicYearListScreen(),
             routes: [
               GoRoute(
                 path: 'rollover',
-                builder: (_, __) =>
-                    const PlaceholderScreen('Rollover', showBack: true),
+                builder: (_, __) => const RolloverScreen(),
               ),
             ],
           ),
 
+          // ── Masters ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.standards,
-            builder: (_, __) =>
-                const PlaceholderScreen('Standards', showBack: true),
+            builder: (_, __) => const StandardsScreen(),
           ),
           GoRoute(
             path: RouteNames.subjects,
-            builder: (_, __) =>
-                const PlaceholderScreen('Subjects', showBack: true),
+            builder: (_, __) => const SubjectsScreen(),
           ),
           GoRoute(
             path: RouteNames.gradeMaster,
-            builder: (_, __) =>
-                const PlaceholderScreen('Grade Master', showBack: true),
+            builder: (_, __) => const GradeMasterScreen(),
           ),
 
+          // ── Teachers ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.teachers,
-            builder: (_, __) => const PlaceholderScreen('Teachers'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Teachers'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -241,9 +249,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Students ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.students,
-            builder: (_, __) => const PlaceholderScreen('Students'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Students'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -260,9 +270,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Parents ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.parents,
-            builder: (_, __) => const PlaceholderScreen('Parents'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Parents'),
             routes: [
               GoRoute(
                 path: ':id',
@@ -273,9 +285,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Attendance ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.attendance,
-            builder: (_, __) => const PlaceholderScreen('Attendance'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Attendance'),
             routes: [
               GoRoute(
                 path: 'mark',
@@ -297,16 +311,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'analytics/:studentId',
-                builder: (context, state) => PlaceholderScreen(
+                builder: (context, state) => const PlaceholderScreen(
                     'Attendance Analytics',
                     showBack: true),
               ),
             ],
           ),
 
+          // ── Assignments ────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.assignments,
-            builder: (_, __) => const PlaceholderScreen('Assignments'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Assignments'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -322,7 +338,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'submissions',
-                    builder: (context, state) => PlaceholderScreen(
+                    builder: (context, state) => const PlaceholderScreen(
                         'Submissions',
                         showBack: true),
                   ),
@@ -331,9 +347,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Homework ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.homework,
-            builder: (_, __) => const PlaceholderScreen('Homework'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Homework'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -344,6 +362,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Diary ──────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.diary,
             builder: (_, __) => const PlaceholderScreen('Diary'),
@@ -357,9 +376,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Timetable ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.timetable,
-            builder: (_, __) => const PlaceholderScreen('Timetable'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Timetable'),
             routes: [
               GoRoute(
                 path: 'upload',
@@ -370,6 +391,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Exam Schedule ──────────────────────────────────────────────
           GoRoute(
             path: RouteNames.examSchedules,
             builder: (_, __) =>
@@ -389,7 +411,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'table',
-                    builder: (context, state) => PlaceholderScreen(
+                    builder: (context, state) => const PlaceholderScreen(
                         'Schedule Table',
                         showBack: true),
                   ),
@@ -398,9 +420,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Results ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.results,
-            builder: (_, __) => const PlaceholderScreen('Results'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Results'),
             routes: [
               GoRoute(
                 path: 'enter',
@@ -411,11 +435,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'report-card/:studentId',
                 builder: (context, state) =>
-                    const PlaceholderScreen('Report Card', showBack: true),
+                    const PlaceholderScreen('Report Card',
+                        showBack: true),
               ),
             ],
           ),
 
+          // ── Fees ───────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.feeDashboard,
             builder: (_, __) => const PlaceholderScreen('Fees'),
@@ -441,9 +467,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Chat ───────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.conversations,
-            builder: (_, __) => const PlaceholderScreen('Messages'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Messages'),
             routes: [
               GoRoute(
                 path: ':conversationId',
@@ -453,14 +481,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Leave ──────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.leaveList,
             builder: (_, __) => const PlaceholderScreen('Leave'),
             routes: [
               GoRoute(
                 path: 'apply',
-                builder: (_, __) =>
-                    const PlaceholderScreen('Apply Leave', showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Apply Leave',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'balance',
@@ -471,19 +501,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id/decision',
                 builder: (context, state) =>
-                    const PlaceholderScreen('Leave Decision', showBack: true),
+                    const PlaceholderScreen('Leave Decision',
+                        showBack: true),
               ),
             ],
           ),
 
+          // ── Gallery ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.galleryAlbums,
-            builder: (_, __) => const PlaceholderScreen('Gallery'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Gallery'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) =>
-                    const PlaceholderScreen('Create Album', showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Album',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
@@ -493,9 +527,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Documents ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.documents,
-            builder: (_, __) => const PlaceholderScreen('Documents'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Documents'),
             routes: [
               GoRoute(
                 path: 'request',
@@ -506,6 +542,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Behaviour ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.behaviourLogs,
             builder: (_, __) =>
@@ -520,9 +557,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          // ── Complaints ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.complaints,
-            builder: (_, __) => const PlaceholderScreen('Complaints'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Complaints'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -533,14 +572,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id',
                 builder: (context, state) =>
-                    const PlaceholderScreen('Complaint', showBack: true),
+                    const PlaceholderScreen('Complaint',
+                        showBack: true),
               ),
             ],
           ),
 
+          // ── Schools (Superadmin) ───────────────────────────────────────
           GoRoute(
             path: RouteNames.schools,
-            builder: (_, __) => const PlaceholderScreen('Schools'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Schools'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -551,14 +593,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id',
                 builder: (context, state) =>
-                    const PlaceholderScreen('School', showBack: true),
+                    const PlaceholderScreen('School',
+                        showBack: true),
               ),
             ],
           ),
 
           GoRoute(
             path: RouteNames.schoolSettings,
-            builder: (_, __) => const PlaceholderScreen('Settings'),
+            builder: (_, __) =>
+                const PlaceholderScreen('Settings'),
           ),
         ],
       ),
@@ -578,16 +622,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const Icon(Icons.error_outline_rounded,
                 size: 48, color: Color(0xFFEF4444)),
             const SizedBox(height: 16),
-            const Text('404 — Page Not Found',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748))),
+            const Text(
+              '404 — Page Not Found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(state.error?.toString() ?? 'Unknown error',
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF637082)),
-                textAlign: TextAlign.center),
+            Text(
+              state.error?.toString() ?? 'Unknown error',
+              style: const TextStyle(
+                  fontSize: 13, color: Color(0xFF637082)),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go(RouteNames.dashboard),

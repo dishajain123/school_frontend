@@ -29,7 +29,9 @@ class _NotificationInboxScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationNotifierProvider.notifier).loadInbox(refresh: true);
+      ref
+          .read(notificationNotifierProvider.notifier)
+          .loadInbox(refresh: true);
     });
     _scrollController.addListener(_onScroll);
   }
@@ -49,7 +51,7 @@ class _NotificationInboxScreenState
 
   @override
   Widget build(BuildContext context) {
-    final notifState = ref.watch(notificationNotifierProvider);
+    final asyncState = ref.watch(notificationNotifierProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
@@ -59,7 +61,9 @@ class _NotificationInboxScreenState
         actions: [
           TextButton(
             onPressed: () {
-              ref.read(notificationNotifierProvider.notifier).markAllRead();
+              ref
+                  .read(notificationNotifierProvider.notifier)
+                  .markAllRead();
             },
             child: Text(
               'Mark all read',
@@ -70,7 +74,7 @@ class _NotificationInboxScreenState
           ),
         ],
       ),
-      body: notifState.when(
+      body: asyncState.when(
         loading: () => AppLoading.listView(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
@@ -78,13 +82,15 @@ class _NotificationInboxScreenState
               .read(notificationNotifierProvider.notifier)
               .loadInbox(refresh: true),
         ),
-        data: (state) => Column(
+        data: (notifState) => Column(
           children: [
             NotificationFilterBar(
-              selectedType: state.typeFilter,
-              selectedRead: state.isReadFilter,
+              selectedType: notifState.typeFilter,
+              selectedRead: notifState.isReadFilter,
               onFilterChanged: (type, isRead) {
-                ref.read(notificationNotifierProvider.notifier).setFilter(
+                ref
+                    .read(notificationNotifierProvider.notifier)
+                    .setFilter(
                       typeFilter: type,
                       isReadFilter: isRead,
                       clearType: type == null,
@@ -93,35 +99,46 @@ class _NotificationInboxScreenState
               },
             ),
             Expanded(
-              child: state.isLoading
+              child: notifState.isLoading
                   ? AppLoading.listView()
-                  : state.items.isEmpty
-                      ? const AppEmptyState(
-                          title: 'No notifications',
-                          subtitle:
-                              'You\'re all caught up! Notifications will appear here.',
-                          icon: Icons.notifications_none_outlined,
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => ref
+                  : notifState.error != null && notifState.items.isEmpty
+                      ? AppErrorState(
+                          message: notifState.error,
+                          onRetry: () => ref
                               .read(notificationNotifierProvider.notifier)
                               .loadInbox(refresh: true),
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppDimensions.space8),
-                            itemCount: state.items.length +
-                                (state.isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == state.items.length) {
-                                return AppLoading.paginating();
-                              }
-                              final notification = state.items[index];
-                              return _buildWithDateHeader(
-                                  state.items, index, notification);
-                            },
-                          ),
-                        ),
+                        )
+                      : notifState.items.isEmpty
+                          ? const AppEmptyState(
+                              title: 'No notifications',
+                              subtitle:
+                                  'You\'re all caught up! Notifications will appear here.',
+                              icon: Icons.notifications_none_outlined,
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => ref
+                                  .read(notificationNotifierProvider.notifier)
+                                  .loadInbox(refresh: true),
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppDimensions.space8),
+                                itemCount: notifState.items.length +
+                                    (notifState.isLoadingMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == notifState.items.length) {
+                                    return AppLoading.paginating();
+                                  }
+                                  final notification =
+                                      notifState.items[index];
+                                  return _buildWithDateHeader(
+                                    notifState.items,
+                                    index,
+                                    notification,
+                                  );
+                                },
+                              ),
+                            ),
             ),
           ],
         ),

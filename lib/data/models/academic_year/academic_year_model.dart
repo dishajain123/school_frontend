@@ -62,4 +62,6 @@ class AcademicYearModel {
       updatedAt: updatedAt,
     );
   }
+
+  String get displayName => '$name (${startDate.year}–${endDate.year})';
 }
