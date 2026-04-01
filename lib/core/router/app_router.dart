@@ -8,11 +8,12 @@ import '../../presentation/auth/screens/forgot_password_screen.dart';
 import '../../presentation/auth/screens/verify_otp_screen.dart';
 import '../../presentation/auth/screens/reset_password_screen.dart';
 import '../../presentation/common/shell/main_shell.dart';
+import '../../presentation/dashboard/screens/dashboard_screen.dart';
+import '../../presentation/profile/screens/profile_screen.dart';
+import '../../presentation/profile/screens/change_password_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../data/models/auth/current_user.dart';
 import 'route_names.dart';
-
-// ── Placeholder screen ────────────────────────────────────────────────────────
 
 class PlaceholderScreen extends StatelessWidget {
   const PlaceholderScreen(this.title, {this.showBack = false, super.key});
@@ -36,13 +37,11 @@ class PlaceholderScreen extends StatelessWidget {
             const Icon(Icons.construction_rounded,
                 size: 48, color: Color(0xFF9BA5B4)),
             const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3748)),
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3748))),
             const SizedBox(height: 8),
             const Text('Coming soon',
                 style: TextStyle(fontSize: 13, color: Color(0xFF637082))),
@@ -53,9 +52,6 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-// ── Router listenable adapter ─────────────────────────────────────────────────
-
-/// Bridges Riverpod [AuthState] changes into a [Listenable] for GoRouter.
 class _AuthStateListenable extends ChangeNotifier {
   _AuthStateListenable(this._ref) {
     _ref.listen<AuthState>(authNotifierProvider, (_, __) {
@@ -64,11 +60,8 @@ class _AuthStateListenable extends ChangeNotifier {
   }
 
   final Ref _ref;
-
   AuthState get state => _ref.read(authNotifierProvider);
 }
-
-// ── Router provider ───────────────────────────────────────────────────────────
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = _AuthStateListenable(ref);
@@ -82,7 +75,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authNotifierProvider);
       final location = state.matchedLocation;
 
-      // While still initializing, stay on splash
       if (authState.status == AuthStatus.initial ||
           authState.status == AuthStatus.loading) {
         if (location == RouteNames.splash) return null;
@@ -90,7 +82,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final isAuthenticated = authState.isAuthenticated;
-
       final isOnAuthRoute = location == RouteNames.login ||
           location == RouteNames.forgotPassword ||
           location.startsWith('/verify-otp') ||
@@ -104,25 +95,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated && location == RouteNames.login) {
         return RouteNames.dashboard;
       }
-
       return null;
     },
 
     routes: [
-      // ── Splash ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.splash,
-        builder: (context, state) => const SplashScreen(),
+        builder: (_, __) => const SplashScreen(),
       ),
-
-      // ── Auth routes ───────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.login,
-        builder: (context, state) => const LoginScreen(),
+        builder: (_, __) => const LoginScreen(),
       ),
       GoRoute(
         path: RouteNames.forgotPassword,
-        builder: (context, state) => const ForgotPasswordScreen(),
+        builder: (_, __) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: RouteNames.verifyOtp,
@@ -144,7 +131,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ── Authenticated shell ───────────────────────────────────────────
       ShellRoute(
         builder: (context, state, child) {
           final user = ref.read(authNotifierProvider).currentUser;
@@ -152,466 +138,440 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return MainShell(role: role, child: child);
         },
         routes: [
+          // ── Dashboard ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.dashboard,
-            builder: (context, state) =>
-                const PlaceholderScreen('Dashboard'),
+            builder: (_, __) => const DashboardScreen(),
           ),
 
+          // ── Profile ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.profile,
-            builder: (context, state) =>
-                const PlaceholderScreen('Profile'),
+            builder: (_, __) => const ProfileScreen(),
             routes: [
               GoRoute(
                 path: 'change-password',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Change Password',
-                        showBack: true),
+                builder: (_, __) => const ChangePasswordScreen(),
               ),
             ],
           ),
 
+          // ── Notifications ─────────────────────────────────────────────
           GoRoute(
             path: RouteNames.notifications,
-            builder: (context, state) =>
+            builder: (_, __) =>
                 const PlaceholderScreen('Notifications', showBack: true),
           ),
 
+          // ── Announcements ─────────────────────────────────────────────
           GoRoute(
             path: RouteNames.announcements,
-            builder: (context, state) =>
-                const PlaceholderScreen('Announcements'),
+            builder: (_, __) => const PlaceholderScreen('Announcements'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Announcement',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Announcement',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Announcement $id',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Announcement ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Academic Years ────────────────────────────────────────────
           GoRoute(
             path: RouteNames.academicYears,
-            builder: (context, state) =>
-                const PlaceholderScreen('Academic Years'),
+            builder: (_, __) => const PlaceholderScreen('Academic Years'),
             routes: [
               GoRoute(
                 path: 'rollover',
-                builder: (context, state) =>
+                builder: (_, __) =>
                     const PlaceholderScreen('Rollover', showBack: true),
               ),
             ],
           ),
 
+          // ── Masters ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.standards,
-            builder: (context, state) =>
+            builder: (_, __) =>
                 const PlaceholderScreen('Standards', showBack: true),
           ),
           GoRoute(
             path: RouteNames.subjects,
-            builder: (context, state) =>
+            builder: (_, __) =>
                 const PlaceholderScreen('Subjects', showBack: true),
           ),
           GoRoute(
             path: RouteNames.gradeMaster,
-            builder: (context, state) =>
+            builder: (_, __) =>
                 const PlaceholderScreen('Grade Master', showBack: true),
           ),
 
+          // ── Teachers ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.teachers,
-            builder: (context, state) =>
-                const PlaceholderScreen('Teachers'),
+            builder: (_, __) => const PlaceholderScreen('Teachers'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Teacher',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Teacher',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Teacher $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Teacher ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Students ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.students,
-            builder: (context, state) =>
-                const PlaceholderScreen('Students'),
+            builder: (_, __) => const PlaceholderScreen('Students'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Student',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Student',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Student $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Student ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Parents ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.parents,
-            builder: (context, state) =>
-                const PlaceholderScreen('Parents'),
+            builder: (_, __) => const PlaceholderScreen('Parents'),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Parent $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Parent ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Attendance ────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.attendance,
-            builder: (context, state) =>
-                const PlaceholderScreen('Attendance'),
+            builder: (_, __) => const PlaceholderScreen('Attendance'),
             routes: [
               GoRoute(
                 path: 'mark',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Mark Attendance',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Mark Attendance',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'snapshot',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Class Snapshot',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Class Snapshot',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'below-threshold',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Below Threshold',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Below Threshold',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'analytics/:studentId',
-                builder: (context, state) {
-                  final sid = state.pathParameters['studentId']!;
-                  return PlaceholderScreen('Attendance Analytics $sid',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Attendance Analytics ${state.pathParameters['studentId']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Assignments ───────────────────────────────────────────────
           GoRoute(
             path: RouteNames.assignments,
-            builder: (context, state) =>
-                const PlaceholderScreen('Assignments'),
+            builder: (_, __) => const PlaceholderScreen('Assignments'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Assignment',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Assignment',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Assignment $id',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Assignment ${state.pathParameters['id']}',
+                    showBack: true),
                 routes: [
                   GoRoute(
                     path: 'submissions',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return PlaceholderScreen('Submissions for $id',
-                          showBack: true);
-                    },
+                    builder: (context, state) => PlaceholderScreen(
+                        'Submissions for ${state.pathParameters['id']}',
+                        showBack: true),
                   ),
                 ],
               ),
             ],
           ),
 
+          // ── Homework ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.homework,
-            builder: (context, state) =>
-                const PlaceholderScreen('Homework'),
+            builder: (_, __) => const PlaceholderScreen('Homework'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Homework',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Homework',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Diary ─────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.diary,
-            builder: (context, state) =>
-                const PlaceholderScreen('Diary'),
+            builder: (_, __) => const PlaceholderScreen('Diary'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Diary Entry',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Diary Entry',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Timetable ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.timetable,
-            builder: (context, state) =>
-                const PlaceholderScreen('Timetable'),
+            builder: (_, __) => const PlaceholderScreen('Timetable'),
             routes: [
               GoRoute(
                 path: 'upload',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Upload Timetable',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Upload Timetable',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Exam Schedules ────────────────────────────────────────────
           GoRoute(
             path: RouteNames.examSchedules,
-            builder: (context, state) =>
-                const PlaceholderScreen('Exam Schedules'),
+            builder: (_, __) => const PlaceholderScreen('Exam Schedules'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Exam Series',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Exam Series',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Exam Series $id',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Exam Series ${state.pathParameters['id']}',
+                    showBack: true),
                 routes: [
                   GoRoute(
                     path: 'table',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return PlaceholderScreen('Schedule Table $id',
-                          showBack: true);
-                    },
+                    builder: (context, state) => PlaceholderScreen(
+                        'Schedule Table ${state.pathParameters['id']}',
+                        showBack: true),
                   ),
                 ],
               ),
             ],
           ),
 
+          // ── Results ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.results,
-            builder: (context, state) =>
-                const PlaceholderScreen('Results'),
+            builder: (_, __) => const PlaceholderScreen('Results'),
             routes: [
               GoRoute(
                 path: 'enter',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Enter Results',
-                        showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Enter Results', showBack: true),
               ),
               GoRoute(
                 path: 'report-card/:studentId',
-                builder: (context, state) {
-                  final sid = state.pathParameters['studentId']!;
-                  return PlaceholderScreen('Report Card $sid',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Report Card ${state.pathParameters['studentId']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Fees ──────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.feeDashboard,
-            builder: (context, state) =>
-                const PlaceholderScreen('Fees'),
+            builder: (_, __) => const PlaceholderScreen('Fees'),
             routes: [
               GoRoute(
                 path: 'payments',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Payment History',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Payment History',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'record',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Record Payment',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Record Payment',
+                    showBack: true),
               ),
               GoRoute(
                 path: 'receipt/:id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Receipt $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Receipt ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Chat ──────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.conversations,
-            builder: (context, state) =>
-                const PlaceholderScreen('Messages'),
+            builder: (_, __) => const PlaceholderScreen('Messages'),
             routes: [
               GoRoute(
                 path: ':conversationId',
-                builder: (context, state) {
-                  final id = state.pathParameters['conversationId']!;
-                  return PlaceholderScreen('Chat $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Chat ${state.pathParameters['conversationId']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Leave ─────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.leaveList,
-            builder: (context, state) =>
-                const PlaceholderScreen('Leave'),
+            builder: (_, __) => const PlaceholderScreen('Leave'),
             routes: [
               GoRoute(
                 path: 'apply',
-                builder: (context, state) =>
+                builder: (_, __) =>
                     const PlaceholderScreen('Apply Leave', showBack: true),
               ),
               GoRoute(
                 path: 'balance',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Leave Balance',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Leave Balance',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id/decision',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Leave Decision $id',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Leave Decision ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Gallery ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.galleryAlbums,
-            builder: (context, state) =>
-                const PlaceholderScreen('Gallery'),
+            builder: (_, __) => const PlaceholderScreen('Gallery'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
+                builder: (_, __) =>
                     const PlaceholderScreen('Create Album', showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Album $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Album ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Documents ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.documents,
-            builder: (context, state) =>
-                const PlaceholderScreen('Documents'),
+            builder: (_, __) => const PlaceholderScreen('Documents'),
             routes: [
               GoRoute(
                 path: 'request',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Request Document',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Request Document',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Behaviour ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.behaviourLogs,
-            builder: (context, state) =>
+            builder: (_, __) =>
                 const PlaceholderScreen('Behaviour Logs'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Log Behaviour',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Log Behaviour',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Complaints ────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.complaints,
-            builder: (context, state) =>
-                const PlaceholderScreen('Complaints'),
+            builder: (_, __) => const PlaceholderScreen('Complaints'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create Complaint',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create Complaint',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('Complaint $id',
-                      showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'Complaint ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
+          // ── Schools (Superadmin) ───────────────────────────────────────
           GoRoute(
             path: RouteNames.schools,
-            builder: (context, state) =>
-                const PlaceholderScreen('Schools'),
+            builder: (_, __) => const PlaceholderScreen('Schools'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Create School',
-                        showBack: true),
+                builder: (_, __) => const PlaceholderScreen(
+                    'Create School',
+                    showBack: true),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) {
-                  final id = state.pathParameters['id']!;
-                  return PlaceholderScreen('School $id', showBack: true);
-                },
+                builder: (context, state) => PlaceholderScreen(
+                    'School ${state.pathParameters['id']}',
+                    showBack: true),
               ),
             ],
           ),
 
           GoRoute(
             path: RouteNames.schoolSettings,
-            builder: (context, state) =>
-                const PlaceholderScreen('Settings'),
+            builder: (_, __) => const PlaceholderScreen('Settings'),
           ),
         ],
       ),
