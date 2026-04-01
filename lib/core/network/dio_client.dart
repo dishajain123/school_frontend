@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_logout_bus.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
 import 'interceptors/auth_interceptor.dart';
@@ -27,8 +28,9 @@ final dioClientProvider = Provider<Dio>((ref) {
     AuthInterceptor(
       secureStorage: secureStorage,
       onLogout: () {
-        // Invalidate auth state — handled via a stream / notifier in FM05
+        // Clear tokens first, then notify the auth notifier via the bus.
         secureStorage.clearAll();
+        AuthLogoutBus.instance.notifyLogout();
       },
     ),
     ErrorInterceptor(),
@@ -36,7 +38,6 @@ final dioClientProvider = Provider<Dio>((ref) {
       requestBody: false,
       responseBody: false,
       logPrint: (o) {
-        // Use in debug only
         assert(() {
           // ignore: avoid_print
           print('[Dio] $o');

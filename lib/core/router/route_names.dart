@@ -121,4 +121,24 @@ class RouteNames {
   static const String schoolDetail = '/schools/:id';
   static const String createSchool = '/schools/create';
   static const String schoolSettings = '/settings';
+
+  // ── Helpers: build parameterized paths ───────────────────────────────────
+  static String announcementDetailPath(String id) => '/announcements/$id';
+  static String teacherDetailPath(String id) => '/teachers/$id';
+  static String studentDetailPath(String id) => '/students/$id';
+  static String parentDetailPath(String id) => '/parents/$id';
+  static String attendanceAnalyticsPath(String studentId) =>
+      '/attendance/analytics/$studentId';
+  static String assignmentDetailPath(String id) => '/assignments/$id';
+  static String submissionListPath(String assignmentId) =>
+      '/assignments/$assignmentId/submissions';
+  static String examScheduleTablePath(String id) => '/exam-schedule/$id/table';
+  static String reportCardPath(String studentId) =>
+      '/results/report-card/$studentId';
+  static String receiptPath(String id) => '/fees/receipt/$id';
+  static String chatRoomPath(String conversationId) => '/chat/$conversationId';
+  static String leaveDecisionPath(String id) => '/leave/$id/decision';
+  static String albumDetailPath(String id) => '/gallery/$id';
+  static String complaintDetailPath(String id) => '/complaints/$id';
+  static String schoolDetailPath(String id) => '/schools/$id';
 }

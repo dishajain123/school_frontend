@@ -31,8 +31,8 @@ class AppCard extends StatefulWidget {
     this.boxShadow,
     this.border,
     this.clipBehavior = Clip.antiAlias,
-    this._variant = _CardVariant.standard,
-  });
+    _CardVariant variant = _CardVariant.standard,
+  }) : _variant = variant;
 
   factory AppCard.hero({
     Key? key,
@@ -50,7 +50,7 @@ class AppCard extends StatefulWidget {
         backgroundColor: backgroundColor,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         boxShadow: AppDecorations.shadow2,
-        _variant: _CardVariant.hero,
+        variant: _CardVariant.hero,
         child: child,
       );
 
@@ -74,7 +74,7 @@ class AppCard extends StatefulWidget {
           color: borderColor ?? AppColors.surface200,
           width: AppDimensions.borderThin,
         ),
-        _variant: _CardVariant.outlined,
+        variant: _CardVariant.outlined,
         child: child,
       );
 
@@ -96,7 +96,7 @@ class AppCard extends StatefulWidget {
           color: AppColors.surface100,
           width: AppDimensions.borderThin,
         ),
-        _variant: _CardVariant.surface,
+        variant: _CardVariant.surface,
         child: child,
       );
 
