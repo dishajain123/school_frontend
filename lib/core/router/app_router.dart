@@ -36,8 +36,14 @@ import '../../presentation/fees/screens/receipt_screen.dart';
 // FM23 — Chat
 import '../../presentation/chat/screens/conversation_list_screen.dart';
 import '../../presentation/chat/screens/chat_screen.dart';
+// FM24 — Teacher Leave
+import '../../presentation/leave/screens/leave_list_screen.dart';
+import '../../presentation/leave/screens/apply_leave_screen.dart';
+import '../../presentation/leave/screens/leave_balance_screen.dart';
+import '../../presentation/leave/screens/leave_decision_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/chat/conversation_model.dart';
+import '../../data/models/leave/leave_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
@@ -547,28 +553,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ── Leave ──────────────────────────────────────────────────────
+          // ── Leave (FM24) ───────────────────────────────────────────────
           GoRoute(
             path: RouteNames.leaveList,
-            builder: (_, __) => const PlaceholderScreen('Leave'),
+            builder: (_, __) => const LeaveListScreen(),
             routes: [
               GoRoute(
                 path: 'apply',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Apply Leave',
-                    showBack: true),
+                builder: (_, __) => const ApplyLeaveScreen(),
               ),
               GoRoute(
                 path: 'balance',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Leave Balance',
-                    showBack: true),
+                builder: (_, __) => const LeaveBalanceScreen(),
               ),
               GoRoute(
                 path: ':id/decision',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Leave Decision',
-                        showBack: true),
+                builder: (context, state) {
+                  final leaveId = state.pathParameters['id']!;
+                  final leave = state.extra as LeaveModel?;
+                  return LeaveDecisionScreen(
+                    leaveId: leaveId,
+                    leave: leave,
+                  );
+                },
               ),
             ],
           ),
