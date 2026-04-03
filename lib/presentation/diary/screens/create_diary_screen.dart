@@ -66,8 +66,8 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
       ),
     );
     if (picked != null && mounted) {
-      setState(
-          () => _selectedDate = DateTime(picked.year, picked.month, picked.day));
+      setState(() =>
+          _selectedDate = DateTime(picked.year, picked.month, picked.day));
     }
   }
 
@@ -124,11 +124,23 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppDimensions.space24),
-            child: Text(
-              'Could not load your classes. Please try again.',
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.errorRed),
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Could not load your classes. Please try again.',
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.errorRed),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppDimensions.space8),
+                Text(
+                  e.toString(),
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey600),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
@@ -175,8 +187,7 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
                 _selectedSubjectId = null; // reset subject on class change
               });
             },
-            onSubjectChanged: (id) =>
-                setState(() => _selectedSubjectId = id),
+            onSubjectChanged: (id) => setState(() => _selectedSubjectId = id),
             onDateTap: _pickDate,
             onSubmit: () => _submit(assignments),
           );
@@ -262,8 +273,8 @@ class _DiaryForm extends StatelessWidget {
                         .map((e) => DropdownMenuItem(
                               value: e.key,
                               child: Text(e.value,
-                                  style: AppTypography.bodyMedium.copyWith(
-                                      color: AppColors.grey800)),
+                                  style: AppTypography.bodyMedium
+                                      .copyWith(color: AppColors.grey800)),
                             ))
                         .toList(),
                     onChanged: onStandardChanged,
@@ -279,8 +290,7 @@ class _DiaryForm extends StatelessWidget {
                     child: selectedStandardId == null
                         ? _DisabledField(hint: 'Select a class first')
                         : subjects.isEmpty
-                            ? _DisabledField(
-                                hint: 'No subjects for this class')
+                            ? _DisabledField(hint: 'No subjects for this class')
                             : _StyledDropdown<String>(
                                 key: ValueKey(selectedStandardId),
                                 hint: 'Select subject',
@@ -292,8 +302,7 @@ class _DiaryForm extends StatelessWidget {
                                             e.value,
                                             style: AppTypography.bodyMedium
                                                 .copyWith(
-                                                    color:
-                                                        AppColors.grey800),
+                                                    color: AppColors.grey800),
                                           ),
                                         ))
                                     .toList(),
@@ -345,8 +354,8 @@ class _DiaryForm extends StatelessWidget {
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.surface100,
-                          borderRadius: BorderRadius.circular(
-                              AppDimensions.radiusFull),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusFull),
                         ),
                         child: Text(
                           'Optional',
@@ -433,8 +442,7 @@ class _StyledDropdown<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.surface50,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -445,12 +453,10 @@ class _StyledDropdown<T> extends StatelessWidget {
           value: value,
           isExpanded: true,
           hint: Text(hint,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.grey400)),
-          style: AppTypography.bodyMedium
-              .copyWith(color: AppColors.grey800),
-          icon: const Icon(Icons.keyboard_arrow_down,
-              color: AppColors.grey400),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.grey400),
           onChanged: onChanged,
           items: items,
         ),
@@ -467,8 +473,7 @@ class _DisabledField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.surface100,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -477,8 +482,7 @@ class _DisabledField extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(hint,
-            style: AppTypography.bodyMedium
-                .copyWith(color: AppColors.grey400)),
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
       ),
     );
   }
@@ -495,8 +499,7 @@ class _DatePickerTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 52,
-        padding:
-            const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
         decoration: BoxDecoration(
           color: AppColors.surface50,
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -509,8 +512,8 @@ class _DatePickerTile extends StatelessWidget {
             const SizedBox(width: AppDimensions.space12),
             Text(
               DateFormatter.formatDate(date),
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.grey800),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
             ),
             const Spacer(),
             const Icon(Icons.arrow_drop_down, color: AppColors.grey400),
@@ -532,20 +535,18 @@ class _TipBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.infoLight,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border:
-            Border.all(color: AppColors.infoBlue.withOpacity(0.25)),
+        border: Border.all(color: AppColors.infoBlue.withOpacity(0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline,
-              size: 16, color: AppColors.infoBlue),
+          const Icon(Icons.info_outline, size: 16, color: AppColors.infoBlue),
           const SizedBox(width: AppDimensions.space8),
           Expanded(
             child: Text(
               message,
-              style: AppTypography.bodySmall
-                  .copyWith(color: AppColors.infoBlue),
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.infoBlue),
             ),
           ),
         ],

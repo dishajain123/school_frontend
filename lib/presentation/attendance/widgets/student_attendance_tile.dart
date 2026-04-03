@@ -9,6 +9,7 @@ class StudentAttendanceTile extends StatelessWidget {
     super.key,
     required this.studentId,
     required this.admissionNumber,
+    this.rollNumber,
     this.section,
     required this.currentStatus,
     required this.onStatusChanged,
@@ -17,6 +18,7 @@ class StudentAttendanceTile extends StatelessWidget {
 
   final String studentId;
   final String admissionNumber;
+  final String? rollNumber;
   final String? section;
   final AttendanceStatus currentStatus;
   final ValueChanged<AttendanceStatus> onStatusChanged;
@@ -26,7 +28,7 @@ class StudentAttendanceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _rowBackground,
         border: isLast
             ? null
             : const Border(
@@ -42,8 +44,7 @@ class StudentAttendanceTile extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: AppColors.surface100,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             child: Center(
               child: Text(
@@ -63,9 +64,16 @@ class StudentAttendanceTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(admissionNumber,
+                Text(
+                    rollNumber != null && rollNumber!.trim().isNotEmpty
+                        ? 'Roll ${rollNumber!.trim()}'
+                        : admissionNumber,
                     style: AppTypography.titleSmall,
                     overflow: TextOverflow.ellipsis),
+                if (rollNumber != null && rollNumber!.trim().isNotEmpty)
+                  Text(admissionNumber,
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.grey600)),
                 if (section != null && section!.isNotEmpty)
                   Text('Section $section',
                       style: AppTypography.caption
@@ -116,15 +124,6 @@ class _StatusToggleGroup extends StatelessWidget {
           selectedBg: AppColors.errorLight,
           onTap: () => onChanged(AttendanceStatus.absent),
         ),
-        const SizedBox(width: AppDimensions.space4),
-        _StatusButton(
-          label: 'L',
-          status: AttendanceStatus.late,
-          isSelected: currentStatus == AttendanceStatus.late,
-          selectedColor: AppColors.warningAmber,
-          selectedBg: AppColors.warningLight,
-          onTap: () => onChanged(AttendanceStatus.late),
-        ),
       ],
     );
   }
@@ -157,8 +156,7 @@ class _StatusButton extends StatelessWidget {
         height: 34,
         decoration: BoxDecoration(
           color: isSelected ? selectedBg : AppColors.surface50,
-          borderRadius:
-              BorderRadius.circular(AppDimensions.radiusSmall),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
           border: Border.all(
             color: isSelected ? selectedColor : AppColors.surface200,
             width: isSelected ? 1.5 : 1,
@@ -169,12 +167,24 @@ class _StatusButton extends StatelessWidget {
             label,
             style: AppTypography.labelMedium.copyWith(
               color: isSelected ? selectedColor : AppColors.grey400,
-              fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+extension on StudentAttendanceTile {
+  Color get _rowBackground {
+    switch (currentStatus) {
+      case AttendanceStatus.present:
+        return AppColors.successLight.withValues(alpha: 0.25);
+      case AttendanceStatus.absent:
+        return AppColors.errorLight.withValues(alpha: 0.22);
+      case AttendanceStatus.late:
+        return AppColors.warningLight.withValues(alpha: 0.2);
+    }
   }
 }

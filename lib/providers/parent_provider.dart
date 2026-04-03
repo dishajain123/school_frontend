@@ -5,7 +5,6 @@ import '../core/storage/local_storage.dart';
 import '../data/models/parent/child_summary.dart';
 import '../data/models/parent/parent_model.dart';
 import '../data/repositories/parent_repository.dart';
-import '../providers/auth_provider.dart';
 
 // ── Children State (for PARENT role) ─────────────────────────────────────────
 
@@ -41,9 +40,8 @@ class ChildrenState {
   }) {
     return ChildrenState(
       children: children ?? this.children,
-      selectedChildId: clearSelectedChild
-          ? null
-          : (selectedChildId ?? this.selectedChildId),
+      selectedChildId:
+          clearSelectedChild ? null : (selectedChildId ?? this.selectedChildId),
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
     );
@@ -69,7 +67,8 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
       final children = await repo.getMyChildren();
 
       final localStorage = ref.read(localStorageProvider);
-      String? savedChildId = localStorage.getString(StorageKeys.selectedChildId);
+      String? savedChildId =
+          localStorage.getString(StorageKeys.selectedChildId);
 
       // Validate saved child still exists
       if (savedChildId != null) {
@@ -77,7 +76,8 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
         if (!stillExists) savedChildId = null;
       }
 
-      final selectedId = savedChildId ?? (children.isNotEmpty ? children.first.id : null);
+      final selectedId =
+          savedChildId ?? (children.isNotEmpty ? children.first.id : null);
 
       state = AsyncData(ChildrenState(
         children: children,
@@ -170,7 +170,8 @@ class ParentNotifier extends AsyncNotifier<ParentListState> {
   Future<void> load({bool refresh = false}) async {
     final current = state.valueOrNull ?? const ParentListState();
     if (refresh) {
-      state = AsyncData(current.copyWith(isLoading: true, page: 1, clearError: true));
+      state = AsyncData(
+          current.copyWith(isLoading: true, page: 1, clearError: true));
     } else {
       if (current.isLoadingMore) return;
       if (!current.hasMore && current.page > 1) return;
@@ -184,9 +185,12 @@ class ParentNotifier extends AsyncNotifier<ParentListState> {
 
       final result = await repo.list(page: nextPage, pageSize: 20);
 
-      final newItems = refresh
-          ? result.items
-          : [...(state.valueOrNull?.items ?? []), ...result.items];
+      final List<ParentModel> newItems = refresh
+          ? List<ParentModel>.from(result.items)
+          : <ParentModel>[
+              ...latestState.items,
+              ...result.items,
+            ];
 
       state = AsyncData(ParentListState(
         items: newItems,
@@ -222,7 +226,8 @@ class ParentNotifier extends AsyncNotifier<ParentListState> {
     return created;
   }
 
-  Future<ParentModel> updateParent(String id, Map<String, dynamic> payload) async {
+  Future<ParentModel> updateParent(
+      String id, Map<String, dynamic> payload) async {
     final repo = ref.read(parentRepositoryProvider);
     final updated = await repo.update(id, payload);
     final current = state.valueOrNull ?? const ParentListState();

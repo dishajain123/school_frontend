@@ -4,12 +4,14 @@ class ClassSnapshotRecord {
   const ClassSnapshotRecord({
     required this.studentId,
     required this.admissionNumber,
+    this.rollNumber,
     required this.section,
     this.status,
   });
 
   final String studentId;
   final String admissionNumber;
+  final String? rollNumber;
   final String section;
   final AttendanceStatus? status;
 
@@ -17,6 +19,7 @@ class ClassSnapshotRecord {
     return ClassSnapshotRecord(
       studentId: json['student_id'] as String,
       admissionNumber: json['admission_number'] as String,
+      rollNumber: json['roll_number'] as String?,
       section: json['section'] as String? ?? '',
       status: json['status'] != null
           ? AttendanceStatusX.fromString(json['status'] as String)

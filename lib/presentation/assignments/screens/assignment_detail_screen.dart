@@ -87,7 +87,8 @@ class _AssignmentDetailScreenState
           );
 
       if (mounted) {
-        SnackbarUtils.showSuccess(context, 'Assignment submitted successfully!');
+        SnackbarUtils.showSuccess(
+            context, 'Assignment submitted successfully!');
         ref.invalidate(assignmentDetailProvider(widget.assignmentId));
         setState(() {
           _textCtrl.clear();
@@ -176,8 +177,7 @@ class _AssignmentDetailScreenState
                   AppButton.secondary(
                     label: 'View Submissions',
                     onTap: () => context.push(
-                      RouteNames.submissionList,
-                      extra: widget.assignmentId,
+                      RouteNames.submissionListPath(widget.assignmentId),
                     ),
                   ),
                 ],
@@ -258,8 +258,8 @@ class _HeaderCard extends StatelessWidget {
             ),
             child: Text(
               assignment.title,
-              style: AppTypography.headlineSmall
-                  .copyWith(color: AppColors.white),
+              style:
+                  AppTypography.headlineSmall.copyWith(color: AppColors.white),
             ),
           ),
 
@@ -275,7 +275,8 @@ class _HeaderCard extends StatelessWidget {
                       vertical: AppDimensions.space8),
                   decoration: BoxDecoration(
                     color: bgColor,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                   child: Row(
                     children: [
@@ -284,8 +285,8 @@ class _HeaderCard extends StatelessWidget {
                       const SizedBox(width: AppDimensions.space8),
                       Text(
                         'Due: ${DateFormatter.formatDate(assignment.dueDate)}',
-                        style: AppTypography.titleSmall
-                            .copyWith(color: dueColor),
+                        style:
+                            AppTypography.titleSmall.copyWith(color: dueColor),
                       ),
                       if (assignment.isOverdue) ...[
                         const SizedBox(width: AppDimensions.space8),
@@ -334,8 +335,7 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, size: 14, color: AppColors.grey400),
         const SizedBox(width: 4),
         Text(label,
-            style:
-                AppTypography.bodySmall.copyWith(color: AppColors.grey600)),
+            style: AppTypography.bodySmall.copyWith(color: AppColors.grey600)),
       ],
     );
   }
@@ -405,13 +405,12 @@ class _AttachmentButton extends StatelessWidget {
                       style: AppTypography.titleSmall
                           .copyWith(color: AppColors.infoBlue)),
                   Text('Tap to view',
-                      style: AppTypography.bodySmall
-                          .copyWith(color: AppColors.infoBlue.withOpacity(0.7))),
+                      style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.infoBlue.withOpacity(0.7))),
                 ],
               ),
             ),
-            const Icon(Icons.open_in_new,
-                color: AppColors.infoBlue, size: 16),
+            const Icon(Icons.open_in_new, color: AppColors.infoBlue, size: 16),
           ],
         ),
       ),
@@ -470,7 +469,8 @@ class _SubmissionSection extends ConsumerWidget {
             const SizedBox(width: AppDimensions.space12),
             Text(
               'This assignment is closed for submissions.',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.grey600),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey600),
             ),
           ],
         ),
@@ -511,8 +511,7 @@ class _SubmissionSection extends ConsumerWidget {
               color: AppColors.surface50,
               borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               border: Border.all(
-                  color: AppColors.surface200,
-                  style: BorderStyle.solid),
+                  color: AppColors.surface200, style: BorderStyle.solid),
             ),
             child: pickedFile == null
                 ? Row(
@@ -598,7 +597,8 @@ class _SubmittedCard extends StatelessWidget {
               if (submission.isLate) ...[
                 const SizedBox(width: AppDimensions.space8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.errorLight,
                     borderRadius: BorderRadius.circular(4),

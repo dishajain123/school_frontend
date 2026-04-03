@@ -108,8 +108,12 @@ class SchoolNotifier extends AsyncNotifier<SchoolListState> {
         isActive: _mapFilter(snapshot.filter),
       );
 
-      final merged =
-          refresh ? result.items : [...(snapshot.items), ...result.items];
+      final List<SchoolModel> merged = refresh
+          ? List<SchoolModel>.from(result.items)
+          : <SchoolModel>[
+              ...snapshot.items,
+              ...result.items,
+            ];
 
       state = AsyncData(
         snapshot.copyWith(

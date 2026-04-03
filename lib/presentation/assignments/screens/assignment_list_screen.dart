@@ -9,8 +9,6 @@ import '../../../core/router/route_names.dart';
 import '../../../data/models/assignment/assignment_model.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/masters_provider.dart';
-import '../../../providers/academic_year_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
@@ -62,7 +60,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     setState(() => _activeFilter = ['all', 'active', 'overdue'][index]);
     final filters = switch (index) {
       1 => const AssignmentFilters(isActive: true),
-      2 => const AssignmentFilters(isActive: true), // overdue filtered client-side
+      2 =>
+        const AssignmentFilters(isActive: true), // overdue filtered client-side
       _ => const AssignmentFilters(),
     };
     ref.read(assignmentsProvider.notifier).applyFilters(filters);
@@ -77,8 +76,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   Widget build(BuildContext context) {
     final assignmentsState = ref.watch(assignmentsProvider);
     final currentUser = ref.watch(currentUserProvider);
-    final canCreate =
-        currentUser?.hasPermission('assignment:create') ?? false;
+    final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -86,9 +84,9 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
         bottom: TabBar(
           controller: _tabController,
           onTap: _applyTabFilter,
-          labelColor: AppColors.navyDeep,
-          unselectedLabelColor: AppColors.grey400,
-          indicatorColor: AppColors.navyDeep,
+          labelColor: AppColors.white,
+          unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
+          indicatorColor: AppColors.goldPrimary,
           indicatorWeight: 2,
           labelStyle: AppTypography.labelLarge,
           unselectedLabelStyle: AppTypography.labelMedium,
@@ -110,8 +108,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
         loading: () => _buildShimmer(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
-          onRetry: () =>
-              ref.read(assignmentsProvider.notifier).refresh(),
+          onRetry: () => ref.read(assignmentsProvider.notifier).refresh(),
         ),
         data: (state) {
           final filtered = state.items.where(_tabFilter).toList();
@@ -133,8 +130,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           }
 
           return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(assignmentsProvider.notifier).refresh(),
+            onRefresh: () => ref.read(assignmentsProvider.notifier).refresh(),
             color: AppColors.navyDeep,
             child: ListView.builder(
               controller: _scrollCtrl,
@@ -154,8 +150,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                 return AssignmentCard(
                   assignment: assignment,
                   onTap: () => context.push(
-                    RouteNames.assignmentDetail,
-                    extra: assignment.id,
+                    RouteNames.assignmentDetailPath(assignment.id),
                   ),
                 );
               },

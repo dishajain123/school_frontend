@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_logout_bus.dart';
 import '../constants/api_constants.dart';
@@ -9,10 +10,13 @@ import 'interceptors/error_interceptor.dart';
 /// Provider for the configured Dio HTTP client.
 final dioClientProvider = Provider<Dio>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
+  const resolvedBaseUrl =
+      (kIsWeb ? 'http://localhost:8000' : ApiConstants.baseUrl) +
+          ApiConstants.apiPrefix;
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: ApiConstants.baseUrl + ApiConstants.apiPrefix,
+      baseUrl: resolvedBaseUrl,
       connectTimeout:
           const Duration(milliseconds: ApiConstants.connectTimeoutMs),
       receiveTimeout:

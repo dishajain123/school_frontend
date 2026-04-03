@@ -41,13 +41,17 @@ class TeacherClassSubjectModel {
     final standard = json['standard'] as Map<String, dynamic>?;
     final subject = json['subject'] as Map<String, dynamic>?;
     final academicYear = json['academic_year'] as Map<String, dynamic>?;
+    final teacher = json['teacher'] as Map<String, dynamic>?;
+
+    String idValue(dynamic value) => value?.toString() ?? '';
+
     return TeacherClassSubjectModel(
-      id: json['id'] as String,
-      teacherId: json['teacher_id'] as String,
-      standardId: json['standard_id'] as String,
+      id: idValue(json['id']),
+      teacherId: idValue(json['teacher_id'] ?? teacher?['id']),
+      standardId: idValue(json['standard_id'] ?? standard?['id']),
       section: json['section'] as String? ?? '',
-      subjectId: json['subject_id'] as String,
-      academicYearId: json['academic_year_id'] as String,
+      subjectId: idValue(json['subject_id'] ?? subject?['id']),
+      academicYearId: idValue(json['academic_year_id'] ?? academicYear?['id']),
       standardName: standard?['name'] as String?,
       subjectName: subject?['name'] as String?,
       subjectCode: subject?['code'] as String?,

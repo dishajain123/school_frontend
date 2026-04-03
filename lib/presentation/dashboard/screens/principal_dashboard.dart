@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/quick_action_grid.dart';
@@ -15,6 +16,9 @@ class PrincipalDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(principalDashboardStatsProvider);
+    final stats = statsAsync.valueOrNull;
+
     final quickActions = [
       QuickActionItem(
         icon: Icons.school_outlined,
@@ -69,10 +73,13 @@ class PrincipalDashboard extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surface50,
       body: RefreshIndicator(
-        onRefresh: () async {},
+        onRefresh: () async {
+          ref.invalidate(principalDashboardStatsProvider);
+          await ref.read(principalDashboardStatsProvider.future);
+        },
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: GreetingHeader(
                 subtitle: 'Manage your school effectively.',
               ),
@@ -87,7 +94,7 @@ class PrincipalDashboard extends ConsumerWidget {
                       Expanded(
                         child: StatCard(
                           label: 'Total Students',
-                          value: '--',
+                          value: stats?.totalStudents.toString() ?? '--',
                           icon: Icons.school_outlined,
                           iconColor: AppColors.navyMedium,
                           onTap: () => context.go(RouteNames.students),
@@ -97,7 +104,7 @@ class PrincipalDashboard extends ConsumerWidget {
                       Expanded(
                         child: StatCard(
                           label: 'Total Teachers',
-                          value: '--',
+                          value: stats?.totalTeachers.toString() ?? '--',
                           icon: Icons.co_present_outlined,
                           iconColor: AppColors.infoBlue,
                           onTap: () => context.go(RouteNames.teachers),
@@ -111,7 +118,7 @@ class PrincipalDashboard extends ConsumerWidget {
                       Expanded(
                         child: StatCard(
                           label: 'Pending Leave',
-                          value: '--',
+                          value: stats?.pendingLeaves.toString() ?? '--',
                           icon: Icons.beach_access_outlined,
                           iconColor: AppColors.warningAmber,
                           onTap: () => context.go(RouteNames.leaveList),
@@ -121,7 +128,7 @@ class PrincipalDashboard extends ConsumerWidget {
                       Expanded(
                         child: StatCard(
                           label: 'Open Complaints',
-                          value: '--',
+                          value: stats?.openComplaints.toString() ?? '--',
                           icon: Icons.feedback_outlined,
                           iconColor: AppColors.errorRed,
                           onTap: () => context.go(RouteNames.complaints),
@@ -130,7 +137,7 @@ class PrincipalDashboard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppDimensions.space24),
-                  AppSectionHeader(title: 'Quick Actions'),
+                  const AppSectionHeader(title: 'Quick Actions'),
                   const SizedBox(height: AppDimensions.space12),
                   QuickActionGrid(actions: quickActions),
                   const SizedBox(height: AppDimensions.space40),

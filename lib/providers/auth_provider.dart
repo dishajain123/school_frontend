@@ -9,7 +9,6 @@ import '../core/errors/app_exception.dart';
 import '../core/storage/local_storage.dart';
 import '../core/storage/secure_storage.dart';
 import '../data/models/auth/current_user.dart';
-import '../data/models/auth/token_response.dart';
 import '../data/repositories/auth_repository.dart';
 
 // ── Auth Status ───────────────────────────────────────────────────────────────
@@ -98,15 +97,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.loading);
 
     try {
-      final token = await _secureStorage.readToken();
+      final token = await _secureStorage
+          .readToken()
+          .timeout(const Duration(seconds: 3), onTimeout: () => null);
       if (token == null || token.isEmpty) {
         state = const AuthState(status: AuthStatus.unauthenticated);
         return;
       }
 
-      final user = await _authRepo.getMe();
+      final user = await _authRepo.getMe().timeout(const Duration(seconds: 8));
       await _persistUser(user);
       state = AuthState(status: AuthStatus.authenticated, currentUser: user);
+    } on TimeoutException {
+      await _clearLocalData();
+      state = const AuthState(status: AuthStatus.unauthenticated);
     } on AppException {
       await _clearLocalData();
       state = const AuthState(status: AuthStatus.unauthenticated);

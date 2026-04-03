@@ -70,7 +70,8 @@ class StudentRepository {
     return StudentModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<StudentModel> update(String studentId, Map<String, dynamic> payload) async {
+  Future<StudentModel> update(
+      String studentId, Map<String, dynamic> payload) async {
     final response = await _dio.patch(
       ApiConstants.studentById(studentId),
       data: payload,
@@ -85,6 +86,21 @@ class StudentRepository {
       data: {'promotion_status': promotionStatus},
     );
     return StudentModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<String>> listSections({
+    String? standardId,
+    String? academicYearId,
+  }) async {
+    final response = await _dio.get(
+      ApiConstants.studentSections,
+      queryParameters: {
+        if (standardId != null) 'standard_id': standardId,
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+      },
+    );
+    final data = response.data as List<dynamic>? ?? const [];
+    return data.map((e) => e.toString()).toList();
   }
 }
 

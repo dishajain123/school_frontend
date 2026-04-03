@@ -58,7 +58,7 @@ class RouteNames {
   static const String uploadTimetable = '/timetable/upload';
 
   static const String examSchedules = '/exam-schedule';
-  static const String examScheduleTable = '/exam-schedule/:id/table';
+  static const String examScheduleTable = '/exam-schedule/table';
   static const String createExamSeries = '/exam-schedule/create';
 
   static const String results = '/results';

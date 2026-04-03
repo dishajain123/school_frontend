@@ -111,7 +111,7 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
               }
               return ref.watch(standardsProvider(year.id)).when(
                     data: (standards) => DropdownButtonFormField<String>(
-                      value: _selectedStandardId,
+                      initialValue: _selectedStandardId,
                       decoration: _dropdownDecoration('Select class'),
                       items: standards
                           .map((s) => DropdownMenuItem(
@@ -167,8 +167,19 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
 
   String _formatDate(DateTime d) {
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]} ${d.year}';
   }
@@ -248,9 +259,9 @@ class _SnapshotSummaryBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             child: LinearProgressIndicator(
               value: snapshot.presentPercentage / 100,
-              backgroundColor: Colors.white.withOpacity(0.15),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.successGreen),
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
               minHeight: 8,
             ),
           ),
@@ -258,7 +269,7 @@ class _SnapshotSummaryBar extends StatelessWidget {
           Text(
             '${snapshot.presentPercentage.toStringAsFixed(1)}% present today',
             style: AppTypography.caption
-                .copyWith(color: Colors.white.withOpacity(0.7)),
+                .copyWith(color: Colors.white.withValues(alpha: 0.7)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -279,11 +290,11 @@ class _SnapStat extends StatelessWidget {
     return Column(
       children: [
         Text(value,
-            style: AppTypography.headlineMedium.copyWith(
-                color: color, fontWeight: FontWeight.w700)),
+            style: AppTypography.headlineMedium
+                .copyWith(color: color, fontWeight: FontWeight.w700)),
         Text(label,
             style: AppTypography.caption
-                .copyWith(color: Colors.white.withOpacity(0.6))),
+                .copyWith(color: Colors.white.withValues(alpha: 0.6))),
       ],
     );
   }
@@ -360,8 +371,7 @@ class _SnapshotRecordTile extends StatelessWidget {
                     ? record.admissionNumber.substring(0, 2).toUpperCase()
                     : record.admissionNumber.toUpperCase(),
                 style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.navyMedium,
-                    fontWeight: FontWeight.w600),
+                    color: AppColors.navyMedium, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -370,8 +380,12 @@ class _SnapshotRecordTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(record.admissionNumber,
-                    style: AppTypography.titleSmall),
+                Text(record.admissionNumber, style: AppTypography.titleSmall),
+                if (record.rollNumber != null &&
+                    record.rollNumber!.trim().isNotEmpty)
+                  Text('Roll ${record.rollNumber}',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.grey600)),
                 if (record.section.isNotEmpty)
                   Text('Sec ${record.section}',
                       style: AppTypography.caption
@@ -410,8 +424,7 @@ class _FilterRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space16,
-            vertical: AppDimensions.space12),
+            horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
         decoration: BoxDecoration(
           color: AppColors.surface50,
           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
@@ -422,8 +435,8 @@ class _FilterRow extends StatelessWidget {
             Icon(icon, size: 18, color: AppColors.navyMedium),
             const SizedBox(width: AppDimensions.space8),
             Text(label,
-                style: AppTypography.bodyLarge
-                    .copyWith(color: AppColors.grey800)),
+                style:
+                    AppTypography.bodyLarge.copyWith(color: AppColors.grey800)),
             const Spacer(),
             const Icon(Icons.arrow_drop_down, color: AppColors.grey400),
           ],

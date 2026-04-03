@@ -76,6 +76,16 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     return user?.hasPermission('behaviour_log:read') ?? false;
   }
 
+  bool get _canViewAttendanceHistory {
+    final user = ref.read(currentUserProvider);
+    return user?.hasPermission('attendance:read') ?? false;
+  }
+
+  bool get _canViewAttendanceAnalytics {
+    final user = ref.read(currentUserProvider);
+    return user?.hasPermission('attendance:analytics') ?? false;
+  }
+
   Future<void> _updatePromotionStatus(String status, String label) async {
     final confirmed = await AppDialog.confirm(
       context,
@@ -103,6 +113,17 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
         SnackbarUtils.showError(context, e.toString());
       }
     }
+  }
+
+  String? _ageText(DateTime? dob) {
+    if (dob == null) return null;
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    final hasHadBirthdayThisYear = (now.month > dob.month) ||
+        (now.month == dob.month && now.day >= dob.day);
+    if (!hasHadBirthdayThisYear) age -= 1;
+    if (age < 0) return null;
+    return '$age years';
   }
 
   @override
@@ -272,10 +293,35 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                       icon: Icons.fact_check_outlined,
                     ),
                   ],
+                  if (_canViewAttendanceHistory) ...[
+                    const SizedBox(height: AppDimensions.space12),
+                    AppButton.secondary(
+                      label: 'View Attendance History',
+                      onTap: () => context.push(
+                          '${RouteNames.attendance}?student_id=${student.id}'),
+                      icon: Icons.history_edu_outlined,
+                    ),
+                  ],
+                  if (_canViewAttendanceAnalytics) ...[
+                    const SizedBox(height: AppDimensions.space8),
+                    AppButton.secondary(
+                      label: 'View Attendance Analytics',
+                      onTap: () => context.push(
+                        RouteNames.attendanceAnalyticsPath(student.id),
+                      ),
+                      icon: Icons.insights_outlined,
+                    ),
+                  ],
                   const SizedBox(height: AppDimensions.space16),
                   _InfoSection(
                     title: 'Personal Details',
                     children: [
+                      if (_ageText(student.dateOfBirth) != null)
+                        _InfoRow(
+                          icon: Icons.cake_rounded,
+                          label: 'Age',
+                          value: _ageText(student.dateOfBirth)!,
+                        ),
                       if (student.dateOfBirth != null)
                         _InfoRow(
                           icon: Icons.cake_outlined,
@@ -311,25 +357,24 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: AppDimensions.space12),
-                    if (!student.isPromoted)
-                      AppButton.primary(
-                        label: 'Mark as Promoted',
-                        onTap: _isPromotionLoading
-                            ? null
-                            : () =>
-                                _updatePromotionStatus('PROMOTED', 'Promoted'),
-                        isLoading: _isPromotionLoading,
-                        icon: Icons.trending_up_rounded,
-                      )
-                    else
-                      AppButton.secondary(
-                        label: 'Mark as Held Back',
-                        onTap: _isPromotionLoading
-                            ? null
-                            : () => _updatePromotionStatus(
-                                'HELD_BACK', 'Held Back'),
-                        isLoading: _isPromotionLoading,
-                      ),
+                    AppButton.primary(
+                      label: 'Mark as Promoted',
+                      onTap: _isPromotionLoading
+                          ? null
+                          : () =>
+                              _updatePromotionStatus('PROMOTED', 'Promoted'),
+                      isLoading: _isPromotionLoading,
+                      icon: Icons.trending_up_rounded,
+                    ),
+                    const SizedBox(height: AppDimensions.space8),
+                    AppButton.secondary(
+                      label: 'Mark as Held Back',
+                      onTap: _isPromotionLoading
+                          ? null
+                          : () =>
+                              _updatePromotionStatus('HELD_BACK', 'Held Back'),
+                      isLoading: _isPromotionLoading,
+                    ),
                   ],
                   const SizedBox(height: AppDimensions.space40),
                 ],

@@ -1,5 +1,3 @@
-import '../../models/masters/subject_model.dart';
-
 enum AttendanceStatus { present, absent, late }
 
 extension AttendanceStatusX on AttendanceStatus {
@@ -34,8 +32,10 @@ class AttendanceModel {
     required this.studentId,
     required this.teacherId,
     required this.standardId,
+    required this.section,
     required this.subjectId,
     required this.academicYearId,
+    required this.lectureNumber,
     required this.date,
     required this.status,
     required this.createdAt,
@@ -46,8 +46,10 @@ class AttendanceModel {
   final String studentId;
   final String teacherId;
   final String standardId;
+  final String section;
   final String subjectId;
   final String academicYearId;
+  final int lectureNumber;
   final DateTime date;
   final AttendanceStatus status;
   final DateTime createdAt;
@@ -59,8 +61,10 @@ class AttendanceModel {
       studentId: json['student_id'] as String,
       teacherId: json['teacher_id'] as String,
       standardId: json['standard_id'] as String,
+      section: json['section'] as String? ?? '',
       subjectId: json['subject_id'] as String,
       academicYearId: json['academic_year_id'] as String,
+      lectureNumber: json['lecture_number'] as int? ?? 1,
       date: DateTime.parse(json['date'] as String),
       status: AttendanceStatusX.fromString(json['status'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),

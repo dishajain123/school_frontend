@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../models/diary/diary_model.dart';
 
@@ -9,7 +10,7 @@ class DiaryRepository {
   final Dio _dio;
 
   // Matches FastAPI router prefix: /api/v1/diary
-  static const String _base = '/api/v1/diary';
+  static const String _base = ApiConstants.diary;
 
   // ── List diary entries ─────────────────────────────────────────────────────
   // Role-scoped on the backend:

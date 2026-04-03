@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
@@ -126,7 +124,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Text(
-                        'SMS',
+                        'EduNest \u{1F393}',
                         style: AppTypography.displayLarge.copyWith(
                           color: AppColors.white,
                           letterSpacing: 4,
@@ -138,7 +136,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     FadeTransition(
                       opacity: _subtitleFade,
                       child: Text(
-                        'School Management System',
+                        'Smart School Platform \u{2728}',
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.white.withValues(alpha: 0.7),
                           letterSpacing: 0.5,
@@ -167,6 +165,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
+                      Text(
+                        'Loading your campus \u{1F4DA}',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.65),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       Text(
                         'v1.0.0',
                         style: AppTypography.caption.copyWith(

@@ -103,9 +103,12 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
         pageSize: 20,
       );
 
-      final newItems = refresh
-          ? result.items
-          : [...(state.valueOrNull?.items ?? []), ...result.items];
+      final List<StudentModel> newItems = refresh
+          ? List<StudentModel>.from(result.items)
+          : <StudentModel>[
+              ...latestState.items,
+              ...result.items,
+            ];
 
       state = AsyncData(
         StudentState(
@@ -154,7 +157,8 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     return created;
   }
 
-  Future<StudentModel> updateStudent(String id, Map<String, dynamic> payload) async {
+  Future<StudentModel> updateStudent(
+      String id, Map<String, dynamic> payload) async {
     final repo = ref.read(studentRepositoryProvider);
     final updated = await repo.update(id, payload);
     final current = state.valueOrNull ?? const StudentState();
@@ -193,3 +197,11 @@ final studentNotifierProvider =
     AsyncNotifierProvider<StudentNotifier, StudentState>(
   () => StudentNotifier(),
 );
+
+final studentSectionsProvider =
+    FutureProvider.family<List<String>, String?>((ref, standardId) async {
+  if (standardId == null || standardId.isEmpty) return const <String>[];
+
+  final repo = ref.read(studentRepositoryProvider);
+  return repo.listSections(standardId: standardId);
+});

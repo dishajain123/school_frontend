@@ -27,6 +27,7 @@ class StudentListScreen extends ConsumerStatefulWidget {
 class _StudentListScreenState extends ConsumerState<StudentListScreen> {
   final ScrollController _scrollController = ScrollController();
   StandardModel? _selectedStandard;
+  String? _selectedSection;
 
   @override
   void initState() {
@@ -57,13 +58,30 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
   }
 
   void _onStandardChanged(StandardModel? standard) {
-    setState(() => _selectedStandard = standard);
+    setState(() {
+      _selectedStandard = standard;
+      _selectedSection = null;
+    });
     ref.read(studentNotifierProvider.notifier).setFilters(
-          StudentFilters(standardId: standard?.id),
+          StudentFilters(
+            standardId: standard?.id,
+            section: null,
+          ),
         );
   }
 
-  String? _getStandardName(StudentModel student, List<StandardModel> standards) {
+  void _onSectionChanged(String? section) {
+    setState(() => _selectedSection = section);
+    ref.read(studentNotifierProvider.notifier).setFilters(
+          StudentFilters(
+            standardId: _selectedStandard?.id,
+            section: section,
+          ),
+        );
+  }
+
+  String? _getStandardName(
+      StudentModel student, List<StandardModel> standards) {
     if (student.standardId == null) return null;
     try {
       return standards.firstWhere((s) => s.id == student.standardId).name;
@@ -77,10 +95,13 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
     final asyncState = ref.watch(studentNotifierProvider);
     final standardsAsync = ref.watch(standardsNotifierProvider);
     final standards = standardsAsync.valueOrNull ?? [];
+    final sectionsAsync =
+        ref.watch(studentSectionsProvider(_selectedStandard?.id));
+    final sections = sectionsAsync.valueOrNull ?? const <String>[];
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(
+      appBar: const AppAppBar(
         title: 'Students',
         showBack: true,
       ),
@@ -100,33 +121,153 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
           : null,
       body: Column(
         children: [
-          // Standard filter bar
+          // Standard filter dropdown
           if (standards.isNotEmpty)
             Container(
-              height: 52,
               color: AppColors.white,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.space16,
-                  vertical: AppDimensions.space8,
-                ),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.space16,
+                AppDimensions.space12,
+                AppDimensions.space16,
+                AppDimensions.space8,
+              ),
+              child: Column(
                 children: [
-                  _FilterChip(
-                    label: 'All',
-                    isSelected: _selectedStandard == null,
-                    onTap: () => _onStandardChanged(null),
-                  ),
-                  ...standards.map(
-                    (s) => Padding(
-                      padding:
-                          const EdgeInsets.only(left: AppDimensions.space8),
-                      child: _FilterChip(
-                        label: s.name,
-                        isSelected: _selectedStandard?.id == s.id,
-                        onTap: () => _onStandardChanged(s),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _selectedStandard?.id,
+                    isExpanded: true,
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusMedium),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.navyDeep,
+                    ),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.navyDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Filter by Class',
+                      labelStyle: AppTypography.labelMedium.copyWith(
+                        color: AppColors.grey600,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.space12,
+                        vertical: AppDimensions.space12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMedium),
+                        borderSide:
+                            const BorderSide(color: AppColors.surface200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMedium),
+                        borderSide: const BorderSide(
+                          color: AppColors.navyDeep,
+                          width: 1.4,
+                        ),
                       ),
                     ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(
+                          'All Classes',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.grey800,
+                          ),
+                        ),
+                      ),
+                      ...standards.map(
+                        (s) => DropdownMenuItem<String?>(
+                          value: s.id,
+                          child: Text(s.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (standardId) {
+                      final selected =
+                          standards.cast<StandardModel?>().firstWhere(
+                                (s) => s?.id == standardId,
+                                orElse: () => null,
+                              );
+                      _onStandardChanged(selected);
+                    },
+                  ),
+                  const SizedBox(height: AppDimensions.space8),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _selectedSection,
+                    isExpanded: true,
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusMedium),
+                    icon: sectionsAsync.isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.navyDeep,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.navyDeep,
+                          ),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.navyDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Filter by Section',
+                      labelStyle: AppTypography.labelMedium.copyWith(
+                        color: AppColors.grey600,
+                      ),
+                      filled: true,
+                      fillColor: _selectedStandard == null
+                          ? AppColors.surface100
+                          : AppColors.surface50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.space12,
+                        vertical: AppDimensions.space12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMedium),
+                        borderSide:
+                            const BorderSide(color: AppColors.surface200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMedium),
+                        borderSide: const BorderSide(
+                          color: AppColors.navyDeep,
+                          width: 1.4,
+                        ),
+                      ),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(
+                          'All Sections',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.grey800,
+                          ),
+                        ),
+                      ),
+                      ...sections.map(
+                        (section) => DropdownMenuItem<String?>(
+                          value: section,
+                          child: Text('Section $section'),
+                        ),
+                      ),
+                    ],
+                    onChanged:
+                        _selectedStandard == null ? null : _onSectionChanged,
                   ),
                 ],
               ),
@@ -209,43 +350,6 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space12,
-          vertical: AppDimensions.space4,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.navyDeep : AppColors.surface100,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: isSelected ? AppColors.white : AppColors.grey800,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
       ),
     );
   }

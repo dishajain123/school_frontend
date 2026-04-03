@@ -16,7 +16,7 @@ class SmsApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'SMS — School Management',
+      title: 'EduNest — Smart School Platform',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: router,

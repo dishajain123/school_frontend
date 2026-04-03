@@ -41,6 +41,9 @@ class TeacherRepository {
 
   Future<TeacherListResult> list({
     String? academicYearId,
+    String? standardId,
+    String? subjectId,
+    String? subjectName,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -50,6 +53,15 @@ class TeacherRepository {
     };
     if (academicYearId != null) {
       params['academic_year_id'] = academicYearId;
+    }
+    if (standardId != null) {
+      params['standard_id'] = standardId;
+    }
+    if (subjectId != null) {
+      params['subject_id'] = subjectId;
+    }
+    if (subjectName != null && subjectName.trim().isNotEmpty) {
+      params['subject_name'] = subjectName.trim();
     }
 
     final response = await _dio.get(
@@ -69,7 +81,8 @@ class TeacherRepository {
     return TeacherModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<TeacherModel> update(String teacherId, Map<String, dynamic> payload) async {
+  Future<TeacherModel> update(
+      String teacherId, Map<String, dynamic> payload) async {
     final response = await _dio.patch(
       ApiConstants.teacherById(teacherId),
       data: payload,
@@ -80,27 +93,83 @@ class TeacherRepository {
 
 /// Repository for teacher's own class-subject assignments.
 /// Used by MarkAttendanceScreen to populate class and subject dropdowns.
-/// Endpoint assumed: GET /api/v1/teacher-class-subjects/mine
+/// Endpoint: GET /teacher-assignments/mine
 class TeacherClassSubjectRepository {
   const TeacherClassSubjectRepository(this._dio);
   final Dio _dio;
 
+  List<TeacherClassSubjectModel> _parseList(dynamic data) {
+    final List<dynamic> raw = data is List ? data : (data['items'] as List);
+    return raw
+        .map(
+          (e) => TeacherClassSubjectModel.fromJson(e as Map<String, dynamic>),
+        )
+        .toList();
+  }
+
   Future<List<TeacherClassSubjectModel>> getMyAssignments({
     String? academicYearId,
   }) async {
+    try {
+      final response = await _dio.get(
+        '/teacher-assignments/mine',
+        queryParameters: {
+          if (academicYearId != null) 'academic_year_id': academicYearId,
+        },
+      );
+      return _parseList(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+      // Backward compatibility: some local servers may still expose the
+      // older teacher-class-subjects route.
+      final fallback = await _dio.get(
+        '/teacher-class-subjects/mine',
+        queryParameters: {
+          if (academicYearId != null) 'academic_year_id': academicYearId,
+        },
+      );
+      return _parseList(fallback.data);
+    }
+  }
+
+  Future<List<TeacherClassSubjectModel>> listByTeacher({
+    required String teacherId,
+    String? academicYearId,
+  }) async {
     final response = await _dio.get(
-      '/api/v1/teacher-class-subjects/mine',
+      ApiConstants.teacherAssignments,
       queryParameters: {
+        'teacher_id': teacherId,
         if (academicYearId != null) 'academic_year_id': academicYearId,
       },
     );
-    final data = response.data;
-    // Support both direct list and paginated wrapper { items: [...] }
-    final List<dynamic> raw = data is List ? data : (data['items'] as List);
-    return raw
-        .map((e) =>
-            TeacherClassSubjectModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _parseList(response.data);
+  }
+
+  Future<TeacherClassSubjectModel> createAssignment({
+    required String teacherId,
+    required String standardId,
+    required String section,
+    required String subjectId,
+    required String academicYearId,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.teacherAssignments,
+      data: {
+        'teacher_id': teacherId,
+        'standard_id': standardId,
+        'section': section,
+        'subject_id': subjectId,
+        'academic_year_id': academicYearId,
+      },
+    );
+    return TeacherClassSubjectModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> deleteAssignment(String assignmentId) async {
+    await _dio.delete(ApiConstants.teacherAssignmentById(assignmentId));
   }
 }
 

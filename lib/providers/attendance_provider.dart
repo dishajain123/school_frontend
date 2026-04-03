@@ -6,19 +6,24 @@ import '../data/models/attendance/attendance_record_input.dart';
 import '../data/models/attendance/attendance_snapshot.dart';
 import '../data/models/attendance/below_threshold.dart';
 import '../data/models/attendance/mark_attendance_request.dart';
+import '../data/models/auth/current_user.dart';
 import '../data/models/student/student_model.dart';
 import '../data/models/teacher/teacher_class_subject_model.dart';
 import '../data/repositories/attendance_repository.dart';
 import '../data/repositories/student_repository.dart';
 import '../data/repositories/teacher_repository.dart';
+import 'auth_provider.dart';
 
 typedef AttendanceListParams = ({
   String? studentId,
   String? standardId,
+  String? section,
+  String? academicYearId,
   String? date,
   int? month,
   int? year,
   String? subjectId,
+  int? lectureNumber,
 });
 
 typedef StudentAnalyticsParams = ({
@@ -48,7 +53,6 @@ typedef StudentsForAttendanceParams = ({
 final myTeacherAssignmentsProvider =
     FutureProvider.family<List<TeacherClassSubjectModel>, String?>(
   (ref, academicYearId) async {
-    if (academicYearId == null) return [];
     final repo = ref.read(teacherClassSubjectRepositoryProvider);
     return repo.getMyAssignments(academicYearId: academicYearId);
   },
@@ -65,21 +69,38 @@ final studentsForAttendanceProvider =
       page: 1,
       pageSize: 200,
     );
-    return result.items;
+    final items = [...result.items];
+    int rollOrder(StudentModel s) {
+      final raw = s.rollNumber?.trim() ?? '';
+      final match = RegExp(r'\d+').firstMatch(raw);
+      return int.tryParse(match?.group(0) ?? '') ?? 999999;
+    }
+
+    items.sort((a, b) {
+      final byRoll = rollOrder(a).compareTo(rollOrder(b));
+      if (byRoll != 0) return byRoll;
+      return a.admissionNumber.toLowerCase().compareTo(
+            b.admissionNumber.toLowerCase(),
+          );
+    });
+    return items;
   },
 );
 
-final attendanceListProvider =
-    FutureProvider.family<({List<AttendanceModel> items, int total}), AttendanceListParams>(
+final attendanceListProvider = FutureProvider.family<
+    ({List<AttendanceModel> items, int total}), AttendanceListParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return repo.listAttendance(
       studentId: params.studentId,
       standardId: params.standardId,
+      section: params.section,
+      academicYearId: params.academicYearId,
       date: params.date,
       month: params.month,
       year: params.year,
       subjectId: params.subjectId,
+      lectureNumber: params.lectureNumber,
     );
   },
 );
@@ -126,6 +147,7 @@ class MarkAttendanceFormState {
     this.selectedAcademicYearId,
     this.selectedAssignment,
     this.selectedSubjectId,
+    this.selectedLectureNumber = 1,
     this.attendanceMap = const {},
     this.isSubmitting = false,
     this.submitError,
@@ -135,6 +157,7 @@ class MarkAttendanceFormState {
   final String? selectedAcademicYearId;
   final TeacherClassSubjectModel? selectedAssignment;
   final String? selectedSubjectId;
+  final int selectedLectureNumber;
   final Map<String, AttendanceStatus> attendanceMap;
   final bool isSubmitting;
   final String? submitError;
@@ -144,6 +167,7 @@ class MarkAttendanceFormState {
     String? selectedAcademicYearId,
     TeacherClassSubjectModel? selectedAssignment,
     String? selectedSubjectId,
+    int? selectedLectureNumber,
     Map<String, AttendanceStatus>? attendanceMap,
     bool? isSubmitting,
     String? submitError,
@@ -155,6 +179,8 @@ class MarkAttendanceFormState {
           selectedAcademicYearId ?? this.selectedAcademicYearId,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
       selectedSubjectId: selectedSubjectId ?? this.selectedSubjectId,
+      selectedLectureNumber:
+          selectedLectureNumber ?? this.selectedLectureNumber,
       attendanceMap: attendanceMap ?? this.attendanceMap,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitError: clearSubmitError ? null : (submitError ?? this.submitError),
@@ -196,6 +222,14 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
     );
   }
 
+  void setLectureNumber(int lectureNumber) {
+    state = state.copyWith(
+      selectedLectureNumber: lectureNumber,
+      attendanceMap: const {},
+      clearSubmitError: true,
+    );
+  }
+
   void initStudents(List<String> ids) {
     final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
     for (final id in ids) {
@@ -215,6 +249,14 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
   void setStudentStatus(String studentId, AttendanceStatus status) {
     final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
     next[studentId] = status;
+    state = state.copyWith(attendanceMap: next, clearSubmitError: true);
+  }
+
+  void markAll(AttendanceStatus status, List<String> studentIds) {
+    final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
+    for (final id in studentIds) {
+      next[id] = status;
+    }
     state = state.copyWith(attendanceMap: next, clearSubmitError: true);
   }
 
@@ -243,8 +285,10 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
 
       final request = MarkAttendanceRequest(
         standardId: assignment.standardId,
+        section: assignment.section,
         subjectId: subjectId,
         academicYearId: academicYearId,
+        lectureNumber: state.selectedLectureNumber,
         date: state.date,
         records: records,
       );
@@ -265,3 +309,13 @@ final markAttendanceProvider =
     NotifierProvider<MarkAttendanceNotifier, MarkAttendanceFormState>(
   MarkAttendanceNotifier.new,
 );
+
+final currentStudentIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user?.role != UserRole.student) return null;
+
+  final repo = ref.read(studentRepositoryProvider);
+  final result = await repo.list(page: 1, pageSize: 1);
+  if (result.items.isEmpty) return null;
+  return result.items.first.id;
+});

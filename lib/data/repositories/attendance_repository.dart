@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../models/attendance/attendance_model.dart';
 import '../models/attendance/mark_attendance_request.dart';
@@ -16,7 +17,7 @@ class AttendanceRepository {
   Future<MarkAttendanceResponse> markAttendance(
       MarkAttendanceRequest request) async {
     final response = await _dio.post(
-      '/api/v1/attendance',
+      ApiConstants.attendance,
       data: request.toJson(),
     );
     return MarkAttendanceResponse.fromJson(
@@ -28,20 +29,26 @@ class AttendanceRepository {
   Future<({List<AttendanceModel> items, int total})> listAttendance({
     String? studentId,
     String? standardId,
+    String? section,
+    String? academicYearId,
     String? date,
     int? month,
     int? year,
     String? subjectId,
+    int? lectureNumber,
   }) async {
     final response = await _dio.get(
-      '/api/v1/attendance',
+      ApiConstants.attendance,
       queryParameters: {
         if (studentId != null) 'student_id': studentId,
         if (standardId != null) 'standard_id': standardId,
+        if (section != null) 'section': section,
+        if (academicYearId != null) 'academic_year_id': academicYearId,
         if (date != null) 'date': date,
         if (month != null) 'month': month,
         if (year != null) 'year': year,
         if (subjectId != null) 'subject_id': subjectId,
+        if (lectureNumber != null) 'lecture_number': lectureNumber,
       },
     );
     final data = response.data as Map<String, dynamic>;
@@ -59,7 +66,7 @@ class AttendanceRepository {
     int? year,
   }) async {
     final response = await _dio.get(
-      '/api/v1/attendance/analytics/student/$studentId',
+      ApiConstants.attendanceStudentAnalytics(studentId),
       queryParameters: {
         if (month != null) 'month': month,
         if (year != null) 'year': year,
@@ -77,8 +84,9 @@ class AttendanceRepository {
     required String date,
   }) async {
     final response = await _dio.get(
-      '/api/v1/attendance/analytics/class/$standardId',
+      ApiConstants.attendanceClassSnapshot(standardId),
       queryParameters: {
+        'standard_id': standardId,
         'academic_year_id': academicYearId,
         'date': date,
       },
@@ -95,7 +103,7 @@ class AttendanceRepository {
     double threshold = 75.0,
   }) async {
     final response = await _dio.get(
-      '/api/v1/attendance/analytics/below-threshold',
+      ApiConstants.attendanceBelowThreshold,
       queryParameters: {
         'standard_id': standardId,
         'academic_year_id': academicYearId,

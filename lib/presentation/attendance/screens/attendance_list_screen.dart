@@ -7,6 +7,7 @@ import '../../../data/models/attendance/attendance_model.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_provider.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_loading.dart';
@@ -32,20 +33,27 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   int _year = DateTime.now().year;
   String? _selectedSubjectId;
 
-  String? _resolveStudentId() {
-    if (widget.studentId != null) return widget.studentId;
-    final user = ref.read(currentUserProvider);
-    if (user == null) return null;
-    if (user.role == 'STUDENT') return user.id;
-    if (user.role == 'PARENT') {
-      return ref.read(selectedChildIdProvider);
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final studentId = _resolveStudentId();
+    final user = ref.watch(currentUserProvider);
+    final role = user?.role;
+    final studentIdFromArg = widget.studentId;
+    final selectedChildId = ref.watch(selectedChildIdProvider);
+    final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
+
+    final studentId = studentIdFromArg ??
+        (role == UserRole.parent
+            ? selectedChildId
+            : (role == UserRole.student
+                ? currentStudentIdAsync.valueOrNull
+                : null));
+
+    if (role == UserRole.student && currentStudentIdAsync.isLoading) {
+      return const AppScaffold(
+        appBar: AppAppBar(title: 'Attendance', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (studentId == null) {
       return const AppScaffold(
@@ -61,10 +69,13 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
     final params = (
       studentId: studentId,
       standardId: null,
+      section: null,
+      academicYearId: null,
       date: null,
       month: _month,
       year: _year,
       subjectId: _selectedSubjectId,
+      lectureNumber: null,
     );
 
     final attendanceAsync = ref.watch(attendanceListProvider(params));
@@ -108,11 +119,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
               records: records,
               month: _month,
               year: _year,
-              onMonthChanged: (month, year) =>
-                  setState(() {
-                    _month = month;
-                    _year = year;
-                  }),
+              onMonthChanged: (month, year) => setState(() {
+                _month = month;
+                _year = year;
+              }),
             ),
           ),
         ),
@@ -138,21 +148,18 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppDimensions.space16,
                         vertical: AppDimensions.space8),
-                    child: Text('Records',
-                        style: AppTypography.headlineSmall),
+                    child: Text('Records', style: AppTypography.headlineSmall),
                   );
                 }
                 final record = records[index - 1];
                 return _AttendanceRecordTile(
-                    record: record,
-                    isLast: index == records.length);
+                    record: record, isLast: index == records.length);
               },
               childCount: records.length + 1,
             ),
           ),
         const SliverPadding(
-            padding:
-                EdgeInsets.only(bottom: AppDimensions.space40)),
+            padding: EdgeInsets.only(bottom: AppDimensions.space40)),
       ],
     );
   }
@@ -162,12 +169,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
         records.where((r) => r.status == AttendanceStatus.present).length;
     final absent =
         records.where((r) => r.status == AttendanceStatus.absent).length;
-    final late =
-        records.where((r) => r.status == AttendanceStatus.late).length;
+    final late = records.where((r) => r.status == AttendanceStatus.late).length;
     final total = records.length;
-    final pct = total > 0
-        ? ((present + late) / total * 100).toStringAsFixed(1)
-        : '0.0';
+    final pct =
+        total > 0 ? ((present + late) / total * 100).toStringAsFixed(1) : '0.0';
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
@@ -179,9 +184,14 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _StatPill(label: 'Present', value: '$present', color: AppColors.successGreen),
-          _StatPill(label: 'Absent', value: '$absent', color: AppColors.errorRed),
-          _StatPill(label: 'Late', value: '$late', color: AppColors.warningAmber),
+          _StatPill(
+              label: 'Present',
+              value: '$present',
+              color: AppColors.successGreen),
+          _StatPill(
+              label: 'Absent', value: '$absent', color: AppColors.errorRed),
+          _StatPill(
+              label: 'Late', value: '$late', color: AppColors.warningAmber),
           _StatPill(
             label: 'Overall',
             value: '$pct%',
@@ -219,8 +229,8 @@ class _StatPill extends StatelessWidget {
           ),
         ),
         Text(label,
-            style: AppTypography.caption.copyWith(
-                color: Colors.white.withOpacity(0.7))),
+            style: AppTypography.caption
+                .copyWith(color: Colors.white.withValues(alpha: 0.7))),
       ],
     );
   }
@@ -270,8 +280,19 @@ class _AttendanceRecordTile extends StatelessWidget {
 
   String _formatDate(DateTime d) {
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]} ${d.year}';
   }
@@ -301,11 +322,14 @@ class _AttendanceRecordTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_formatDate(record.date),
-                  style: AppTypography.titleSmall),
+              Text(_formatDate(record.date), style: AppTypography.titleSmall),
               Text(record.subjectId,
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.grey400)),
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey400)),
+              Text(
+                'Lecture ${record.lectureNumber}${record.section.isNotEmpty ? ' • Sec ${record.section}' : ''}',
+                style: AppTypography.caption.copyWith(color: AppColors.grey400),
+              ),
             ],
           ),
           const Spacer(),
@@ -316,13 +340,12 @@ class _AttendanceRecordTile extends StatelessWidget {
                 vertical: AppDimensions.space4),
             decoration: BoxDecoration(
               color: _statusBg,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             child: Text(
               _statusLabel,
-              style: AppTypography.labelSmall.copyWith(
-                  color: _statusColor, fontWeight: FontWeight.w600),
+              style: AppTypography.labelSmall
+                  .copyWith(color: _statusColor, fontWeight: FontWeight.w600),
             ),
           ),
         ],

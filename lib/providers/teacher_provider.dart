@@ -1,7 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/auth/current_user.dart';
 import '../data/models/teacher/teacher_model.dart';
+import '../data/models/teacher/teacher_class_subject_model.dart';
+import '../data/repositories/student_repository.dart';
 import '../data/repositories/teacher_repository.dart';
+import 'academic_year_provider.dart';
+import 'auth_provider.dart';
+
+class TeacherFilters {
+  const TeacherFilters({
+    this.academicYearId,
+    this.standardId,
+    this.subjectId,
+    this.subjectName,
+  });
+
+  final String? academicYearId;
+  final String? standardId;
+  final String? subjectId;
+  final String? subjectName;
+}
 
 class TeacherState {
   const TeacherState({
@@ -11,7 +30,7 @@ class TeacherState {
     this.isLoading = false,
     this.isLoadingMore = false,
     this.error,
-    this.academicYearFilter,
+    this.filters = const TeacherFilters(),
   });
 
   final List<TeacherModel> items;
@@ -20,7 +39,7 @@ class TeacherState {
   final bool isLoading;
   final bool isLoadingMore;
   final String? error;
-  final String? academicYearFilter;
+  final TeacherFilters filters;
 
   bool get hasMore => items.length < total;
 
@@ -31,7 +50,7 @@ class TeacherState {
     bool? isLoading,
     bool? isLoadingMore,
     String? error,
-    String? academicYearFilter,
+    TeacherFilters? filters,
     bool clearError = false,
   }) {
     return TeacherState(
@@ -41,7 +60,7 @@ class TeacherState {
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: clearError ? null : (error ?? this.error),
-      academicYearFilter: academicYearFilter ?? this.academicYearFilter,
+      filters: filters ?? this.filters,
     );
   }
 }
@@ -70,14 +89,20 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
       final nextPage = refresh ? 1 : latestState.page;
 
       final result = await repo.list(
-        academicYearId: latestState.academicYearFilter,
+        academicYearId: latestState.filters.academicYearId,
+        standardId: latestState.filters.standardId,
+        subjectId: latestState.filters.subjectId,
+        subjectName: latestState.filters.subjectName,
         page: nextPage,
         pageSize: 20,
       );
 
-      final newItems = refresh
-          ? result.items
-          : [...(state.valueOrNull?.items ?? []), ...result.items];
+      final List<TeacherModel> newItems = refresh
+          ? List<TeacherModel>.from(result.items)
+          : <TeacherModel>[
+              ...latestState.items,
+              ...result.items,
+            ];
 
       state = AsyncData(
         TeacherState(
@@ -86,7 +111,7 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
           page: nextPage + 1,
           isLoading: false,
           isLoadingMore: false,
-          academicYearFilter: latestState.academicYearFilter,
+          filters: latestState.filters,
         ),
       );
     } catch (e) {
@@ -107,10 +132,10 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
     await load();
   }
 
-  Future<void> setFilter({String? academicYearId}) async {
+  Future<void> setFilter(TeacherFilters filters) async {
     final current = state.valueOrNull ?? const TeacherState();
     state = AsyncData(
-      current.copyWith(academicYearFilter: academicYearId),
+      current.copyWith(filters: filters),
     );
     await load(refresh: true);
   }
@@ -135,9 +160,7 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
     final current = state.valueOrNull ?? const TeacherState();
     state = AsyncData(
       current.copyWith(
-        items: current.items
-            .map((t) => t.id == id ? updated : t)
-            .toList(),
+        items: current.items.map((t) => t.id == id ? updated : t).toList(),
       ),
     );
     return updated;
@@ -151,9 +174,68 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
       return null;
     }
   }
+
+  Future<TeacherClassSubjectModel> createTeacherAssignment({
+    required String teacherId,
+    required String standardId,
+    required String section,
+    required String subjectId,
+    required String academicYearId,
+  }) async {
+    final repo = ref.read(teacherClassSubjectRepositoryProvider);
+    final created = await repo.createAssignment(
+      teacherId: teacherId,
+      standardId: standardId,
+      section: section,
+      subjectId: subjectId,
+      academicYearId: academicYearId,
+    );
+    ref.invalidate(teacherAssignmentsByTeacherProvider(teacherId));
+    return created;
+  }
+
+  Future<void> deleteTeacherAssignment({
+    required String assignmentId,
+    required String teacherId,
+  }) async {
+    final repo = ref.read(teacherClassSubjectRepositoryProvider);
+    await repo.deleteAssignment(assignmentId);
+    ref.invalidate(teacherAssignmentsByTeacherProvider(teacherId));
+  }
 }
 
 final teacherNotifierProvider =
     AsyncNotifierProvider<TeacherNotifier, TeacherState>(
   () => TeacherNotifier(),
 );
+
+final teacherAssignmentsByTeacherProvider =
+    FutureProvider.family<List<TeacherClassSubjectModel>, String>(
+  (ref, teacherId) async {
+    final user = ref.watch(currentUserProvider);
+    final activeYearId = ref.watch(activeYearProvider)?.id;
+    final repo = ref.read(teacherClassSubjectRepositoryProvider);
+
+    // Principals/superadmins should browse the selected teacher;
+    // teachers can still see only their own assignments through /mine.
+    if (user?.role == UserRole.teacher) {
+      return repo.getMyAssignments(academicYearId: activeYearId);
+    }
+    return repo.listByTeacher(
+      teacherId: teacherId,
+      academicYearId: activeYearId,
+    );
+  },
+);
+
+final sectionsByStandardProvider =
+    FutureProvider.family<List<String>, String?>((ref, standardId) async {
+  if (standardId == null || standardId.isEmpty) return const <String>[];
+  final activeYearId = ref.watch(activeYearProvider)?.id;
+  final repo = ref.read(studentRepositoryProvider);
+  final sections = await repo.listSections(
+    standardId: standardId,
+    academicYearId: activeYearId,
+  );
+  return sections.where((s) => s.trim().isNotEmpty).toList();
+});

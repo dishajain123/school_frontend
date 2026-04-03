@@ -25,13 +25,10 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell>
-    with TickerProviderStateMixin {
+class _MainShellState extends ConsumerState<MainShell> {
   late final List<ShellTabItem> _tabs;
   late int _currentIndex;
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
-  late final List<bool> _tabInitialized;
-  late AnimationController _indicatorController;
 
   @override
   void initState() {
@@ -40,24 +37,11 @@ class _MainShellState extends ConsumerState<MainShell>
     _currentIndex = 0;
     _navigatorKeys =
         List.generate(_tabs.length, (_) => GlobalKey<NavigatorState>());
-    _tabInitialized = List.filled(_tabs.length, false);
-    _tabInitialized[0] = true;
-
-    _indicatorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )..forward();
 
     // Load notification count on shell init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationNotifierProvider.notifier).loadUnreadCount();
     });
-  }
-
-  @override
-  void dispose() {
-    _indicatorController.dispose();
-    super.dispose();
   }
 
   void _onTabTapped(int index, BuildContext context) {
@@ -69,14 +53,10 @@ class _MainShellState extends ConsumerState<MainShell>
     HapticFeedback.selectionClick();
 
     setState(() {
-      _tabInitialized[index] = true;
       _currentIndex = index;
     });
 
     ref.read(shellTabIndexProvider.notifier).state = index;
-    _indicatorController
-      ..reset()
-      ..forward();
 
     context.go(_tabs[index].rootPath);
   }
@@ -89,7 +69,6 @@ class _MainShellState extends ConsumerState<MainShell>
       bottomNavigationBar: _BottomNav(
         tabs: _tabs,
         currentIndex: _currentIndex,
-        indicatorController: _indicatorController,
         onTabTapped: (i) => _onTabTapped(i, context),
       ),
     );
@@ -100,13 +79,11 @@ class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.tabs,
     required this.currentIndex,
-    required this.indicatorController,
     required this.onTabTapped,
   });
 
   final List<ShellTabItem> tabs;
   final int currentIndex;
-  final AnimationController indicatorController;
   final ValueChanged<int> onTabTapped;
 
   @override
@@ -126,86 +103,35 @@ class _BottomNav extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: AppDimensions.bottomNavHeight,
-          child: Row(
-            children: List.generate(tabs.length, (i) {
-              return Expanded(
-                child: _NavItem(
-                  tab: tabs[i],
-                  isSelected: i == currentIndex,
-                  indicatorController: indicatorController,
-                  onTap: () => onTabTapped(i),
-                ),
-              );
-            }),
+          child: BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: onTabTapped,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.white,
+            elevation: 0,
+            selectedItemColor: AppColors.navyDeep,
+            unselectedItemColor: AppColors.grey400,
+            selectedFontSize: 10,
+            unselectedFontSize: 10,
+            selectedLabelStyle: AppTypography.labelSmall.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+            unselectedLabelStyle: AppTypography.labelSmall.copyWith(
+              fontWeight: FontWeight.w400,
+              fontSize: 10,
+            ),
+            items: tabs
+                .map(
+                  (tab) => BottomNavigationBarItem(
+                    icon: Icon(tab.icon, size: AppDimensions.iconSM),
+                    activeIcon:
+                        Icon(tab.activeIcon, size: AppDimensions.iconSM),
+                    label: tab.label,
+                  ),
+                )
+                .toList(),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.tab,
-    required this.isSelected,
-    required this.indicatorController,
-    required this.onTap,
-  });
-
-  final ShellTabItem tab;
-  final bool isSelected;
-  final AnimationController indicatorController;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: AppDimensions.space8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              width: isSelected ? 20 : 0,
-              height: 3,
-              margin: const EdgeInsets.only(bottom: AppDimensions.space4),
-              decoration: BoxDecoration(
-                color: AppColors.goldPrimary,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusFull),
-              ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                isSelected ? tab.activeIcon : tab.icon,
-                key: ValueKey(isSelected),
-                size: AppDimensions.iconMD,
-                color:
-                    isSelected ? AppColors.navyDeep : AppColors.grey400,
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space4),
-            Text(
-              tab.label,
-              style: AppTypography.labelSmall.copyWith(
-                color:
-                    isSelected ? AppColors.navyDeep : AppColors.grey400,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.w400,
-                fontSize: 10,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ],
         ),
       ),
     );

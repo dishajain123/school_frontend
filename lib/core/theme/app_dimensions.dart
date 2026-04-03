@@ -83,7 +83,7 @@ abstract final class AppDimensions {
   static const double buttonHeightXs = 32.0;
   static const double inputHeight = 52.0;
   static const double appBarHeight = 56.0;
-  static const double bottomNavHeight = 64.0;
+  static const double bottomNavHeight = 76.0;
   static const double filterBarHeight = 52.0;
   static const double chipHeight = 28.0;
   static const double dragHandleHeight = 4.0;
@@ -97,10 +97,10 @@ abstract final class AppDimensions {
   static const double listTileDividerIndent = 56.0;
 
   // ── Avatar Sizes ──────────────────────────────────────────────────────────
-  static const double avatarSm = 32.0;   // compact lists
-  static const double avatarMd = 40.0;   // standard list tile
-  static const double avatarLg = 56.0;   // detail header
-  static const double avatarXl = 80.0;   // profile screen
+  static const double avatarSm = 32.0; // compact lists
+  static const double avatarMd = 40.0; // standard list tile
+  static const double avatarLg = 56.0; // detail header
+  static const double avatarXl = 80.0; // profile screen
 
   // ── Icon Sizes ────────────────────────────────────────────────────────────
   /// 16px — inside chips, small badges

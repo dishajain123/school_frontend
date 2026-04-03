@@ -87,9 +87,12 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
         pageSize: 20,
       );
 
-      final newItems = refresh
-          ? result.items
-          : [...(state.valueOrNull?.items ?? []), ...result.items];
+      final List<NotificationModel> newItems = refresh
+          ? List<NotificationModel>.from(result.items)
+          : <NotificationModel>[
+              ...latestState.items,
+              ...result.items,
+            ];
 
       state = AsyncData(
         NotificationState(
@@ -148,13 +151,13 @@ class NotificationNotifier extends AsyncNotifier<NotificationState> {
         if (ids.contains(n.id)) return n.copyWith(isRead: true);
         return n;
       }).toList();
-      final newlyRead = current.items
-          .where((n) => ids.contains(n.id) && !n.isRead)
-          .length;
+      final newlyRead =
+          current.items.where((n) => ids.contains(n.id) && !n.isRead).length;
       state = AsyncData(
         current.copyWith(
           items: updatedItems,
-          unreadCount: (current.unreadCount - newlyRead).clamp(0, current.total),
+          unreadCount:
+              (current.unreadCount - newlyRead).clamp(0, current.total),
         ),
       );
     } catch (_) {}

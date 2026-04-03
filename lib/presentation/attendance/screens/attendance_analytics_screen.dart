@@ -6,6 +6,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_provider.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_loading.dart';
@@ -32,23 +33,26 @@ class _AttendanceAnalyticsScreenState
   int? _selectedMonth;
   int? _selectedYear;
 
-  static const List<String> _monthNames = [
-    'All', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  String? _resolveStudentId() {
-    if (widget.studentId != null) return widget.studentId;
-    final user = ref.read(currentUserProvider);
-    if (user == null) return null;
-    if (user.role == 'STUDENT') return user.id;
-    if (user.role == 'PARENT') return ref.read(selectedChildIdProvider);
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final studentId = _resolveStudentId();
+    final user = ref.watch(currentUserProvider);
+    final role = user?.role;
+    final selectedChildId = ref.watch(selectedChildIdProvider);
+    final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
+
+    final studentId = widget.studentId ??
+        (role == UserRole.parent
+            ? selectedChildId
+            : (role == UserRole.student
+                ? currentStudentIdAsync.valueOrNull
+                : null));
+
+    if (role == UserRole.student && currentStudentIdAsync.isLoading) {
+      return const AppScaffold(
+        appBar: AppAppBar(title: 'Analytics', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (studentId == null) {
       return const AppScaffold(
@@ -92,7 +96,8 @@ class _AttendanceAnalyticsScreenState
                     return const AppEmptyState(
                       icon: Icons.bar_chart_outlined,
                       title: 'No analytics data',
-                      subtitle: 'Attendance analytics will appear here once recorded.',
+                      subtitle:
+                          'Attendance analytics will appear here once recorded.',
                     );
                   }
                   return CustomScrollView(
@@ -146,8 +151,8 @@ class _AttendanceAnalyticsScreenState
                         ),
                       ),
                       const SliverPadding(
-                          padding: EdgeInsets.only(
-                              bottom: AppDimensions.space40)),
+                          padding:
+                              EdgeInsets.only(bottom: AppDimensions.space40)),
                     ],
                   );
                 },
@@ -178,8 +183,19 @@ class _MonthFilterBar extends StatelessWidget {
   final void Function(int? month, int? year) onSelected;
 
   static const _months = [
-    'All', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'All',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -206,16 +222,13 @@ class _MonthFilterBar extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.only(right: AppDimensions.space8),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.space12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.navyDeep : AppColors.surface50,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusFull),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 border: Border.all(
-                  color: isSelected
-                      ? AppColors.navyDeep
-                      : AppColors.surface200,
+                  color: isSelected ? AppColors.navyDeep : AppColors.surface200,
                 ),
               ),
               child: Center(
@@ -256,7 +269,7 @@ class _OverallCard extends StatelessWidget {
               children: [
                 Text('Overall Attendance',
                     style: AppTypography.labelMedium
-                        .copyWith(color: Colors.white.withOpacity(0.7))),
+                        .copyWith(color: Colors.white.withValues(alpha: 0.7))),
                 const SizedBox(height: AppDimensions.space8),
                 Text(
                   '${percentage.toStringAsFixed(1)}%',

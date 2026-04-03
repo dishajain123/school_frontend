@@ -11,8 +11,10 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/attendance_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_avatar.dart';
 import '../../common/widgets/app_button.dart';
@@ -86,8 +88,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 16),
               AppButton.secondary(
                 label: 'Retry',
-                onTap: () =>
-                    ref.read(userNotifierProvider.notifier).load(),
+                onTap: () => ref.read(userNotifierProvider.notifier).load(),
                 fullWidth: false,
               ),
             ],
@@ -96,6 +97,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         data: (user) {
           final displayUser = user;
           final name = authUser?.email?.split('@').first ?? 'User';
+          final isTeacher = authUser?.role == UserRole.teacher;
+          final myAssignmentsAsync = isTeacher
+              ? ref.watch(myTeacherAssignmentsProvider(null))
+              : const AsyncData<List<TeacherClassSubjectModel>>([]);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
@@ -119,8 +124,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.navyDeep,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppColors.white, width: 2),
+                          border: Border.all(color: AppColors.white, width: 2),
                         ),
                         child: const Icon(Icons.camera_alt_outlined,
                             size: 16, color: AppColors.white),
@@ -145,8 +149,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         horizontal: AppDimensions.space12,
                         vertical: AppDimensions.space4),
                     decoration: BoxDecoration(
-                      color:
-                          AppColors.navyLight.withValues(alpha: 0.12),
+                      color: AppColors.navyLight.withValues(alpha: 0.12),
                       borderRadius:
                           BorderRadius.circular(AppDimensions.radiusFull),
                     ),
@@ -176,21 +179,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ProfileInfoRow(
                         icon: Icons.email_outlined,
                         label: 'Email',
-                        value: displayUser?.email ??
-                            authUser?.email ??
-                            '—',
+                        value: displayUser?.email ?? authUser?.email ?? '—',
                       ),
-                      const Divider(
-                          height: 1, color: AppColors.surface100),
+                      const Divider(height: 1, color: AppColors.surface100),
                       ProfileInfoRow(
                         icon: Icons.phone_outlined,
                         label: 'Phone',
-                        value: displayUser?.phone ??
-                            authUser?.phone ??
-                            '—',
+                        value: displayUser?.phone ?? authUser?.phone ?? '—',
                       ),
-                      const Divider(
-                          height: 1, color: AppColors.surface100),
+                      const Divider(height: 1, color: AppColors.surface100),
                       ProfileInfoRow(
                         icon: Icons.business_outlined,
                         label: 'School ID',
@@ -199,6 +196,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                 ),
+
+                if (isTeacher) ...[
+                  const SizedBox(height: AppDimensions.space16),
+                  _TeacherAssignmentsCard(assignmentsAsync: myAssignmentsAsync),
+                ],
 
                 const SizedBox(height: AppDimensions.space16),
 
@@ -216,14 +218,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         leading: const Icon(Icons.lock_outlined,
                             color: AppColors.grey600),
                         title: Text('Change Password',
-                            style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.grey800)),
-                        trailing: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: AppColors.grey400),
-                        onTap: () =>
-                            context.push(RouteNames.changePassword),
+                            style: AppTypography.bodyMedium
+                                .copyWith(color: AppColors.grey800)),
+                        trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                            size: 14, color: AppColors.grey400),
+                        onTap: () => context.push(RouteNames.changePassword),
                       ),
                     ],
                   ),
@@ -263,5 +262,155 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       default:
         return role;
     }
+  }
+}
+
+class _TeacherAssignmentsCard extends StatelessWidget {
+  const _TeacherAssignmentsCard({required this.assignmentsAsync});
+
+  final AsyncValue<List<TeacherClassSubjectModel>> assignmentsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      padding: const EdgeInsets.all(AppDimensions.space16),
+      child: assignmentsAsync.when(
+        loading: () => const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppDimensions.space12),
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        error: (_, __) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Teaching Assignments',
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.grey800,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space8),
+            Text(
+              'Unable to load assigned classes and subjects.',
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+            ),
+          ],
+        ),
+        data: (assignments) {
+          final subjectSet = <String>{};
+          final classSectionSet = <String>{};
+          for (final a in assignments) {
+            final subjectLabel = a.subjectName ?? a.subjectId;
+            if (subjectLabel.isNotEmpty) subjectSet.add(subjectLabel);
+
+            final classLabel = a.standardName ?? a.standardId;
+            final section = a.section.trim();
+            final combined =
+                section.isEmpty ? classLabel : '$classLabel - $section';
+            if (combined.isNotEmpty) classSectionSet.add(combined);
+          }
+
+          final subjects = subjectSet.toList()..sort();
+          final classSections = classSectionSet.toList()..sort();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Teaching Assignments',
+                style: AppTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.grey800,
+                ),
+              ),
+              const SizedBox(height: AppDimensions.space12),
+              _AssignmentChipGroup(
+                label: 'Subjects',
+                values: subjects,
+                emptyLabel: 'No subjects assigned',
+              ),
+              const SizedBox(height: AppDimensions.space12),
+              _AssignmentChipGroup(
+                label: 'Classes & Sections',
+                values: classSections,
+                emptyLabel: 'No classes assigned',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AssignmentChipGroup extends StatelessWidget {
+  const _AssignmentChipGroup({
+    required this.label,
+    required this.values,
+    required this.emptyLabel,
+  });
+
+  final String label;
+  final List<String> values;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.grey600,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppDimensions.space8),
+        if (values.isEmpty)
+          Text(
+            emptyLabel,
+            style: AppTypography.bodySmall.copyWith(color: AppColors.grey400),
+          )
+        else
+          Wrap(
+            spacing: AppDimensions.space8,
+            runSpacing: AppDimensions.space8,
+            children: values
+                .map(
+                  (value) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.space12,
+                      vertical: AppDimensions.space6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.navyLight.withValues(alpha: 0.08),
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusFull),
+                      border: Border.all(
+                        color: AppColors.navyLight.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Text(
+                      value,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
   }
 }

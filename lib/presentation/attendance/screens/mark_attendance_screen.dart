@@ -8,7 +8,6 @@ import '../../../data/models/attendance/attendance_model.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/academic_year_provider.dart';
-import '../../../providers/student_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_button.dart';
@@ -37,9 +36,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   void _initActiveYear() {
     final activeYear = ref.read(activeYearProvider);
     if (activeYear != null) {
-      ref
-          .read(markAttendanceProvider.notifier)
-          .setAcademicYear(activeYear.id);
+      ref.read(markAttendanceProvider.notifier).setAcademicYear(activeYear.id);
     }
   }
 
@@ -134,6 +131,15 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                         .read(markAttendanceProvider.notifier)
                         .setSubjectId(subjectId),
                   ),
+                  const SizedBox(height: AppDimensions.space16),
+                  _SectionLabel(label: 'Lecture'),
+                  const SizedBox(height: AppDimensions.space8),
+                  _LectureDropdown(
+                    selectedLectureNumber: formState.selectedLectureNumber,
+                    onChanged: (value) => ref
+                        .read(markAttendanceProvider.notifier)
+                        .setLectureNumber(value),
+                  ),
                 ],
               ],
             ),
@@ -147,9 +153,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
               onStatusChanged: (studentId, status) => ref
                   .read(markAttendanceProvider.notifier)
                   .setStudentStatus(studentId, status),
-              onStudentsLoaded: (ids) => ref
-                  .read(markAttendanceProvider.notifier)
-                  .initStudents(ids),
+              onStudentsLoaded: (ids) =>
+                  ref.read(markAttendanceProvider.notifier).initStudents(ids),
               onExistingLoaded: (records) => ref
                   .read(markAttendanceProvider.notifier)
                   .preloadExisting(records),
@@ -201,8 +206,19 @@ class _DatePickerTile extends StatelessWidget {
 
   String _format(DateTime d) {
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]} ${d.year}';
   }
@@ -225,11 +241,10 @@ class _DatePickerTile extends StatelessWidget {
                 size: 18, color: AppColors.navyMedium),
             const SizedBox(width: AppDimensions.space8),
             Text(_format(date),
-                style: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.grey800)),
+                style:
+                    AppTypography.bodyLarge.copyWith(color: AppColors.grey800)),
             const Spacer(),
-            const Icon(Icons.arrow_drop_down,
-                color: AppColors.grey400),
+            const Icon(Icons.arrow_drop_down, color: AppColors.grey400),
           ],
         ),
       ),
@@ -265,19 +280,19 @@ class _ClassDropdown extends ConsumerWidget {
 
         if (classes.isEmpty) {
           return Text('No classes assigned',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey400));
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.grey400));
         }
 
         return DropdownButtonFormField<String>(
-          value: selectedAssignment != null
+          initialValue: selectedAssignment != null
               ? '${selectedAssignment!.standardId}_${selectedAssignment!.section}'
               : null,
           decoration: _inputDecoration('Select class'),
           items: classes
               .map((c) => DropdownMenuItem(
                     value: '${c.standardId}_${c.section}',
-                    child: Text(c.classLabel,
-                        style: AppTypography.bodyMedium),
+                    child: Text(c.classLabel, style: AppTypography.bodyMedium),
                   ))
               .toList(),
           onChanged: (val) {
@@ -330,17 +345,18 @@ class _SubjectDropdown extends ConsumerWidget {
 
         if (subjects.isEmpty) {
           return Text('No subjects found',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey400));
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.grey400));
         }
 
         return DropdownButtonFormField<String>(
-          value: selectedSubjectId,
+          initialValue: selectedSubjectId,
           decoration: _inputDecoration('Select subject'),
           items: subjects
               .map((s) => DropdownMenuItem(
                     value: s.subjectId,
-                    child: Text(s.subjectLabel,
-                        style: AppTypography.bodyMedium),
+                    child:
+                        Text(s.subjectLabel, style: AppTypography.bodyMedium),
                   ))
               .toList(),
           onChanged: onChanged,
@@ -354,8 +370,7 @@ class _SubjectDropdown extends ConsumerWidget {
 
 InputDecoration _inputDecoration(String hint) => InputDecoration(
       hintText: hint,
-      hintStyle:
-          AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
+      hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
       filled: true,
       fillColor: AppColors.surface50,
       contentPadding: const EdgeInsets.symmetric(
@@ -416,8 +431,11 @@ class _StudentList extends ConsumerWidget {
         '${formState.date.year}-${formState.date.month.toString().padLeft(2, '0')}-${formState.date.day.toString().padLeft(2, '0')}';
     final existingAsync = ref.watch(attendanceListProvider((
       standardId: assignment.standardId,
+      section: assignment.section,
+      academicYearId: formState.selectedAcademicYearId,
       date: existingDate,
       subjectId: formState.selectedSubjectId,
+      lectureNumber: formState.selectedLectureNumber,
       studentId: null,
       month: null,
       year: null,
@@ -455,6 +473,36 @@ class _StudentList extends ConsumerWidget {
               total: students.length,
               statusMap: formState.attendanceMap,
             ),
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.space16,
+                AppDimensions.space8,
+                AppDimensions.space16,
+                AppDimensions.space8,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppButton.secondary(
+                      label: 'Mark All Absent',
+                      onTap: () => ref
+                          .read(markAttendanceProvider.notifier)
+                          .markAll(AttendanceStatus.absent, studentIds),
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.space8),
+                  Expanded(
+                    child: AppButton.primary(
+                      label: 'Mark All Present',
+                      onTap: () => ref
+                          .read(markAttendanceProvider.notifier)
+                          .markAll(AttendanceStatus.present, studentIds),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // Student list
             Expanded(
               child: ListView.builder(
@@ -467,10 +515,10 @@ class _StudentList extends ConsumerWidget {
                     key: ValueKey(student.id),
                     studentId: student.id,
                     admissionNumber: student.admissionNumber,
+                    rollNumber: student.rollNumber,
                     section: student.section,
                     currentStatus: status,
-                    onStatusChanged: (s) =>
-                        onStatusChanged(student.id, s),
+                    onStatusChanged: (s) => onStatusChanged(student.id, s),
                     isLast: index == students.length - 1,
                   );
                 },
@@ -481,7 +529,7 @@ class _StudentList extends ConsumerWidget {
               color: Colors.white,
               padding: const EdgeInsets.all(AppDimensions.space16),
               child: AppButton.primary(
-                label: 'Submit Attendance (${students.length})',
+                label: 'Final Submit (${students.length})',
                 isLoading: formState.isSubmitting,
                 onTap: () => onSubmit(studentIds),
               ),
@@ -492,8 +540,45 @@ class _StudentList extends ConsumerWidget {
       loading: () => Expanded(child: Center(child: AppLoading.fullPage())),
       error: (e, _) => AppErrorState(
         message: e.toString(),
-        onRetry: () => ref.invalidate(studentsForAttendanceProvider),
+        onRetry: () => ref.invalidate(
+          studentsForAttendanceProvider((
+            standardId: assignment.standardId,
+            section: assignment.section,
+            academicYearId: formState.selectedAcademicYearId!,
+          )),
+        ),
       ),
+    );
+  }
+}
+
+class _LectureDropdown extends StatelessWidget {
+  const _LectureDropdown({
+    required this.selectedLectureNumber,
+    required this.onChanged,
+  });
+
+  final int selectedLectureNumber;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: selectedLectureNumber,
+      decoration: _inputDecoration('Select lecture'),
+      items: List.generate(
+        12,
+        (index) {
+          final lecture = index + 1;
+          return DropdownMenuItem<int>(
+            value: lecture,
+            child: Text('Lecture $lecture', style: AppTypography.bodyMedium),
+          );
+        },
+      ),
+      onChanged: (value) {
+        if (value != null) onChanged(value);
+      },
     );
   }
 }
@@ -579,12 +664,11 @@ class _SummaryChip extends StatelessWidget {
         children: [
           Text(
             '$count',
-            style: AppTypography.labelLarge.copyWith(
-                color: color, fontWeight: FontWeight.w700),
+            style: AppTypography.labelLarge
+                .copyWith(color: color, fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 4),
-          Text(label,
-              style: AppTypography.labelSmall.copyWith(color: color)),
+          Text(label, style: AppTypography.labelSmall.copyWith(color: color)),
         ],
       ),
     );

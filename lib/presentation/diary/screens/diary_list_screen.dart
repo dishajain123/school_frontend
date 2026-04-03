@@ -9,6 +9,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/attendance_provider.dart'; // myTeacherAssignmentsProvider
 import '../../../providers/auth_provider.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../providers/diary_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
@@ -98,9 +99,8 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
-    final isTeacher = currentUser?.role == 'TEACHER';
-    final canCreate =
-        currentUser?.hasPermission('diary:create') ?? false;
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final canCreate = currentUser?.hasPermission('diary:create') ?? false;
 
     // Load teacher assignments for subject filter + name resolution
     final activeYear = ref.watch(activeYearProvider);
@@ -157,8 +157,7 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
               selectedId: _selectedSubjectId,
               onSelected: (id) {
                 setState(() {
-                  _selectedSubjectId =
-                      _selectedSubjectId == id ? null : id;
+                  _selectedSubjectId = _selectedSubjectId == id ? null : id;
                 });
               },
             ),
@@ -169,14 +168,12 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
           Expanded(
             child: RefreshIndicator(
               color: AppColors.navyDeep,
-              onRefresh: () async =>
-                  ref.invalidate(diaryListProvider(_params)),
+              onRefresh: () async => ref.invalidate(diaryListProvider(_params)),
               child: diaryAsync.when(
                 loading: () => _DiaryShimmer(),
                 error: (e, _) => AppErrorState(
                   message: e.toString(),
-                  onRetry: () =>
-                      ref.invalidate(diaryListProvider(_params)),
+                  onRetry: () => ref.invalidate(diaryListProvider(_params)),
                 ),
                 data: (response) {
                   if (response.items.isEmpty) {
@@ -366,12 +363,8 @@ class _SubjectFilterBar extends StatelessWidget {
                 label: Text(
                   entry.value,
                   style: AppTypography.labelMedium.copyWith(
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.grey600,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w500,
+                    color: isSelected ? AppColors.white : AppColors.grey600,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
                 selected: isSelected,
@@ -381,9 +374,7 @@ class _SubjectFilterBar extends StatelessWidget {
                 checkmarkColor: AppColors.white,
                 showCheckmark: false,
                 side: BorderSide(
-                  color: isSelected
-                      ? AppColors.navyDeep
-                      : AppColors.surface200,
+                  color: isSelected ? AppColors.navyDeep : AppColors.surface200,
                 ),
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.space4),
