@@ -33,7 +33,11 @@ import '../../presentation/fees/screens/fee_dashboard_screen.dart';
 import '../../presentation/fees/screens/payment_history_screen.dart';
 import '../../presentation/fees/screens/record_payment_screen.dart';
 import '../../presentation/fees/screens/receipt_screen.dart';
+// FM23 — Chat
+import '../../presentation/chat/screens/conversation_list_screen.dart';
+import '../../presentation/chat/screens/chat_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
+import '../../data/models/chat/conversation_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
@@ -306,7 +310,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ── Parents (FM13) ─────────────────────────────────────────────
+          // ── Parents ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.parents,
             builder: (_, __) => const ParentListScreen(),
@@ -494,7 +498,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
 
           // ── Fees ───────────────────────────────────────────────────────
-          // -- FM21 Fee Management --
           GoRoute(
             path: RouteNames.feeDashboard,
             builder: (context, state) {
@@ -524,16 +527,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
 
-          // ── Chat ───────────────────────────────────────────────────────
+          // ── Chat (FM23) ────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.conversations,
-            builder: (_, __) =>
-                const PlaceholderScreen('Messages'),
+            builder: (_, __) => const ConversationListScreen(),
             routes: [
               GoRoute(
                 path: ':conversationId',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Chat', showBack: true),
+                builder: (context, state) {
+                  final conversationId =
+                      state.pathParameters['conversationId']!;
+                  final conversation = state.extra as ConversationModel?;
+                  return ChatScreen(
+                    conversationId: conversationId,
+                    conversation: conversation,
+                  );
+                },
               ),
             ],
           ),
