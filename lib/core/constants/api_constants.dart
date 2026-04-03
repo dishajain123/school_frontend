@@ -111,11 +111,14 @@ class ApiConstants {
       '/api/v1/results/report-card/$studentId';
 
   // ── Fees ──────────────────────────────────────────────────────────────────
-  static const String feeStructures = '/fees/structures';
-  static const String feeLedgerGenerate = '/fees/ledger/generate';
-  static const String feePayments = '/fees/payments';
-  static const String feeDashboard = '/fees';
-  static String feeReceiptUrl(String paymentId) => '/fees/payments/$paymentId/receipt';
+  static const String feeStructures = '/api/v1/fees/structures';
+  static const String feeLedgerGenerate = '/api/v1/fees/ledger/generate';
+  static const String feePayments = '/api/v1/fees/payments';
+  static const String feeDashboard = '/api/v1/fees';
+  static String feePaymentReceipt(String paymentId) =>
+      '/api/v1/fees/payments/$paymentId/receipt';
+  static String feeReceiptUrl(String paymentId) =>
+      '/api/v1/fees/payments/$paymentId/receipt';
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String notifications = '/notifications';

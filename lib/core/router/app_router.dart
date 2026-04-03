@@ -29,6 +29,10 @@ import '../../presentation/students/screens/create_student_screen.dart';
 import '../../presentation/parents/screens/parent_list_screen.dart';
 import '../../presentation/parents/screens/parent_detail_screen.dart';
 import '../../presentation/parents/screens/create_parent_screen.dart';
+import '../../presentation/fees/screens/fee_dashboard_screen.dart';
+import '../../presentation/fees/screens/payment_history_screen.dart';
+import '../../presentation/fees/screens/record_payment_screen.dart';
+import '../../presentation/fees/screens/receipt_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
@@ -490,29 +494,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
 
           // ── Fees ───────────────────────────────────────────────────────
+          // -- FM21 Fee Management --
           GoRoute(
             path: RouteNames.feeDashboard,
-            builder: (_, __) => const PlaceholderScreen('Fees'),
-            routes: [
-              GoRoute(
-                path: 'payments',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Payment History',
-                    showBack: true),
-              ),
-              GoRoute(
-                path: 'record',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Record Payment',
-                    showBack: true),
-              ),
-              GoRoute(
-                path: 'receipt/:id',
-                builder: (context, state) => PlaceholderScreen(
-                    'Receipt ${state.pathParameters['id']}',
-                    showBack: true),
-              ),
-            ],
+            builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              return FeeDashboardScreen(studentId: studentId);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.paymentHistory,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>? ?? {};
+              return PaymentHistoryScreen.fromExtras(extra);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.recordPayment,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>? ?? {};
+              return RecordPaymentScreen.fromExtras(extra);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.feeReceipt,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>? ?? {};
+              return ReceiptScreen.fromExtras(extra);
+            },
           ),
 
           // ── Chat ───────────────────────────────────────────────────────

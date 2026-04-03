@@ -66,8 +66,9 @@ class RouteNames {
   static const String reportCard = '/results/report-card';
 
   static const String feeDashboard = '/fees';
-  static const String paymentHistory = '/fees/payments';
-  static const String recordPayment = '/fees/record';
+  static const String paymentHistory = '/fees/payment-history';
+  static const String recordPayment = '/fees/record-payment';
+  static const String feeReceipt = '/fees/receipt';
   static const String receipt = '/fees/receipt/:id';
 
   static const String conversations = '/chat';
