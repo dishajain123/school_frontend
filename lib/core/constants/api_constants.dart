@@ -102,11 +102,13 @@ class ApiConstants {
   static String examScheduleEntryCancel(String entryId) => '/exam-schedule/entries/$entryId/cancel';
 
   // ── Results ───────────────────────────────────────────────────────────────
-  static const String resultExams = '/results/exams';
-  static const String resultEntries = '/results/entries';
-  static String resultExamPublish(String examId) => '/results/exams/$examId/publish';
-  static const String results = '/results';
-  static String reportCard(String studentId) => '/results/report-card/$studentId';
+  static const String resultsExams = '/api/v1/results/exams';
+  static const String resultsEntries = '/api/v1/results/entries';
+  static const String results = '/api/v1/results';
+  static String resultsExamPublish(String examId) =>
+      '/api/v1/results/exams/$examId/publish';
+  static String reportCard(String studentId) =>
+      '/api/v1/results/report-card/$studentId';
 
   // ── Fees ──────────────────────────────────────────────────────────────────
   static const String feeStructures = '/fees/structures';
@@ -162,3 +164,4 @@ class ApiConstants {
   static String complaintStatus(String id) => '/complaints/$id/status';
   static const String feedback = '/complaints/feedback';
 }
+
