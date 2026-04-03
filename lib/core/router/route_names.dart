@@ -115,6 +115,11 @@ class RouteNames {
   static String chatRoomPath(String conversationId) => '/chat/$conversationId';
   static String leaveDecisionPath(String id) => '/leave/$id/decision';
   static String albumDetailPath(String id) => '/gallery/$id';
+  static String behaviourLogsPath({String? studentId}) =>
+      studentId == null ? '/behaviour' : '/behaviour?student_id=$studentId';
+  static String createBehaviourLogPath({String? studentId}) => studentId == null
+      ? '/behaviour/create'
+      : '/behaviour/create?student_id=$studentId';
   static String complaintDetailPath(String id) => '/complaints/$id';
   static String schoolDetailPath(String id) => '/schools/$id';
 }

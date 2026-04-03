@@ -71,6 +71,11 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     return user?.hasPermission('student:promote') ?? false;
   }
 
+  bool get _canViewBehaviour {
+    final user = ref.read(currentUserProvider);
+    return user?.hasPermission('behaviour_log:read') ?? false;
+  }
+
   Future<void> _updatePromotionStatus(String status, String label) async {
     final confirmed = await AppDialog.confirm(
       context,
@@ -105,16 +110,16 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: AppAppBar(title: 'Student', showBack: true),
+        appBar: const AppAppBar(title: 'Student', showBack: true),
         body: AppLoading.listView(count: 5),
       );
     }
 
     if (_student == null) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: AppColors.surface50,
         appBar: AppAppBar(title: 'Student', showBack: true),
-        body: const Center(child: Text('Student not found.')),
+        body: Center(child: Text('Student not found.')),
       );
     }
 
@@ -146,7 +151,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () async {
                     final result = await context.push(
-                      RouteNames.studentDetailPath(student.id) + '/edit',
+                      '${RouteNames.studentDetailPath(student.id)}/edit',
                       extra: student,
                     );
                     if (result == true && mounted) _loadStudent();
@@ -171,7 +176,8 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: AppColors.avatarBackground(student.admissionNumber),
+                          color: AppColors.avatarBackground(
+                              student.admissionNumber),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: AppColors.white.withValues(alpha: 0.3),
@@ -204,8 +210,8 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.goldPrimary.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(
-                                AppDimensions.radiusFull),
+                            borderRadius:
+                                BorderRadius.circular(AppDimensions.radiusFull),
                           ),
                           child: Text(
                             '$standardName${student.section != null ? ' · Sec ${student.section}' : ''}',
@@ -228,7 +234,6 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: AppDimensions.space16),
-
                   _InfoSection(
                     title: 'Academic Details',
                     children: [
@@ -257,9 +262,17 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                       ),
                     ],
                   ),
-
+                  if (_canViewBehaviour) ...[
+                    const SizedBox(height: AppDimensions.space16),
+                    AppButton.secondary(
+                      label: 'View Behaviour Log',
+                      onTap: () => context.push(
+                        RouteNames.behaviourLogsPath(studentId: student.id),
+                      ),
+                      icon: Icons.fact_check_outlined,
+                    ),
+                  ],
                   const SizedBox(height: AppDimensions.space16),
-
                   _InfoSection(
                     title: 'Personal Details',
                     children: [
@@ -267,19 +280,17 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         _InfoRow(
                           icon: Icons.cake_outlined,
                           label: 'Date of Birth',
-                          value:
-                              DateFormatter.formatDate(student.dateOfBirth!),
+                          value: DateFormatter.formatDate(student.dateOfBirth!),
                         ),
                       if (student.admissionDate != null)
                         _InfoRow(
                           icon: Icons.calendar_today_outlined,
                           label: 'Admission Date',
-                          value: DateFormatter.formatDate(
-                              student.admissionDate!),
+                          value:
+                              DateFormatter.formatDate(student.admissionDate!),
                         ),
                     ],
                   ),
-
                   if (_canPromote) ...[
                     const SizedBox(height: AppDimensions.space16),
                     _InfoSection(
@@ -288,7 +299,8 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         _InfoRow(
                           icon: Icons.trending_up_rounded,
                           label: 'Status',
-                          value: student.isPromoted ? 'Promoted' : 'Not Promoted',
+                          value:
+                              student.isPromoted ? 'Promoted' : 'Not Promoted',
                           valueColor: student.isPromoted
                               ? AppColors.successGreen
                               : AppColors.grey600,
@@ -304,8 +316,8 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         label: 'Mark as Promoted',
                         onTap: _isPromotionLoading
                             ? null
-                            : () => _updatePromotionStatus(
-                                'PROMOTED', 'Promoted'),
+                            : () =>
+                                _updatePromotionStatus('PROMOTED', 'Promoted'),
                         isLoading: _isPromotionLoading,
                         icon: Icons.trending_up_rounded,
                       )
@@ -319,7 +331,6 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         isLoading: _isPromotionLoading,
                       ),
                   ],
-
                   const SizedBox(height: AppDimensions.space40),
                 ],
               ),
@@ -408,7 +419,8 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon,
-              size: AppDimensions.iconSM, color: iconColor ?? AppColors.grey400),
+              size: AppDimensions.iconSM,
+              color: iconColor ?? AppColors.grey400),
           const SizedBox(width: AppDimensions.space12),
           Expanded(
             child: Column(

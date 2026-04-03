@@ -41,9 +41,24 @@ import '../../presentation/leave/screens/leave_list_screen.dart';
 import '../../presentation/leave/screens/apply_leave_screen.dart';
 import '../../presentation/leave/screens/leave_balance_screen.dart';
 import '../../presentation/leave/screens/leave_decision_screen.dart';
+import '../../presentation/gallery/screens/album_list_screen.dart';
+import '../../presentation/gallery/screens/create_album_screen.dart';
+import '../../presentation/gallery/screens/album_detail_screen.dart';
+import '../../presentation/behaviour/screens/behaviour_log_list_screen.dart';
+import '../../presentation/behaviour/screens/create_behaviour_log_screen.dart';
+import '../../presentation/superadmin/screens/schools_list_screen.dart';
+import '../../presentation/superadmin/screens/create_school_screen.dart';
+import '../../presentation/superadmin/screens/school_detail_screen.dart';
+import '../../presentation/settings/screens/school_settings_screen.dart';
+import '../../presentation/complaints/screens/complaint_list_screen.dart';
+import '../../presentation/complaints/screens/create_complaint_screen.dart';
+import '../../presentation/complaints/screens/complaint_detail_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/chat/conversation_model.dart';
 import '../../data/models/leave/leave_model.dart';
+import '../../data/models/gallery/album_model.dart';
+import '../../data/models/complaint/complaint_model.dart';
+import '../../data/models/school/school_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
@@ -111,7 +126,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: true,
     refreshListenable: listenable,
-
     redirect: (context, state) {
       final authState = ref.read(authNotifierProvider);
       final location = state.matchedLocation;
@@ -138,7 +152,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
       return null;
     },
-
     routes: [
       GoRoute(
         path: RouteNames.splash,
@@ -171,7 +184,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-
       ShellRoute(
         builder: (context, state, child) {
           final user = ref.read(authNotifierProvider).currentUser;
@@ -221,8 +233,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     return const PlaceholderScreen('Announcement',
                         showBack: true);
                   }
-                  return AnnouncementDetailScreen(
-                      announcement: announcement);
+                  return AnnouncementDetailScreen(announcement: announcement);
                 },
               ),
             ],
@@ -350,26 +361,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Attendance ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.attendance,
-            builder: (_, __) =>
-                const PlaceholderScreen('Attendance'),
+            builder: (_, __) => const PlaceholderScreen('Attendance'),
             routes: [
               GoRoute(
                 path: 'mark',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Mark Attendance',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Mark Attendance', showBack: true),
               ),
               GoRoute(
                 path: 'snapshot',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Class Snapshot',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Class Snapshot', showBack: true),
               ),
               GoRoute(
                 path: 'below-threshold',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Below Threshold',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Below Threshold', showBack: true),
               ),
               GoRoute(
                 path: 'analytics/:studentId',
@@ -383,13 +390,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Assignments ────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.assignments,
-            builder: (_, __) =>
-                const PlaceholderScreen('Assignments'),
+            builder: (_, __) => const PlaceholderScreen('Assignments'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Assignment',
+                builder: (_, __) => const PlaceholderScreen('Create Assignment',
                     showBack: true),
               ),
               GoRoute(
@@ -400,9 +405,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'submissions',
-                    builder: (context, state) => const PlaceholderScreen(
-                        'Submissions',
-                        showBack: true),
+                    builder: (context, state) =>
+                        const PlaceholderScreen('Submissions', showBack: true),
                   ),
                 ],
               ),
@@ -412,14 +416,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Homework ───────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.homework,
-            builder: (_, __) =>
-                const PlaceholderScreen('Homework'),
+            builder: (_, __) => const PlaceholderScreen('Homework'),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Homework',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Create Homework', showBack: true),
               ),
             ],
           ),
@@ -441,14 +443,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Timetable ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.timetable,
-            builder: (_, __) =>
-                const PlaceholderScreen('Timetable'),
+            builder: (_, __) => const PlaceholderScreen('Timetable'),
             routes: [
               GoRoute(
                 path: 'upload',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Upload Timetable',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Upload Timetable', showBack: true),
               ),
             ],
           ),
@@ -456,8 +456,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Exam Schedule ──────────────────────────────────────────────
           GoRoute(
             path: RouteNames.examSchedules,
-            builder: (_, __) =>
-                const PlaceholderScreen('Exam Schedules'),
+            builder: (_, __) => const PlaceholderScreen('Exam Schedules'),
             routes: [
               GoRoute(
                 path: 'create',
@@ -485,20 +484,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Results ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.results,
-            builder: (_, __) =>
-                const PlaceholderScreen('Results'),
+            builder: (_, __) => const PlaceholderScreen('Results'),
             routes: [
               GoRoute(
                 path: 'enter',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Enter Results',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Enter Results', showBack: true),
               ),
               GoRoute(
                 path: 'report-card/:studentId',
                 builder: (context, state) =>
-                    const PlaceholderScreen('Report Card',
-                        showBack: true),
+                    const PlaceholderScreen('Report Card', showBack: true),
               ),
             ],
           ),
@@ -583,19 +579,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Gallery ────────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.galleryAlbums,
-            builder: (_, __) =>
-                const PlaceholderScreen('Gallery'),
+            builder: (_, __) => const AlbumListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Album',
-                    showBack: true),
+                builder: (_, __) => const CreateAlbumScreen(),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Album', showBack: true),
+                builder: (context, state) {
+                  final album = state.extra as AlbumModel?;
+                  return AlbumDetailScreen(
+                    albumId: state.pathParameters['id']!,
+                    initialAlbum: album,
+                  );
+                },
               ),
             ],
           ),
@@ -603,14 +601,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Documents ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.documents,
-            builder: (_, __) =>
-                const PlaceholderScreen('Documents'),
+            builder: (_, __) => const PlaceholderScreen('Documents'),
             routes: [
               GoRoute(
                 path: 'request',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Request Document',
-                    showBack: true),
+                builder: (_, __) =>
+                    const PlaceholderScreen('Request Document', showBack: true),
               ),
             ],
           ),
@@ -618,14 +614,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Behaviour ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.behaviourLogs,
-            builder: (_, __) =>
-                const PlaceholderScreen('Behaviour Logs'),
+            builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              return BehaviourLogListScreen(studentId: studentId);
+            },
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Log Behaviour',
-                    showBack: true),
+                builder: (context, state) {
+                  final studentId = state.uri.queryParameters['student_id'];
+                  return CreateBehaviourLogScreen(initialStudentId: studentId);
+                },
               ),
             ],
           ),
@@ -633,20 +632,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Complaints ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.complaints,
-            builder: (_, __) =>
-                const PlaceholderScreen('Complaints'),
+            builder: (_, __) => const ComplaintListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create Complaint',
-                    showBack: true),
+                builder: (_, __) => const CreateComplaintScreen(),
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) =>
-                    const PlaceholderScreen('Complaint',
-                        showBack: true),
+                builder: (context, state) {
+                  final complaint = state.extra as ComplaintModel?;
+                  return ComplaintDetailScreen(
+                    complaintId: state.pathParameters['id']!,
+                    initialComplaint: complaint,
+                  );
+                },
               ),
             ],
           ),
@@ -654,33 +654,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Schools (Superadmin) ───────────────────────────────────────
           GoRoute(
             path: RouteNames.schools,
-            builder: (_, __) =>
-                const PlaceholderScreen('Schools'),
+            builder: (_, __) => const SchoolsListScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const PlaceholderScreen(
-                    'Create School',
-                    showBack: true),
+                builder: (context, state) {
+                  final existing = state.extra as SchoolModel?;
+                  return CreateSchoolScreen(existingSchool: existing);
+                },
               ),
               GoRoute(
                 path: ':id',
-                builder: (context, state) =>
-                    const PlaceholderScreen('School',
-                        showBack: true),
+                builder: (context, state) {
+                  final school = state.extra as SchoolModel?;
+                  return SchoolDetailScreen(
+                    schoolId: state.pathParameters['id']!,
+                    initialSchool: school,
+                  );
+                },
               ),
             ],
           ),
 
           GoRoute(
             path: RouteNames.schoolSettings,
-            builder: (_, __) =>
-                const PlaceholderScreen('Settings'),
+            builder: (_, __) => const SchoolSettingsScreen(),
           ),
         ],
       ),
     ],
-
     errorBuilder: (context, state) => Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
@@ -706,8 +708,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const SizedBox(height: 8),
             Text(
               state.error?.toString() ?? 'Unknown error',
-              style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF637082)),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF637082)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
