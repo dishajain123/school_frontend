@@ -1,0 +1,112 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/network/dio_client.dart';
+import '../models/attendance/attendance_model.dart';
+import '../models/attendance/mark_attendance_request.dart';
+import '../models/attendance/attendance_analytics.dart';
+import '../models/attendance/attendance_snapshot.dart';
+import '../models/attendance/below_threshold.dart';
+
+class AttendanceRepository {
+  const AttendanceRepository(this._dio);
+  final Dio _dio;
+
+  // ── Mark Attendance ─────────────────────────────────────────────────────────
+
+  Future<MarkAttendanceResponse> markAttendance(
+      MarkAttendanceRequest request) async {
+    final response = await _dio.post(
+      '/api/v1/attendance',
+      data: request.toJson(),
+    );
+    return MarkAttendanceResponse.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  // ── List Attendance ─────────────────────────────────────────────────────────
+
+  Future<({List<AttendanceModel> items, int total})> listAttendance({
+    String? studentId,
+    String? standardId,
+    String? date,
+    int? month,
+    int? year,
+    String? subjectId,
+  }) async {
+    final response = await _dio.get(
+      '/api/v1/attendance',
+      queryParameters: {
+        if (studentId != null) 'student_id': studentId,
+        if (standardId != null) 'standard_id': standardId,
+        if (date != null) 'date': date,
+        if (month != null) 'month': month,
+        if (year != null) 'year': year,
+        if (subjectId != null) 'subject_id': subjectId,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final items = (data['items'] as List)
+        .map((e) => AttendanceModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return (items: items, total: data['total'] as int);
+  }
+
+  // ── Analytics: Student ──────────────────────────────────────────────────────
+
+  Future<StudentAttendanceAnalytics> getStudentAnalytics(
+    String studentId, {
+    int? month,
+    int? year,
+  }) async {
+    final response = await _dio.get(
+      '/api/v1/attendance/analytics/student/$studentId',
+      queryParameters: {
+        if (month != null) 'month': month,
+        if (year != null) 'year': year,
+      },
+    );
+    return StudentAttendanceAnalytics.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  // ── Analytics: Class Snapshot ───────────────────────────────────────────────
+
+  Future<ClassAttendanceSnapshot> getClassSnapshot({
+    required String standardId,
+    required String academicYearId,
+    required String date,
+  }) async {
+    final response = await _dio.get(
+      '/api/v1/attendance/analytics/class/$standardId',
+      queryParameters: {
+        'academic_year_id': academicYearId,
+        'date': date,
+      },
+    );
+    return ClassAttendanceSnapshot.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  // ── Analytics: Below Threshold ──────────────────────────────────────────────
+
+  Future<BelowThresholdResponse> getBelowThreshold({
+    required String standardId,
+    required String academicYearId,
+    double threshold = 75.0,
+  }) async {
+    final response = await _dio.get(
+      '/api/v1/attendance/analytics/below-threshold',
+      queryParameters: {
+        'standard_id': standardId,
+        'academic_year_id': academicYearId,
+        'threshold': threshold,
+      },
+    );
+    return BelowThresholdResponse.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+}
+
+final attendanceRepositoryProvider = Provider<AttendanceRepository>((ref) {
+  return AttendanceRepository(ref.read(dioClientProvider));
+});

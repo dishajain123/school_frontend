@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
+import '../models/teacher/teacher_class_subject_model.dart';
 import '../models/teacher/teacher_model.dart';
 
 class TeacherListResult {
@@ -47,7 +48,9 @@ class TeacherRepository {
       'page': page,
       'page_size': pageSize,
     };
-    if (academicYearId != null) params['academic_year_id'] = academicYearId;
+    if (academicYearId != null) {
+      params['academic_year_id'] = academicYearId;
+    }
 
     final response = await _dio.get(
       ApiConstants.teachers,
@@ -75,6 +78,37 @@ class TeacherRepository {
   }
 }
 
+/// Repository for teacher's own class-subject assignments.
+/// Used by MarkAttendanceScreen to populate class and subject dropdowns.
+/// Endpoint assumed: GET /api/v1/teacher-class-subjects/mine
+class TeacherClassSubjectRepository {
+  const TeacherClassSubjectRepository(this._dio);
+  final Dio _dio;
+
+  Future<List<TeacherClassSubjectModel>> getMyAssignments({
+    String? academicYearId,
+  }) async {
+    final response = await _dio.get(
+      '/api/v1/teacher-class-subjects/mine',
+      queryParameters: {
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+      },
+    );
+    final data = response.data;
+    // Support both direct list and paginated wrapper { items: [...] }
+    final List<dynamic> raw = data is List ? data : (data['items'] as List);
+    return raw
+        .map((e) =>
+            TeacherClassSubjectModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+}
+
 final teacherRepositoryProvider = Provider<TeacherRepository>((ref) {
   return TeacherRepository(ref.read(dioClientProvider));
+});
+
+final teacherClassSubjectRepositoryProvider =
+    Provider<TeacherClassSubjectRepository>((ref) {
+  return TeacherClassSubjectRepository(ref.read(dioClientProvider));
 });

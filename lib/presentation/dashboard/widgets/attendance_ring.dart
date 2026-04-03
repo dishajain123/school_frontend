@@ -120,3 +120,48 @@ class _QuickActionTileState extends State<_QuickActionTile>
     );
   }
 }
+
+class AttendanceRing extends StatelessWidget {
+  const AttendanceRing({
+    super.key,
+    required this.percentage,
+    this.size = 72,
+  });
+
+  final double percentage;
+  final double size;
+
+  Color _ringColor(double pct) {
+    if (pct >= 85) return AppColors.successGreen;
+    if (pct >= 75) return AppColors.warningAmber;
+    return AppColors.errorRed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = (percentage.clamp(0, 100)) / 100;
+    final color = _ringColor(percentage);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: value,
+            strokeWidth: 6,
+            backgroundColor: AppColors.white.withOpacity(0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+          Text(
+            '${percentage.toStringAsFixed(0)}%',
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

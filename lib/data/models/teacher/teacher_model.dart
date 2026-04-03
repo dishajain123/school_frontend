@@ -1,11 +1,9 @@
-import '../auth/current_user.dart';
-
 class TeacherUserModel {
   const TeacherUserModel({
     required this.id,
-    required this.email,
-    required this.phone,
     required this.isActive,
+    this.email,
+    this.phone,
     this.profilePhotoKey,
     this.profilePhotoUrl,
   });
@@ -30,18 +28,19 @@ class TeacherUserModel {
 
   String get displayName {
     if (email != null && email!.isNotEmpty) {
-      return email!.split('@').first.replaceAll('.', ' ').split(' ').map((w) {
+      final parts = email!.split('@').first.split('.');
+      return parts.map((w) {
         if (w.isEmpty) return w;
         return w[0].toUpperCase() + w.substring(1);
       }).join(' ');
     }
-    return phone ?? 'Unknown';
+    return phone ?? 'Teacher';
   }
 
   String get initials {
     final name = displayName;
     final parts = name.trim().split(' ').where((s) => s.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
+    if (parts.isEmpty) return 'T';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
@@ -94,10 +93,11 @@ class TeacherModel {
   String? get profilePhotoUrl => user.profilePhotoUrl;
 
   TeacherModel copyWith({
+    String? academicYearId,
     String? employeeCode,
     DateTime? joinDate,
     String? specialization,
-    String? academicYearId,
+    TeacherUserModel? user,
   }) {
     return TeacherModel(
       id: id,
@@ -106,7 +106,7 @@ class TeacherModel {
       employeeCode: employeeCode ?? this.employeeCode,
       joinDate: joinDate ?? this.joinDate,
       specialization: specialization ?? this.specialization,
-      user: user,
+      user: user ?? this.user,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
