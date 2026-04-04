@@ -61,8 +61,35 @@ class DiaryRepository {
       if (academicYearId != null) 'academic_year_id': academicYearId,
     };
 
-    final response = await _dio.post(_base, data: body);
-    return DiaryModel.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final response = await _dio.post(_base, data: body);
+      return DiaryModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String msg = '';
+      if (data is Map<String, dynamic>) {
+        final rawMsg = data['message'] ?? data['detail'];
+        msg = rawMsg?.toString() ?? '';
+      } else if (data != null) {
+        msg = data.toString();
+      }
+
+      // Compatibility fallback for strict/stale backend validators.
+      final isNoneBodyValidation =
+          e.response?.statusCode == 422 && msg.contains('Input should be None');
+      if (!isNoneBodyValidation) rethrow;
+
+      try {
+        final wrappedResponse =
+            await _dio.post(_base, data: {'payload': body});
+        return DiaryModel.fromJson(
+            wrappedResponse.data as Map<String, dynamic>);
+      } on DioException {
+        final explicitResponse = await _dio.post('$_base/create', data: body);
+        return DiaryModel.fromJson(
+            explicitResponse.data as Map<String, dynamic>);
+      }
+    }
   }
 }
 

@@ -51,17 +51,30 @@ class SubmissionRepository {
 
   Future<SubmissionModel> gradeSubmission(
     String submissionId, {
-    required String grade,
+    String? grade,
     String? feedback,
+    bool? isApproved,
   }) async {
-    final response = await _dio.patch(
-      '$_base/$submissionId/grade',
-      data: {
-        'grade': grade,
-        if (feedback != null && feedback.isNotEmpty) 'feedback': feedback,
-      },
-    );
-    return SubmissionModel.fromJson(response.data as Map<String, dynamic>);
+    final body = <String, dynamic>{
+      if (grade != null && grade.trim().isNotEmpty) 'grade': grade.trim(),
+      if (feedback != null) 'feedback': feedback.trim(),
+      if (isApproved != null) 'is_approved': isApproved,
+    };
+
+    try {
+      final response = await _dio.patch(
+        '$_base/$submissionId/review',
+        data: body,
+      );
+      return SubmissionModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+      final fallback = await _dio.patch(
+        '$_base/$submissionId/grade',
+        data: body,
+      );
+      return SubmissionModel.fromJson(fallback.data as Map<String, dynamic>);
+    }
   }
 }
 

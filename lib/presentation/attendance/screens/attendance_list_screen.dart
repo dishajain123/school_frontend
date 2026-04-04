@@ -75,7 +75,6 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
       month: _month,
       year: _year,
       subjectId: _selectedSubjectId,
-      lectureNumber: null,
     );
 
     final attendanceAsync = ref.watch(attendanceListProvider(params));
@@ -327,7 +326,7 @@ class _AttendanceRecordTile extends StatelessWidget {
                   style:
                       AppTypography.caption.copyWith(color: AppColors.grey400)),
               Text(
-                'Lecture ${record.lectureNumber}${record.section.isNotEmpty ? ' • Sec ${record.section}' : ''}',
+                record.section.isNotEmpty ? 'Sec ${record.section}' : 'Daily record',
                 style: AppTypography.caption.copyWith(color: AppColors.grey400),
               ),
             ],

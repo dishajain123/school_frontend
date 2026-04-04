@@ -11,6 +11,8 @@ class AssignmentCard extends StatelessWidget {
   final String? subjectName;
   final String? standardName;
   final VoidCallback? onTap;
+  final VoidCallback? onViewSubmissions;
+  final bool showSubmissionAction;
 
   /// Optional: the student's submission status for this card
   final _SubmissionStatus? submissionStatus;
@@ -21,6 +23,8 @@ class AssignmentCard extends StatelessWidget {
     this.subjectName,
     this.standardName,
     this.onTap,
+    this.onViewSubmissions,
+    this.showSubmissionAction = false,
     this.submissionStatus,
   });
 
@@ -173,6 +177,27 @@ class AssignmentCard extends StatelessWidget {
                                   size: 14, color: AppColors.grey400),
                           ],
                         ),
+                        if (showSubmissionAction && onViewSubmissions != null) ...[
+                          const SizedBox(height: AppDimensions.space12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: onViewSubmissions,
+                              icon: const Icon(Icons.fact_check_outlined, size: 16),
+                              label: const Text('View Submissions'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 34),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                side: const BorderSide(color: AppColors.navyLight),
+                                foregroundColor: AppColors.navyDeep,
+                                textStyle: AppTypography.labelMedium,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

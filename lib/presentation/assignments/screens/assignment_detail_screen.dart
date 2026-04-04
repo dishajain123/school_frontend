@@ -18,7 +18,6 @@ import '../../../providers/parent_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
-import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_text_field.dart';
 
@@ -175,7 +174,7 @@ class _AssignmentDetailScreenState
                 // ── Teacher: View Submissions ────────────────────────────
                 if (canGrade) ...[
                   AppButton.secondary(
-                    label: 'View Submissions',
+                    label: 'View Student Solutions',
                     onTap: () => context.push(
                       RouteNames.submissionListPath(widget.assignmentId),
                     ),

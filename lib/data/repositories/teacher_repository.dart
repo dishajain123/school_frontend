@@ -110,26 +110,37 @@ class TeacherClassSubjectRepository {
   Future<List<TeacherClassSubjectModel>> getMyAssignments({
     String? academicYearId,
   }) async {
+    final query = <String, dynamic>{
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+
     try {
       final response = await _dio.get(
         '/teacher-assignments/mine',
-        queryParameters: {
-          if (academicYearId != null) 'academic_year_id': academicYearId,
-        },
+        queryParameters: query,
       );
       return _parseList(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode != 404) rethrow;
-      // Backward compatibility: some local servers may still expose the
-      // older teacher-class-subjects route.
+    }
+
+    try {
+      // Backward compatibility for older backend route naming.
       final fallback = await _dio.get(
         '/teacher-class-subjects/mine',
-        queryParameters: {
-          if (academicYearId != null) 'academic_year_id': academicYearId,
-        },
+        queryParameters: query,
       );
       return _parseList(fallback.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
     }
+
+    // Last fallback for setups that expose this via /teachers module.
+    final legacy = await _dio.get(
+      '/teachers/me/assignments',
+      queryParameters: query,
+    );
+    return _parseList(legacy.data);
   }
 
   Future<List<TeacherClassSubjectModel>> listByTeacher({
@@ -157,6 +168,27 @@ class TeacherClassSubjectRepository {
       ApiConstants.teacherAssignments,
       data: {
         'teacher_id': teacherId,
+        'standard_id': standardId,
+        'section': section,
+        'subject_id': subjectId,
+        'academic_year_id': academicYearId,
+      },
+    );
+    return TeacherClassSubjectModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  Future<TeacherClassSubjectModel> updateAssignment({
+    required String assignmentId,
+    required String standardId,
+    required String section,
+    required String subjectId,
+    required String academicYearId,
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.teacherAssignmentById(assignmentId),
+      data: {
         'standard_id': standardId,
         'section': section,
         'subject_id': subjectId,

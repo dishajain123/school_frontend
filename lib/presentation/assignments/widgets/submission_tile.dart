@@ -78,6 +78,15 @@ class SubmissionTile extends StatelessWidget {
                   const SizedBox(height: AppDimensions.space6),
                   Row(
                     children: [
+                      if (submission.isApproved) ...[
+                        _Badge(
+                          label: 'Approved',
+                          color: AppColors.successGreen,
+                          bg: AppColors.successLight,
+                          icon: Icons.verified_rounded,
+                        ),
+                        const SizedBox(width: AppDimensions.space6),
+                      ],
                       if (submission.isGraded && submission.grade != null) ...[
                         _Badge(
                           label: 'Grade: ${submission.grade}',
@@ -96,6 +105,16 @@ class SubmissionTile extends StatelessWidget {
                             icon: Icons.attach_file,
                           ),
                         ),
+                      if (submission.feedback != null &&
+                          submission.feedback!.trim().isNotEmpty) ...[
+                        const SizedBox(width: AppDimensions.space6),
+                        _Badge(
+                          label: 'Feedback',
+                          color: AppColors.warningAmber,
+                          bg: AppColors.warningLight,
+                          icon: Icons.comment_bank_outlined,
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -105,8 +124,13 @@ class SubmissionTile extends StatelessWidget {
             const SizedBox(width: AppDimensions.space8),
 
             // Grade button
-            if (!submission.isGraded && onGrade != null)
-              _GradeButton(onTap: onGrade!)
+            if (onGrade != null)
+              _GradeButton(
+                onTap: onGrade!,
+                label: submission.isGraded || submission.isApproved
+                    ? 'Review'
+                    : 'Grade',
+              )
             else if (submission.isGraded)
               Icon(Icons.check_circle, color: AppColors.successGreen, size: 20),
           ],
@@ -156,7 +180,8 @@ class _Badge extends StatelessWidget {
 
 class _GradeButton extends StatelessWidget {
   final VoidCallback onTap;
-  const _GradeButton({required this.onTap});
+  final String label;
+  const _GradeButton({required this.onTap, this.label = 'Grade'});
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +195,7 @@ class _GradeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         ),
         child: Text(
-          'Grade',
+          label,
           style: AppTypography.labelMedium.copyWith(
             color: AppColors.white,
             fontSize: 12,

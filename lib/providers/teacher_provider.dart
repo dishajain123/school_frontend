@@ -194,6 +194,26 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
     return created;
   }
 
+  Future<TeacherClassSubjectModel> updateTeacherAssignment({
+    required String assignmentId,
+    required String teacherId,
+    required String standardId,
+    required String section,
+    required String subjectId,
+    required String academicYearId,
+  }) async {
+    final repo = ref.read(teacherClassSubjectRepositoryProvider);
+    final updated = await repo.updateAssignment(
+      assignmentId: assignmentId,
+      standardId: standardId,
+      section: section,
+      subjectId: subjectId,
+      academicYearId: academicYearId,
+    );
+    ref.invalidate(teacherAssignmentsByTeacherProvider(teacherId));
+    return updated;
+  }
+
   Future<void> deleteTeacherAssignment({
     required String assignmentId,
     required String teacherId,
@@ -228,14 +248,16 @@ final teacherAssignmentsByTeacherProvider =
   },
 );
 
+typedef SectionsByStandardParams = ({String? standardId, String? academicYearId});
+
 final sectionsByStandardProvider =
-    FutureProvider.family<List<String>, String?>((ref, standardId) async {
+    FutureProvider.family<List<String>, SectionsByStandardParams>((ref, params) async {
+  final standardId = params.standardId;
   if (standardId == null || standardId.isEmpty) return const <String>[];
-  final activeYearId = ref.watch(activeYearProvider)?.id;
   final repo = ref.read(studentRepositoryProvider);
   final sections = await repo.listSections(
     standardId: standardId,
-    academicYearId: activeYearId,
+    academicYearId: params.academicYearId,
   );
   return sections.where((s) => s.trim().isNotEmpty).toList();
 });

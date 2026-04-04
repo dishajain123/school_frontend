@@ -8,9 +8,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/attendance_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
@@ -41,6 +45,13 @@ class _CreateAssignmentScreenState
   bool _isLoading = false;
 
   bool get _isEdit => widget.editAssignmentId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final activeYear = ref.read(activeYearProvider);
+    _selectedAcademicYearId = activeYear?.id;
+  }
 
   T? _firstOrNull<T>(Iterable<T> items, bool Function(T) test) {
     for (final item in items) {
@@ -161,14 +172,39 @@ class _CreateAssignmentScreenState
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final isTeacher = currentUser?.role == UserRole.teacher;
     final activeYear = ref.watch(activeYearProvider);
-    final standards = activeYear != null
-        ? ref.watch(standardsProvider(activeYear.id)).valueOrNull ?? []
+    final selectedYearId = _selectedAcademicYearId ?? activeYear?.id;
+    final teacherAssignmentsAsync =
+        ref.watch(myTeacherAssignmentsProvider(selectedYearId));
+    final standards = selectedYearId != null
+        ? ref.watch(standardsProvider(selectedYearId)).valueOrNull ?? []
         : <dynamic>[];
     final subjects = _selectedStandardId != null
         ? ref.watch(subjectsProvider(_selectedStandardId!)).valueOrNull ?? []
         : <dynamic>[];
     final years = ref.watch(academicYearNotifierProvider).valueOrNull ?? [];
+
+    final teacherAssignments = teacherAssignmentsAsync.valueOrNull ?? const <TeacherClassSubjectModel>[];
+    final teacherStandardMap = <String, String>{};
+    final teacherSubjectMap = <String, String>{};
+    for (final a in teacherAssignments) {
+      teacherStandardMap.putIfAbsent(a.standardId, () => a.standardName ?? a.classLabel);
+      if (_selectedStandardId != null && a.standardId == _selectedStandardId) {
+        teacherSubjectMap.putIfAbsent(a.subjectId, () => a.subjectName ?? a.subjectLabel);
+      }
+    }
+    final teacherStandardIds = teacherStandardMap.keys.toList();
+    final teacherSubjectIds = teacherSubjectMap.keys.toList();
+    final selectedTeacherStandardId =
+        teacherStandardMap.containsKey(_selectedStandardId)
+            ? _selectedStandardId
+            : null;
+    final selectedTeacherSubjectId =
+        teacherSubjectMap.containsKey(_selectedSubjectId)
+            ? _selectedSubjectId
+            : null;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -227,43 +263,96 @@ class _CreateAssignmentScreenState
                 const SizedBox(height: AppDimensions.space16),
 
                 // ── Standard ──────────────────────────────────────────
-                _DropdownField<dynamic>(
-                  label: 'Class (Standard)',
-                  hint: 'Select class',
-                  value: _firstOrNull<dynamic>(
-                    standards,
-                    (s) => s.id == _selectedStandardId,
+                if (isTeacher)
+                  _DropdownField<String>(
+                    label: 'Class (Standard)',
+                    hint: 'Select class',
+                    value: selectedTeacherStandardId,
+                    items: teacherStandardIds,
+                    itemLabel: (id) => teacherStandardMap[id] ?? id,
+                    onChanged: (s) {
+                      setState(() {
+                        _selectedStandardId = s;
+                        _selectedSubjectId = null;
+                      });
+                    },
+                  )
+                else
+                  _DropdownField<dynamic>(
+                    label: 'Class (Standard)',
+                    hint: 'Select class',
+                    value: _firstOrNull<dynamic>(
+                      standards,
+                      (s) => s.id == _selectedStandardId,
+                    ),
+                    items: standards,
+                    itemLabel: (s) => s.name as String,
+                    onChanged: (s) {
+                      setState(() {
+                        _selectedStandardId = s?.id as String?;
+                        _selectedSubjectId = null;
+                      });
+                    },
                   ),
-                  items: standards,
-                  itemLabel: (s) => s.name as String,
-                  onChanged: (s) {
-                    setState(() {
-                      _selectedStandardId = s?.id as String?;
-                      _selectedSubjectId = null;
-                    });
-                  },
-                ),
                 const SizedBox(height: AppDimensions.space16),
 
                 // ── Subject ───────────────────────────────────────────
-                _DropdownField<dynamic>(
-                  label: 'Subject',
-                  hint: _selectedStandardId == null
-                      ? 'Select class first'
-                      : 'Select subject',
-                  value: _firstOrNull<dynamic>(
-                    subjects,
-                    (s) => s.id == _selectedSubjectId,
+                if (isTeacher)
+                  _DropdownField<String>(
+                    label: 'Subject',
+                    hint: _selectedStandardId == null
+                        ? 'Select class first'
+                        : 'Select subject',
+                    value: selectedTeacherSubjectId,
+                    items: teacherSubjectIds,
+                    itemLabel: (id) => teacherSubjectMap[id] ?? id,
+                    onChanged: _selectedStandardId == null
+                        ? null
+                        : (s) {
+                            setState(() => _selectedSubjectId = s);
+                          },
+                  )
+                else
+                  _DropdownField<dynamic>(
+                    label: 'Subject',
+                    hint: _selectedStandardId == null
+                        ? 'Select class first'
+                        : 'Select subject',
+                    value: _firstOrNull<dynamic>(
+                      subjects,
+                      (s) => s.id == _selectedSubjectId,
+                    ),
+                    items: subjects,
+                    itemLabel: (s) => s.name as String,
+                    onChanged: _selectedStandardId == null
+                        ? null
+                        : (s) {
+                            setState(() =>
+                                _selectedSubjectId = s?.id as String?);
+                          },
                   ),
-                  items: subjects,
-                  itemLabel: (s) => s.name as String,
-                  onChanged: _selectedStandardId == null
-                      ? null
-                      : (s) {
-                          setState(() =>
-                              _selectedSubjectId = s?.id as String?);
-                        },
-                ),
+                if (isTeacher) ...[
+                  const SizedBox(height: AppDimensions.space8),
+                  teacherAssignmentsAsync.when(
+                    loading: () => Text(
+                      'Loading your allocated classes...',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.grey600),
+                    ),
+                    error: (e, _) => Text(
+                      'Could not load your class-subject allocation.',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.errorRed),
+                    ),
+                    data: (items) => items.isEmpty
+                        ? Text(
+                            'No class-subject allocation found for selected year.',
+                            style: AppTypography.bodySmall
+                                .copyWith(color: AppColors.warningAmber),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
                 const SizedBox(height: AppDimensions.space16),
               ],
 

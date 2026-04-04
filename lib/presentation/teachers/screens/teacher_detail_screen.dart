@@ -8,6 +8,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/academic_year/academic_year_model.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/masters/standard_model.dart';
 import '../../../data/models/masters/subject_model.dart';
@@ -91,6 +92,26 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen> {
     if (created == true && mounted) {
       ref.invalidate(teacherAssignmentsByTeacherProvider(teacher.id));
       SnackbarUtils.showSuccess(context, 'Assignment created');
+    }
+  }
+
+  Future<void> _openEditAssignmentSheet({
+    required TeacherModel teacher,
+    required TeacherClassSubjectModel assignment,
+  }) async {
+    final updated = await AppBottomSheet.show<bool>(
+      context,
+      title: 'Update Assignment',
+      subtitle: 'Update class, section, subject, or academic year.',
+      child: _AssignTeacherBottomSheet(
+        teacher: teacher,
+        initialAssignment: assignment,
+      ),
+      showDragHandle: true,
+    );
+    if (updated == true && mounted) {
+      ref.invalidate(teacherAssignmentsByTeacherProvider(teacher.id));
+      SnackbarUtils.showSuccess(context, 'Assignment updated');
     }
   }
 
@@ -297,6 +318,10 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen> {
                     canManage: _canManageAssignments,
                     isDeleting: _isDeletingAssignment,
                     onAdd: () => _openAssignSheet(teacher),
+                    onEdit: (a) => _openEditAssignmentSheet(
+                      teacher: teacher,
+                      assignment: a,
+                    ),
                     onDelete: (a) => _deleteAssignment(
                       teacherId: teacher.id,
                       assignment: a,
@@ -341,6 +366,7 @@ class _TeacherAssignmentsSection extends StatelessWidget {
     required this.canManage,
     required this.isDeleting,
     required this.onAdd,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -348,6 +374,7 @@ class _TeacherAssignmentsSection extends StatelessWidget {
   final bool canManage;
   final bool isDeleting;
   final VoidCallback onAdd;
+  final ValueChanged<TeacherClassSubjectModel> onEdit;
   final ValueChanged<TeacherClassSubjectModel> onDelete;
 
   @override
@@ -456,6 +483,17 @@ class _TeacherAssignmentsSection extends StatelessWidget {
                         if (canManage) ...[
                           const SizedBox(width: AppDimensions.space6),
                           GestureDetector(
+                            onTap: isDeleting ? null : () => onEdit(a),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: isDeleting
+                                  ? AppColors.grey400
+                                  : AppColors.navyMedium,
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.space6),
+                          GestureDetector(
                             onTap: isDeleting ? null : () => onDelete(a),
                             child: Icon(
                               Icons.close_rounded,
@@ -480,9 +518,13 @@ class _TeacherAssignmentsSection extends StatelessWidget {
 }
 
 class _AssignTeacherBottomSheet extends ConsumerStatefulWidget {
-  const _AssignTeacherBottomSheet({required this.teacher});
+  const _AssignTeacherBottomSheet({
+    required this.teacher,
+    this.initialAssignment,
+  });
 
   final TeacherModel teacher;
+  final TeacherClassSubjectModel? initialAssignment;
 
   @override
   ConsumerState<_AssignTeacherBottomSheet> createState() =>
@@ -494,19 +536,59 @@ class _AssignTeacherBottomSheetState
   StandardModel? _selectedStandard;
   String? _selectedSection;
   SubjectModel? _selectedSubject;
+  AcademicYearModel? _selectedAcademicYear;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialAssignment;
+    if (initial == null) return;
+
+    final years = ref.read(academicYearNotifierProvider).valueOrNull ?? const [];
+    final standards = ref.read(standardsProvider(initial.academicYearId)).valueOrNull ?? const [];
+    final subjects = ref.read(subjectsProvider(initial.standardId)).valueOrNull ?? const [];
+
+    _selectedAcademicYear = years
+        .cast<AcademicYearModel?>()
+        .firstWhere((y) => y?.id == initial.academicYearId, orElse: () => null);
+    _selectedStandard = standards
+        .cast<StandardModel?>()
+        .firstWhere((s) => s?.id == initial.standardId, orElse: () => null);
+    _selectedSubject = subjects
+        .cast<SubjectModel?>()
+        .firstWhere((s) => s?.id == initial.subjectId, orElse: () => null);
+    _selectedSection = initial.section;
+  }
 
   @override
   Widget build(BuildContext context) {
     final activeYear = ref.watch(activeYearProvider);
-    final standardsAsync = ref.watch(standardsProvider(activeYear?.id));
+    final yearOptions = ref.watch(academicYearNotifierProvider).valueOrNull ?? const <AcademicYearModel>[];
+    final selectedYearId = _selectedAcademicYear?.id ?? activeYear?.id;
+    final standardsAsync = ref.watch(standardsProvider(selectedYearId));
     final sectionsAsync =
-        ref.watch(sectionsByStandardProvider(_selectedStandard?.id));
+        ref.watch(sectionsByStandardProvider((
+          standardId: _selectedStandard?.id,
+          academicYearId: selectedYearId,
+        )));
     final subjectsAsync = ref.watch(subjectsProvider(_selectedStandard?.id));
 
     final standards = standardsAsync.valueOrNull ?? const <StandardModel>[];
     final subjects = subjectsAsync.valueOrNull ?? const <SubjectModel>[];
     final sections = sectionsAsync.valueOrNull ?? const <String>[];
+    final yearValue = yearOptions.any((y) => y.id == selectedYearId)
+        ? selectedYearId
+        : null;
+    final standardValue = standards.any((s) => s.id == _selectedStandard?.id)
+        ? _selectedStandard?.id
+        : null;
+    final sectionValue = sections.contains(_selectedSection)
+        ? _selectedSection
+        : null;
+    final subjectValue = subjects.any((s) => s.id == _selectedSubject?.id)
+        ? _selectedSubject?.id
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +607,39 @@ class _AssignTeacherBottomSheetState
         ),
         const SizedBox(height: AppDimensions.space16),
         DropdownButtonFormField<String?>(
-          initialValue: _selectedStandard?.id,
+          initialValue: yearValue,
+          isExpanded: true,
+          decoration: _fieldDecoration('Academic Year'),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Select academic year'),
+            ),
+            ...yearOptions.map(
+              (year) => DropdownMenuItem<String?>(
+                value: year.id,
+                child: Text(year.name),
+              ),
+            ),
+          ],
+          onChanged: _submitting
+              ? null
+              : (yearId) {
+                  final selected = yearOptions.cast<AcademicYearModel?>().firstWhere(
+                        (y) => y?.id == yearId,
+                        orElse: () => null,
+                      );
+                  setState(() {
+                    _selectedAcademicYear = selected;
+                    _selectedStandard = null;
+                    _selectedSection = null;
+                    _selectedSubject = null;
+                  });
+                },
+        ),
+        const SizedBox(height: AppDimensions.space12),
+        DropdownButtonFormField<String?>(
+          initialValue: standardValue,
           isExpanded: true,
           decoration: _fieldDecoration('Class'),
           items: [
@@ -556,7 +670,7 @@ class _AssignTeacherBottomSheetState
         ),
         const SizedBox(height: AppDimensions.space12),
         DropdownButtonFormField<String?>(
-          initialValue: _selectedSection,
+          initialValue: sectionValue,
           isExpanded: true,
           decoration: _fieldDecoration('Section'),
           items: [
@@ -577,7 +691,7 @@ class _AssignTeacherBottomSheetState
         ),
         const SizedBox(height: AppDimensions.space12),
         DropdownButtonFormField<String?>(
-          initialValue: _selectedSubject?.id,
+          initialValue: subjectValue,
           isExpanded: true,
           decoration: _fieldDecoration('Subject'),
           items: [
@@ -605,7 +719,7 @@ class _AssignTeacherBottomSheetState
         const SizedBox(height: AppDimensions.space12),
         if (activeYear != null)
           Text(
-            'Academic Year: ${activeYear.name}',
+            'Selected Year: ${(yearOptions.cast<AcademicYearModel?>().firstWhere((y) => y?.id == selectedYearId, orElse: () => null)?.name) ?? "—"}',
             style: AppTypography.caption.copyWith(color: AppColors.grey600),
           ),
         if (_selectedStandard != null &&
@@ -622,36 +736,50 @@ class _AssignTeacherBottomSheetState
           ),
         const SizedBox(height: AppDimensions.space20),
         AppButton.primary(
-          label: 'Assign Now',
+          label: widget.initialAssignment == null
+              ? 'Assign Now'
+              : 'Update Assignment',
           icon: Icons.check_circle_outline,
           isLoading: _submitting,
-          onTap: _submitting ? null : () => _submit(activeYear?.id),
+          onTap: _submitting ? null : _submit,
         ),
       ],
     );
   }
 
-  Future<void> _submit(String? activeYearId) async {
+  Future<void> _submit() async {
+    final selectedYearId = _selectedAcademicYear?.id ?? ref.read(activeYearProvider)?.id;
     if (_selectedStandard == null ||
         _selectedSection == null ||
         _selectedSubject == null ||
-        activeYearId == null) {
+        selectedYearId == null) {
       SnackbarUtils.showError(
         context,
-        'Please select class, section, subject and active academic year.',
+        'Please select class, section, subject and academic year.',
       );
       return;
     }
 
     setState(() => _submitting = true);
     try {
-      await ref.read(teacherNotifierProvider.notifier).createTeacherAssignment(
-            teacherId: widget.teacher.id,
-            standardId: _selectedStandard!.id,
-            section: _selectedSection!,
-            subjectId: _selectedSubject!.id,
-            academicYearId: activeYearId,
-          );
+      if (widget.initialAssignment == null) {
+        await ref.read(teacherNotifierProvider.notifier).createTeacherAssignment(
+              teacherId: widget.teacher.id,
+              standardId: _selectedStandard!.id,
+              section: _selectedSection!,
+              subjectId: _selectedSubject!.id,
+              academicYearId: selectedYearId,
+            );
+      } else {
+        await ref.read(teacherNotifierProvider.notifier).updateTeacherAssignment(
+              assignmentId: widget.initialAssignment!.id,
+              teacherId: widget.teacher.id,
+              standardId: _selectedStandard!.id,
+              section: _selectedSection!,
+              subjectId: _selectedSubject!.id,
+              academicYearId: selectedYearId,
+            );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) SnackbarUtils.showError(context, e.toString());

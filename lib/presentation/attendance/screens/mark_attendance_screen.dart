@@ -25,6 +25,16 @@ class MarkAttendanceScreen extends ConsumerStatefulWidget {
 }
 
 class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
+  static const _weekdayNames = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +85,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     }
   }
 
+  String _weekdayLabel(DateTime date) => _weekdayNames[date.weekday - 1];
+
   @override
   Widget build(BuildContext context) {
     final formState = ref.watch(markAttendanceProvider);
@@ -92,12 +104,14 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Date picker row
-                _SectionLabel(label: 'Date'),
+                const _SectionLabel(label: 'Date'),
                 const SizedBox(height: AppDimensions.space8),
                 _DatePickerTile(
                   date: formState.date,
                   onTap: () => _pickDate(context),
                 ),
+                const SizedBox(height: AppDimensions.space16),
+                _InfoRow(label: 'Day', value: _weekdayLabel(formState.date)),
                 const SizedBox(height: AppDimensions.space16),
 
                 // Academic year (read-only from active year)
@@ -108,7 +122,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 const SizedBox(height: AppDimensions.space16),
 
                 // Class selector
-                _SectionLabel(label: 'Class'),
+                const _SectionLabel(label: 'Class'),
                 const SizedBox(height: AppDimensions.space8),
                 _ClassDropdown(
                   academicYearId: formState.selectedAcademicYearId,
@@ -121,7 +135,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 if (formState.selectedAssignment != null) ...[
                   const SizedBox(height: AppDimensions.space16),
                   // Subject selector (filtered by selected assignment)
-                  _SectionLabel(label: 'Subject'),
+                  const _SectionLabel(label: 'Subject'),
                   const SizedBox(height: AppDimensions.space8),
                   _SubjectDropdown(
                     academicYearId: formState.selectedAcademicYearId,
@@ -130,15 +144,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                     onChanged: (subjectId) => ref
                         .read(markAttendanceProvider.notifier)
                         .setSubjectId(subjectId),
-                  ),
-                  const SizedBox(height: AppDimensions.space16),
-                  _SectionLabel(label: 'Lecture'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _LectureDropdown(
-                    selectedLectureNumber: formState.selectedLectureNumber,
-                    onChanged: (value) => ref
-                        .read(markAttendanceProvider.notifier)
-                        .setLectureNumber(value),
                   ),
                 ],
               ],
@@ -349,6 +354,12 @@ class _SubjectDropdown extends ConsumerWidget {
                   AppTypography.bodySmall.copyWith(color: AppColors.grey400));
         }
 
+        if (selectedSubjectId == null && subjects.length == 1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onChanged(subjects.first.subjectId);
+          });
+        }
+
         return DropdownButtonFormField<String>(
           initialValue: selectedSubjectId,
           decoration: _inputDecoration('Select subject'),
@@ -435,7 +446,6 @@ class _StudentList extends ConsumerWidget {
       academicYearId: formState.selectedAcademicYearId,
       date: existingDate,
       subjectId: formState.selectedSubjectId,
-      lectureNumber: formState.selectedLectureNumber,
       studentId: null,
       month: null,
       year: null,
@@ -537,7 +547,7 @@ class _StudentList extends ConsumerWidget {
           ],
         );
       },
-      loading: () => Expanded(child: Center(child: AppLoading.fullPage())),
+      loading: () => Center(child: AppLoading.fullPage()),
       error: (e, _) => AppErrorState(
         message: e.toString(),
         onRetry: () => ref.invalidate(
@@ -548,37 +558,6 @@ class _StudentList extends ConsumerWidget {
           )),
         ),
       ),
-    );
-  }
-}
-
-class _LectureDropdown extends StatelessWidget {
-  const _LectureDropdown({
-    required this.selectedLectureNumber,
-    required this.onChanged,
-  });
-
-  final int selectedLectureNumber;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<int>(
-      initialValue: selectedLectureNumber,
-      decoration: _inputDecoration('Select lecture'),
-      items: List.generate(
-        12,
-        (index) {
-          final lecture = index + 1;
-          return DropdownMenuItem<int>(
-            value: lecture,
-            child: Text('Lecture $lecture', style: AppTypography.bodyMedium),
-          );
-        },
-      ),
-      onChanged: (value) {
-        if (value != null) onChanged(value);
-      },
     );
   }
 }

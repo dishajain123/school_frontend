@@ -6,7 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/router/route_names.dart';
-import '../../../data/models/assignment/assignment_model.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
@@ -59,17 +59,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   void _applyTabFilter(int index) {
     setState(() => _activeFilter = ['all', 'active', 'overdue'][index]);
     final filters = switch (index) {
-      1 => const AssignmentFilters(isActive: true),
-      2 =>
-        const AssignmentFilters(isActive: true), // overdue filtered client-side
+      1 => const AssignmentFilters(isOverdue: false),
+      2 => const AssignmentFilters(isOverdue: true),
       _ => const AssignmentFilters(),
     };
     ref.read(assignmentsProvider.notifier).applyFilters(filters);
-  }
-
-  bool _tabFilter(AssignmentModel a) {
-    if (_activeFilter == 'overdue') return a.isOverdue && a.isActive;
-    return true;
   }
 
   @override
@@ -77,6 +71,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     final assignmentsState = ref.watch(assignmentsProvider);
     final currentUser = ref.watch(currentUserProvider);
     final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
+    final canGrade = currentUser?.hasPermission('submission:grade') ?? false;
+    final canViewSubmissions = canGrade || currentUser?.role == UserRole.teacher;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -111,7 +107,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           onRetry: () => ref.read(assignmentsProvider.notifier).refresh(),
         ),
         data: (state) {
-          final filtered = state.items.where(_tabFilter).toList();
+          final filtered = state.items;
 
           if (filtered.isEmpty && !state.isLoadingMore) {
             return AppEmptyState(
@@ -152,6 +148,12 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                   onTap: () => context.push(
                     RouteNames.assignmentDetailPath(assignment.id),
                   ),
+                  showSubmissionAction: canViewSubmissions,
+                  onViewSubmissions: canViewSubmissions
+                      ? () => context.push(
+                            RouteNames.submissionListPath(assignment.id),
+                          )
+                      : null,
                 );
               },
             ),

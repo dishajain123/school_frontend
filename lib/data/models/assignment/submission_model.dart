@@ -13,6 +13,12 @@ class SubmissionModel {
   final String? grade;
   final String? feedback;
   final bool isGraded;
+  final bool isApproved;
+  final String? approvedBy;
+  final DateTime? approvedAt;
+  final String? studentAdmissionNumber;
+  final String? studentRollNumber;
+  final String? studentSection;
   final bool isLate;
   final String schoolId;
   final DateTime createdAt;
@@ -30,6 +36,12 @@ class SubmissionModel {
     this.grade,
     this.feedback,
     required this.isGraded,
+    required this.isApproved,
+    this.approvedBy,
+    this.approvedAt,
+    this.studentAdmissionNumber,
+    this.studentRollNumber,
+    this.studentSection,
     required this.isLate,
     required this.schoolId,
     required this.createdAt,
@@ -49,6 +61,14 @@ class SubmissionModel {
       grade: json['grade'] as String?,
       feedback: json['feedback'] as String?,
       isGraded: json['is_graded'] as bool,
+      isApproved: json['is_approved'] as bool? ?? false,
+      approvedBy: json['approved_by'] as String?,
+      approvedAt: json['approved_at'] != null
+          ? DateTime.parse(json['approved_at'] as String)
+          : null,
+      studentAdmissionNumber: json['student_admission_number'] as String?,
+      studentRollNumber: json['student_roll_number'] as String?,
+      studentSection: json['student_section'] as String?,
       isLate: json['is_late'] as bool,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -68,6 +88,12 @@ class SubmissionModel {
     String? grade,
     String? feedback,
     bool? isGraded,
+    bool? isApproved,
+    String? approvedBy,
+    DateTime? approvedAt,
+    String? studentAdmissionNumber,
+    String? studentRollNumber,
+    String? studentSection,
     bool? isLate,
     String? schoolId,
     DateTime? createdAt,
@@ -85,6 +111,13 @@ class SubmissionModel {
       grade: grade ?? this.grade,
       feedback: feedback ?? this.feedback,
       isGraded: isGraded ?? this.isGraded,
+      isApproved: isApproved ?? this.isApproved,
+      approvedBy: approvedBy ?? this.approvedBy,
+      approvedAt: approvedAt ?? this.approvedAt,
+      studentAdmissionNumber:
+          studentAdmissionNumber ?? this.studentAdmissionNumber,
+      studentRollNumber: studentRollNumber ?? this.studentRollNumber,
+      studentSection: studentSection ?? this.studentSection,
       isLate: isLate ?? this.isLate,
       schoolId: schoolId ?? this.schoolId,
       createdAt: createdAt ?? this.createdAt,

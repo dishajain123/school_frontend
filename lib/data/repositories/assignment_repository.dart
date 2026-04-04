@@ -15,6 +15,7 @@ class AssignmentRepository {
     String? subjectId,
     String? academicYearId,
     bool? isActive,
+    bool? isOverdue,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -25,6 +26,7 @@ class AssignmentRepository {
       if (subjectId != null) 'subject_id': subjectId,
       if (academicYearId != null) 'academic_year_id': academicYearId,
       if (isActive != null) 'is_active': isActive,
+      if (isOverdue != null) 'is_overdue': isOverdue,
     };
 
     final response = await _dio.get(

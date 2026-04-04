@@ -120,6 +120,9 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                             final submission = state.items[index];
                             final isLast =
                                 index == state.items.length - 1;
+                            final studentLabel = submission.studentAdmissionNumber ??
+                                submission.studentRollNumber ??
+                                'Student ${submission.studentId.substring(0, 8)}';
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(
@@ -129,21 +132,17 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                                 padding: EdgeInsets.zero,
                                 child: SubmissionTile(
                                   submission: submission,
-                                  // In a real app, resolve student name from
-                                  // student provider using submission.studentId
-                                  studentName:
-                                      'Student ${submission.studentId.substring(0, 8)}',
+                                  studentName: studentLabel,
                                   isLast: isLast,
                                   onGrade: () async {
-                                    final graded =
-                                        await GradeBottomSheet.show(
+                                    await GradeBottomSheet.show(
                                       context,
                                       submissionId: submission.id,
                                       assignmentId: widget.assignmentId,
-                                      studentName:
-                                          'Student ${submission.studentId.substring(0, 8)}',
+                                      studentName: studentLabel,
                                       existingGrade: submission.grade,
                                       existingFeedback: submission.feedback,
+                                      existingApproved: submission.isApproved,
                                     );
                                     // Provider is updated inside GradeBottomSheet
                                   },

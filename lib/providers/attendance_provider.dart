@@ -23,7 +23,6 @@ typedef AttendanceListParams = ({
   int? month,
   int? year,
   String? subjectId,
-  int? lectureNumber,
 });
 
 typedef StudentAnalyticsParams = ({
@@ -100,7 +99,6 @@ final attendanceListProvider = FutureProvider.family<
       month: params.month,
       year: params.year,
       subjectId: params.subjectId,
-      lectureNumber: params.lectureNumber,
     );
   },
 );
@@ -147,7 +145,6 @@ class MarkAttendanceFormState {
     this.selectedAcademicYearId,
     this.selectedAssignment,
     this.selectedSubjectId,
-    this.selectedLectureNumber = 1,
     this.attendanceMap = const {},
     this.isSubmitting = false,
     this.submitError,
@@ -157,7 +154,6 @@ class MarkAttendanceFormState {
   final String? selectedAcademicYearId;
   final TeacherClassSubjectModel? selectedAssignment;
   final String? selectedSubjectId;
-  final int selectedLectureNumber;
   final Map<String, AttendanceStatus> attendanceMap;
   final bool isSubmitting;
   final String? submitError;
@@ -167,7 +163,6 @@ class MarkAttendanceFormState {
     String? selectedAcademicYearId,
     TeacherClassSubjectModel? selectedAssignment,
     String? selectedSubjectId,
-    int? selectedLectureNumber,
     Map<String, AttendanceStatus>? attendanceMap,
     bool? isSubmitting,
     String? submitError,
@@ -179,8 +174,6 @@ class MarkAttendanceFormState {
           selectedAcademicYearId ?? this.selectedAcademicYearId,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
       selectedSubjectId: selectedSubjectId ?? this.selectedSubjectId,
-      selectedLectureNumber:
-          selectedLectureNumber ?? this.selectedLectureNumber,
       attendanceMap: attendanceMap ?? this.attendanceMap,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitError: clearSubmitError ? null : (submitError ?? this.submitError),
@@ -217,14 +210,6 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
   void setSubjectId(String? subjectId) {
     state = state.copyWith(
       selectedSubjectId: subjectId,
-      attendanceMap: const {},
-      clearSubmitError: true,
-    );
-  }
-
-  void setLectureNumber(int lectureNumber) {
-    state = state.copyWith(
-      selectedLectureNumber: lectureNumber,
       attendanceMap: const {},
       clearSubmitError: true,
     );
@@ -288,7 +273,6 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
         section: assignment.section,
         subjectId: subjectId,
         academicYearId: academicYearId,
-        lectureNumber: state.selectedLectureNumber,
         date: state.date,
         records: records,
       );

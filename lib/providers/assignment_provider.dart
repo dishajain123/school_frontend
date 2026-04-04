@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/assignment/assignment_model.dart';
 import '../data/repositories/assignment_repository.dart';
-import '../core/errors/app_exception.dart';
 
 // ── Filter state ──────────────────────────────────────────────────────────────
 
@@ -11,12 +10,14 @@ class AssignmentFilters {
   final String? subjectId;
   final String? academicYearId;
   final bool? isActive;
+  final bool? isOverdue;
 
   const AssignmentFilters({
     this.standardId,
     this.subjectId,
     this.academicYearId,
     this.isActive,
+    this.isOverdue,
   });
 
   AssignmentFilters copyWith({
@@ -24,15 +25,18 @@ class AssignmentFilters {
     String? subjectId,
     String? academicYearId,
     bool? isActive,
+    bool? isOverdue,
     bool clearStandard = false,
     bool clearSubject = false,
     bool clearIsActive = false,
+    bool clearIsOverdue = false,
   }) {
     return AssignmentFilters(
       standardId: clearStandard ? null : (standardId ?? this.standardId),
       subjectId: clearSubject ? null : (subjectId ?? this.subjectId),
       academicYearId: academicYearId ?? this.academicYearId,
       isActive: clearIsActive ? null : (isActive ?? this.isActive),
+      isOverdue: clearIsOverdue ? null : (isOverdue ?? this.isOverdue),
     );
   }
 }
@@ -99,6 +103,7 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
       subjectId: filters.subjectId,
       academicYearId: filters.academicYearId,
       isActive: filters.isActive,
+      isOverdue: filters.isOverdue,
       page: page,
     );
     return AssignmentListState(
@@ -134,6 +139,7 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
         subjectId: current.filters.subjectId,
         academicYearId: current.filters.academicYearId,
         isActive: current.filters.isActive,
+        isOverdue: current.filters.isOverdue,
         page: current.page + 1,
       );
 
@@ -144,7 +150,7 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
         total: response.total,
         isLoadingMore: false,
       ));
-    } catch (e, st) {
+    } catch (e) {
       state = AsyncData(current.copyWith(isLoadingMore: false));
     }
   }

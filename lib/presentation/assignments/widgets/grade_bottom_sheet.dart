@@ -15,6 +15,7 @@ class GradeBottomSheet extends ConsumerStatefulWidget {
   final String studentName;
   final String? existingGrade;
   final String? existingFeedback;
+  final bool existingApproved;
 
   const GradeBottomSheet({
     super.key,
@@ -23,6 +24,7 @@ class GradeBottomSheet extends ConsumerStatefulWidget {
     required this.studentName,
     this.existingGrade,
     this.existingFeedback,
+    this.existingApproved = false,
   });
 
   static Future<bool?> show(
@@ -32,6 +34,7 @@ class GradeBottomSheet extends ConsumerStatefulWidget {
     required String studentName,
     String? existingGrade,
     String? existingFeedback,
+    bool existingApproved = false,
   }) {
     return showModalBottomSheet<bool>(
       context: context,
@@ -43,6 +46,7 @@ class GradeBottomSheet extends ConsumerStatefulWidget {
         studentName: studentName,
         existingGrade: existingGrade,
         existingFeedback: existingFeedback,
+        existingApproved: existingApproved,
       ),
     );
   }
@@ -56,6 +60,7 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
   late final TextEditingController _feedbackCtrl;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _approved = false;
 
   @override
   void initState() {
@@ -63,6 +68,7 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
     _gradeCtrl = TextEditingController(text: widget.existingGrade ?? '');
     _feedbackCtrl =
         TextEditingController(text: widget.existingFeedback ?? '');
+    _approved = widget.existingApproved;
   }
 
   @override
@@ -75,6 +81,16 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final grade = _gradeCtrl.text.trim();
+    final feedback = _feedbackCtrl.text.trim();
+    if (grade.isEmpty && feedback.isEmpty && _approved == widget.existingApproved) {
+      SnackbarUtils.showError(
+        context,
+        'Add grade/feedback or change approval status',
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -82,14 +98,13 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
           .read(submissionsProvider(widget.assignmentId).notifier)
           .gradeSubmission(
             widget.submissionId,
-            grade: _gradeCtrl.text.trim(),
-            feedback: _feedbackCtrl.text.trim().isEmpty
-                ? null
-                : _feedbackCtrl.text.trim(),
+            grade: grade.isEmpty ? null : grade,
+            feedback: feedback.isEmpty ? null : feedback,
+            isApproved: _approved,
           );
 
       if (mounted) {
-        SnackbarUtils.showSuccess(context, 'Grade submitted successfully');
+        SnackbarUtils.showSuccess(context, 'Submission reviewed successfully');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -146,7 +161,7 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Grade Submission',
+                        'Review Submission',
                         style: AppTypography.headlineSmall,
                       ),
                       const SizedBox(height: 2),
@@ -170,18 +185,33 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
             // Grade field
             AppTextField(
               controller: _gradeCtrl,
-              label: 'Grade',
+              label: 'Grade (optional)',
               hint: 'e.g. A+, 85/100, Excellent',
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Grade is required';
-                }
-                return null;
-              },
               textInputAction: TextInputAction.next,
             ),
 
             const SizedBox(height: AppDimensions.space16),
+
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Approve Submission',
+                style: AppTypography.titleSmall.copyWith(
+                  color: AppColors.grey800,
+                ),
+              ),
+              subtitle: Text(
+                'Mark this submission as teacher-approved',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.grey600,
+                ),
+              ),
+              value: _approved,
+              onChanged: _isLoading ? null : (v) => setState(() => _approved = v),
+              activeColor: AppColors.successGreen,
+            ),
+
+            const SizedBox(height: AppDimensions.space8),
 
             // Feedback field
             AppTextField(
@@ -196,7 +226,7 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
 
             // Submit button
             AppButton.primary(
-              label: 'Submit Grade',
+              label: 'Save Review',
               onTap: _submit,
               isLoading: _isLoading,
             ),

@@ -98,13 +98,15 @@ class SubmissionsNotifier
 
   Future<SubmissionModel> gradeSubmission(
     String submissionId, {
-    required String grade,
+    String? grade,
     String? feedback,
+    bool? isApproved,
   }) async {
     final updated = await _repo.gradeSubmission(
       submissionId,
       grade: grade,
       feedback: feedback,
+      isApproved: isApproved,
     );
 
     final current = state.valueOrNull;
