@@ -32,14 +32,23 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   int _month = DateTime.now().month;
   int _year = DateTime.now().year;
   String? _selectedSubjectId;
+  bool _requestedParentChildrenLoad = false;
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final role = user?.role;
     final studentIdFromArg = widget.studentId;
+    final childrenAsync = ref.watch(childrenNotifierProvider);
     final selectedChildId = ref.watch(selectedChildIdProvider);
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
+
+    if (role == UserRole.parent && !_requestedParentChildrenLoad) {
+      _requestedParentChildrenLoad = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(childrenNotifierProvider.notifier).loadMyChildren();
+      });
+    }
 
     final studentId = studentIdFromArg ??
         (role == UserRole.parent
@@ -54,14 +63,34 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    if (studentId == null) {
+    if (role == UserRole.student && currentStudentIdAsync.hasError) {
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Attendance', showBack: true),
+        body: AppErrorState(
+          message: currentStudentIdAsync.error.toString(),
+          onRetry: () => ref.invalidate(currentStudentIdProvider),
+        ),
+      );
+    }
+    if (role == UserRole.parent &&
+        childrenAsync.valueOrNull?.isLoading == true) {
       return const AppScaffold(
         appBar: AppAppBar(title: 'Attendance', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (studentId == null) {
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Attendance', showBack: true),
         body: AppEmptyState(
           icon: Icons.person_search_outlined,
-          title: 'No student selected',
-          subtitle: 'Please select a child to view attendance.',
+          title: role == UserRole.parent
+              ? 'No child linked'
+              : 'No student selected',
+          subtitle: role == UserRole.parent
+              ? 'Link a child in parent dashboard to track attendance history.'
+              : 'Please select a child to view attendance.',
         ),
       );
     }
@@ -326,7 +355,9 @@ class _AttendanceRecordTile extends StatelessWidget {
                   style:
                       AppTypography.caption.copyWith(color: AppColors.grey400)),
               Text(
-                record.section.isNotEmpty ? 'Sec ${record.section}' : 'Daily record',
+                record.section.isNotEmpty
+                    ? 'Sec ${record.section}'
+                    : 'Daily record',
                 style: AppTypography.caption.copyWith(color: AppColors.grey400),
               ),
             ],

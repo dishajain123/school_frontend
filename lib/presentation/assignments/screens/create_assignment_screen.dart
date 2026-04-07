@@ -135,11 +135,11 @@ class _CreateAssignmentScreenState
         await ref.read(assignmentsProvider.notifier).updateAssignment(
               widget.editAssignmentId!,
               title: _titleCtrl.text.trim(),
-              description: _descCtrl.text.trim().isEmpty
-                  ? null
-                  : _descCtrl.text.trim(),
+              description:
+                  _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
               dueDate: _dueDate,
             );
+        await ref.read(assignmentsProvider.notifier).refresh();
         if (mounted) {
           SnackbarUtils.showSuccess(context, 'Assignment updated');
           context.pop();
@@ -151,11 +151,11 @@ class _CreateAssignmentScreenState
               subjectId: _selectedSubjectId!,
               dueDate: _dueDate!,
               academicYearId: _selectedAcademicYearId!,
-              description: _descCtrl.text.trim().isEmpty
-                  ? null
-                  : _descCtrl.text.trim(),
+              description:
+                  _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
               file: multipartFile,
             );
+        await ref.read(assignmentsProvider.notifier).refresh();
         if (mounted) {
           SnackbarUtils.showSuccess(context, 'Assignment created');
           context.pop();
@@ -186,13 +186,16 @@ class _CreateAssignmentScreenState
         : <dynamic>[];
     final years = ref.watch(academicYearNotifierProvider).valueOrNull ?? [];
 
-    final teacherAssignments = teacherAssignmentsAsync.valueOrNull ?? const <TeacherClassSubjectModel>[];
+    final teacherAssignments = teacherAssignmentsAsync.valueOrNull ??
+        const <TeacherClassSubjectModel>[];
     final teacherStandardMap = <String, String>{};
     final teacherSubjectMap = <String, String>{};
     for (final a in teacherAssignments) {
-      teacherStandardMap.putIfAbsent(a.standardId, () => a.standardName ?? a.classLabel);
+      teacherStandardMap.putIfAbsent(
+          a.standardId, () => a.standardName ?? a.classLabel);
       if (_selectedStandardId != null && a.standardId == _selectedStandardId) {
-        teacherSubjectMap.putIfAbsent(a.subjectId, () => a.subjectName ?? a.subjectLabel);
+        teacherSubjectMap.putIfAbsent(
+            a.subjectId, () => a.subjectName ?? a.subjectLabel);
       }
     }
     final teacherStandardIds = teacherStandardMap.keys.toList();
@@ -223,8 +226,9 @@ class _CreateAssignmentScreenState
                 controller: _titleCtrl,
                 label: 'Title',
                 hint: 'Enter assignment title',
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Title is required'
+                    : null,
                 textInputAction: TextInputAction.next,
               ),
 
@@ -327,8 +331,8 @@ class _CreateAssignmentScreenState
                     onChanged: _selectedStandardId == null
                         ? null
                         : (s) {
-                            setState(() =>
-                                _selectedSubjectId = s?.id as String?);
+                            setState(
+                                () => _selectedSubjectId = s?.id as String?);
                           },
                   ),
                 if (isTeacher) ...[
@@ -431,8 +435,7 @@ class _CreateAssignmentScreenState
                             IconButton(
                               icon: const Icon(Icons.close,
                                   size: 18, color: AppColors.grey400),
-                              onPressed: () =>
-                                  setState(() => _file = null),
+                              onPressed: () => setState(() => _file = null),
                             ),
                           ],
                         ),
@@ -493,8 +496,8 @@ class _DropdownField<T> extends StatelessWidget {
         const SizedBox(height: AppDimensions.space8),
         Container(
           height: 52,
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.space16),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
           decoration: BoxDecoration(
             color: AppColors.surface50,
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -507,7 +510,8 @@ class _DropdownField<T> extends StatelessWidget {
               hint: Text(hint,
                   style: AppTypography.bodyMedium
                       .copyWith(color: AppColors.grey400)),
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
               icon: const Icon(Icons.keyboard_arrow_down,
                   color: AppColors.grey400),
               onChanged: onChanged,

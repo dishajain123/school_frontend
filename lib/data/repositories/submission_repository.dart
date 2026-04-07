@@ -34,6 +34,9 @@ class SubmissionRepository {
 
   Future<SubmissionListResponse> listSubmissions({
     required String assignmentId,
+    String? standardId,
+    String? subjectId,
+    String? section,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -41,6 +44,9 @@ class SubmissionRepository {
       _base,
       queryParameters: {
         'assignment_id': assignmentId,
+        if (standardId != null) 'standard_id': standardId,
+        if (subjectId != null) 'subject_id': subjectId,
+        if (section != null && section.isNotEmpty) 'section': section,
         'page': page,
         'page_size': pageSize,
       },

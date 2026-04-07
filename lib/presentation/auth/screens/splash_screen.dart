@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
+import '../widgets/school_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -124,7 +125,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Text(
-                        'EduNest \u{1F393}',
+                        'EduNest',
                         style: AppTypography.displayLarge.copyWith(
                           color: AppColors.white,
                           letterSpacing: 4,
@@ -136,7 +137,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     FadeTransition(
                       opacity: _subtitleFade,
                       child: Text(
-                        'Smart School Platform \u{2728}',
+                        'Smart School Platform',
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.white.withValues(alpha: 0.7),
                           letterSpacing: 0.5,
@@ -166,7 +167,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Loading your campus \u{1F4DA}',
+                        'Loading your campus',
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.white.withValues(alpha: 0.65),
                           letterSpacing: 0.3,
@@ -213,7 +214,11 @@ class _LogoMark extends StatelessWidget {
         ],
       ),
       child: const Center(
-        child: Icon(Icons.school_rounded, size: 52, color: AppColors.navyDeep),
+        child: SchoolLogo(
+          size: 64,
+          borderRadius: 12,
+          imagePadding: 6,
+        ),
       ),
     );
   }

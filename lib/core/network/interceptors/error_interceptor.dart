@@ -24,6 +24,14 @@ class ErrorInterceptor extends Interceptor {
         err.type == DioExceptionType.receiveTimeout ||
         err.type == DioExceptionType.sendTimeout ||
         err.type == DioExceptionType.connectionError) {
+      if (_isLocalApi(err.requestOptions.uri.host)) {
+        final uri = err.requestOptions.uri;
+        final target = '${uri.host}:${uri.port}';
+        return NetworkException(
+          message:
+              'Cannot reach local backend at $target. Start backend server and try again.',
+        );
+      }
       return const NetworkException(
         message: 'Connection timed out. Please check your internet.',
       );
@@ -86,6 +94,8 @@ class ErrorInterceptor extends Interceptor {
         );
     }
   }
+
+  bool _isLocalApi(String host) => host == 'localhost' || host == '127.0.0.1';
 
   /// Extracts the human-readable message from backend error body.
   /// Backend sends: { "error": "...", "detail": "...", "request_id": "..." }

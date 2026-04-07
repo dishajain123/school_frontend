@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/dio_client.dart';
 import '../data/models/complaint/complaint_model.dart';
 import '../data/models/leave/leave_model.dart';
 import '../data/repositories/complaint_repository.dart';
@@ -14,12 +16,28 @@ class PrincipalDashboardStats {
     required this.totalTeachers,
     required this.pendingLeaves,
     required this.openComplaints,
+    required this.studentAttendancePercentage,
+    required this.feesPaidAmount,
+    required this.resultsAveragePercentage,
+    required this.teacherAttendancePercentage,
   });
 
   final int totalStudents;
   final int totalTeachers;
   final int pendingLeaves;
   final int openComplaints;
+
+  // Principal report highlights
+  final double studentAttendancePercentage;
+  final double feesPaidAmount;
+  final double resultsAveragePercentage;
+  final double teacherAttendancePercentage;
+}
+
+double _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
 }
 
 final principalDashboardStatsProvider =
@@ -30,6 +48,7 @@ final principalDashboardStatsProvider =
   final teacherRepo = ref.read(teacherRepositoryProvider);
   final leaveRepo = ref.read(leaveRepositoryProvider);
   final complaintRepo = ref.read(complaintRepositoryProvider);
+  final dio = ref.read(dioClientProvider);
 
   final results = await Future.wait([
     studentRepo.list(
@@ -56,10 +75,32 @@ final principalDashboardStatsProvider =
   final pendingLeaves = results[2] as LeaveListResponse;
   final openComplaints = results[3] as ComplaintListResponse;
 
+  Map<String, dynamic> report = <String, dynamic>{};
+  try {
+    final reportRes = await dio.get(
+      '/principal-reports/overview',
+      queryParameters: {
+        if (activeYearId != null) 'academic_year_id': activeYearId,
+      },
+    );
+    if (reportRes.data is Map) {
+      report = Map<String, dynamic>.from(reportRes.data as Map);
+    }
+  } on DioException {
+    // Keep dashboard usable even if report endpoint is unavailable.
+    report = <String, dynamic>{};
+  }
+
   return PrincipalDashboardStats(
     totalStudents: students.total,
     totalTeachers: teachers.total,
     pendingLeaves: pendingLeaves.total,
     openComplaints: openComplaints.total,
+    studentAttendancePercentage:
+        _asDouble(report['student_attendance_percentage']),
+    feesPaidAmount: _asDouble(report['fees_paid_amount']),
+    resultsAveragePercentage: _asDouble(report['results_average_percentage']),
+    teacherAttendancePercentage:
+        _asDouble(report['teacher_attendance_percentage']),
   );
 });

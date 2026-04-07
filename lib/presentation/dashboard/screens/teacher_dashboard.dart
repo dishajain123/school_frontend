@@ -49,7 +49,7 @@ class TeacherDashboard extends ConsumerWidget {
         icon: Icons.beach_access_outlined,
         label: 'Leave',
         color: AppColors.subjectHistory,
-        onTap: () => context.go(RouteNames.applyLeave),
+        onTap: () => context.go(RouteNames.leaveList),
       ),
       QuickActionItem(
         icon: Icons.bar_chart_outlined,

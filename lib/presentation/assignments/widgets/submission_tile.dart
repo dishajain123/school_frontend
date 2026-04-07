@@ -12,6 +12,9 @@ class SubmissionTile extends StatelessWidget {
 
   /// Display name for the student (fetched externally)
   final String studentName;
+  final String? standardName;
+  final String? subjectName;
+  final String? section;
   final VoidCallback? onGrade;
   final VoidCallback? onViewFile;
   final bool isLast;
@@ -20,6 +23,9 @@ class SubmissionTile extends StatelessWidget {
     super.key,
     required this.submission,
     required this.studentName,
+    this.standardName,
+    this.subjectName,
+    this.section,
     this.onGrade,
     this.onViewFile,
     this.isLast = false,
@@ -75,30 +81,43 @@ class SubmissionTile extends StatelessWidget {
                     style: AppTypography.bodySmall
                         .copyWith(color: AppColors.grey400),
                   ),
+                  if (standardName != null ||
+                      subjectName != null ||
+                      section != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (standardName != null) standardName!,
+                        if (section != null && section!.isNotEmpty)
+                          'Sec $section',
+                        if (subjectName != null) subjectName!,
+                      ].join(' • '),
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.grey600),
+                    ),
+                  ],
                   const SizedBox(height: AppDimensions.space6),
-                  Row(
+                  Wrap(
+                    spacing: AppDimensions.space6,
+                    runSpacing: AppDimensions.space6,
                     children: [
-                      if (submission.isApproved) ...[
-                        _Badge(
+                      if (submission.isApproved)
+                        const _Badge(
                           label: 'Approved',
                           color: AppColors.successGreen,
                           bg: AppColors.successLight,
                           icon: Icons.verified_rounded,
                         ),
-                        const SizedBox(width: AppDimensions.space6),
-                      ],
-                      if (submission.isGraded && submission.grade != null) ...[
+                      if (submission.isGraded && submission.grade != null)
                         _Badge(
                           label: 'Grade: ${submission.grade}',
                           color: AppColors.successGreen,
                           bg: AppColors.successLight,
                         ),
-                        const SizedBox(width: AppDimensions.space6),
-                      ],
                       if (submission.fileKey != null)
                         GestureDetector(
                           onTap: onViewFile,
-                          child: _Badge(
+                          child: const _Badge(
                             label: 'File attached',
                             color: AppColors.infoBlue,
                             bg: AppColors.infoLight,
@@ -106,15 +125,13 @@ class SubmissionTile extends StatelessWidget {
                           ),
                         ),
                       if (submission.feedback != null &&
-                          submission.feedback!.trim().isNotEmpty) ...[
-                        const SizedBox(width: AppDimensions.space6),
-                        _Badge(
+                          submission.feedback!.trim().isNotEmpty)
+                        const _Badge(
                           label: 'Feedback',
                           color: AppColors.warningAmber,
                           bg: AppColors.warningLight,
                           icon: Icons.comment_bank_outlined,
                         ),
-                      ],
                     ],
                   ),
                 ],
@@ -147,10 +164,7 @@ class _Badge extends StatelessWidget {
   final IconData? icon;
 
   const _Badge(
-      {required this.label,
-      required this.color,
-      required this.bg,
-      this.icon});
+      {required this.label, required this.color, required this.bg, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +183,8 @@ class _Badge extends StatelessWidget {
           ],
           Text(
             label,
-            style: AppTypography.labelMedium
-                .copyWith(color: color, fontSize: 11),
+            style:
+                AppTypography.labelMedium.copyWith(color: color, fontSize: 11),
           ),
         ],
       ),

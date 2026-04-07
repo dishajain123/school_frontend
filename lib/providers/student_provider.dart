@@ -191,6 +191,28 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     );
     return updated;
   }
+
+  Future<List<StudentModel>> bulkUpdatePromotionStatus({
+    required List<String> studentIds,
+    required String promotionStatus,
+  }) async {
+    final repo = ref.read(studentRepositoryProvider);
+    final updatedItems = await repo.bulkUpdatePromotionStatus(
+      studentIds: studentIds,
+      promotionStatus: promotionStatus,
+    );
+
+    final updatedById = {for (final s in updatedItems) s.id: s};
+    final current = state.valueOrNull ?? const StudentState();
+    state = AsyncData(
+      current.copyWith(
+        items: current.items
+            .map((s) => updatedById.containsKey(s.id) ? updatedById[s.id]! : s)
+            .toList(),
+      ),
+    );
+    return updatedItems;
+  }
 }
 
 final studentNotifierProvider =
@@ -200,8 +222,47 @@ final studentNotifierProvider =
 
 final studentSectionsProvider =
     FutureProvider.family<List<String>, String?>((ref, standardId) async {
-  if (standardId == null || standardId.isEmpty) return const <String>[];
-
   final repo = ref.read(studentRepositoryProvider);
-  return repo.listSections(standardId: standardId);
+  if (standardId == null || standardId.isEmpty) {
+    try {
+      final sections = await repo.listSections();
+      if (sections.isNotEmpty) return sections;
+    } catch (_) {
+      // Fall back to deriving from student list below.
+    }
+  }
+
+  try {
+    final sections = await repo.listSections(
+      standardId:
+          (standardId != null && standardId.isNotEmpty) ? standardId : null,
+    );
+    if (sections.isNotEmpty) return sections;
+  } catch (_) {
+    // Fall back to deriving sections from students if dedicated endpoint fails.
+  }
+
+  const pageSize = 100; // Backend max page_size is 100.
+  int page = 1;
+  final sectionSet = <String>{};
+
+  while (true) {
+    final result = await repo.list(
+      standardId:
+          (standardId != null && standardId.isNotEmpty) ? standardId : null,
+      page: page,
+      pageSize: pageSize,
+    );
+    sectionSet.addAll(
+      result.items
+          .map((s) => (s.section ?? '').trim())
+          .where((section) => section.isNotEmpty),
+    );
+    if (page >= result.totalPages || result.items.isEmpty) break;
+    page += 1;
+  }
+
+  final fallbackSections = sectionSet.toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return fallbackSections;
 });

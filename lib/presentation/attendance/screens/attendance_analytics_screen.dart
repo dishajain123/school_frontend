@@ -32,13 +32,22 @@ class _AttendanceAnalyticsScreenState
     extends ConsumerState<AttendanceAnalyticsScreen> {
   int? _selectedMonth;
   int? _selectedYear;
+  bool _requestedParentChildrenLoad = false;
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final role = user?.role;
+    final childrenAsync = ref.watch(childrenNotifierProvider);
     final selectedChildId = ref.watch(selectedChildIdProvider);
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
+
+    if (role == UserRole.parent && !_requestedParentChildrenLoad) {
+      _requestedParentChildrenLoad = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(childrenNotifierProvider.notifier).loadMyChildren();
+      });
+    }
 
     final studentId = widget.studentId ??
         (role == UserRole.parent
@@ -53,14 +62,34 @@ class _AttendanceAnalyticsScreenState
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    if (studentId == null) {
+    if (role == UserRole.student && currentStudentIdAsync.hasError) {
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Analytics', showBack: true),
+        body: AppErrorState(
+          message: currentStudentIdAsync.error.toString(),
+          onRetry: () => ref.invalidate(currentStudentIdProvider),
+        ),
+      );
+    }
+    if (role == UserRole.parent &&
+        childrenAsync.valueOrNull?.isLoading == true) {
       return const AppScaffold(
         appBar: AppAppBar(title: 'Analytics', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (studentId == null) {
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Analytics', showBack: true),
         body: AppEmptyState(
           icon: Icons.analytics_outlined,
-          title: 'No student selected',
-          subtitle: 'Please select a child to view analytics.',
+          title: role == UserRole.parent
+              ? 'No child linked'
+              : 'No student selected',
+          subtitle: role == UserRole.parent
+              ? 'Link a child in parent dashboard to track attendance analytics.'
+              : 'Please select a child to view analytics.',
         ),
       );
     }

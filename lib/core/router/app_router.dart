@@ -50,6 +50,7 @@ import '../../presentation/exam_schedule/screens/exam_schedule_table_screen.dart
 import '../../presentation/results/screens/result_list_screen.dart';
 import '../../presentation/results/screens/enter_results_screen.dart';
 import '../../presentation/results/screens/report_card_screen.dart';
+import '../../presentation/reports/screens/principal_report_details_screen.dart';
 import '../../presentation/documents/screens/document_list_screen.dart';
 import '../../presentation/documents/screens/request_document_screen.dart';
 import '../../presentation/fees/screens/fee_dashboard_screen.dart';
@@ -494,11 +495,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Timetable ──────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.timetable,
-            builder: (_, __) => const TimetableViewScreen(),
+            builder: (context, state) {
+              final standardId = state.uri.queryParameters['standard_id'];
+              final section = state.uri.queryParameters['section'];
+              return TimetableViewScreen(
+                standardId: (standardId == null || standardId.isEmpty)
+                    ? null
+                    : standardId,
+                section: (section == null || section.trim().isEmpty)
+                    ? null
+                    : section,
+              );
+            },
             routes: [
               GoRoute(
                 path: 'upload',
-                builder: (_, __) => const UploadTimetableScreen(),
+                builder: (context, state) => UploadTimetableScreen(
+                  initialStandardId: state.uri.queryParameters['standard_id'],
+                  initialSection: state.uri.queryParameters['section'],
+                ),
               ),
             ],
           ),
@@ -614,6 +629,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: RouteNames.principalReportDetails,
+            builder: (context, state) {
+              final metric =
+                  state.uri.queryParameters['metric'] ?? 'student_attendance';
+              return PrincipalReportDetailsScreen(initialMetric: metric);
+            },
           ),
 
           // ── Fees ───────────────────────────────────────────────────────
@@ -765,7 +788,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const CreateComplaintScreen(),
+                builder: (_, __) {
+                  final user = ref.read(authNotifierProvider).currentUser;
+                  if (user?.role == UserRole.principal) {
+                    return const PlaceholderScreen(
+                      'Principal Cannot Raise Complaint',
+                      showBack: true,
+                    );
+                  }
+                  return const CreateComplaintScreen();
+                },
               ),
               GoRoute(
                 path: ':id',

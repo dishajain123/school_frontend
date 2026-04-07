@@ -182,7 +182,7 @@ extension ComplaintStatusX on ComplaintStatus {
       case ComplaintStatus.inProgress:
         return ComplaintStatus.resolved;
       case ComplaintStatus.resolved:
-        return ComplaintStatus.closed;
+        return null;
       case ComplaintStatus.closed:
         return null;
     }

@@ -19,6 +19,11 @@ class SubmissionModel {
   final String? studentAdmissionNumber;
   final String? studentRollNumber;
   final String? studentSection;
+  final String? studentName;
+  final String? standardId;
+  final String? standardName;
+  final String? subjectId;
+  final String? subjectName;
   final bool isLate;
   final String schoolId;
   final DateTime createdAt;
@@ -42,6 +47,11 @@ class SubmissionModel {
     this.studentAdmissionNumber,
     this.studentRollNumber,
     this.studentSection,
+    this.studentName,
+    this.standardId,
+    this.standardName,
+    this.subjectId,
+    this.subjectName,
     required this.isLate,
     required this.schoolId,
     required this.createdAt,
@@ -69,6 +79,11 @@ class SubmissionModel {
       studentAdmissionNumber: json['student_admission_number'] as String?,
       studentRollNumber: json['student_roll_number'] as String?,
       studentSection: json['student_section'] as String?,
+      studentName: json['student_name'] as String?,
+      standardId: json['standard_id'] as String?,
+      standardName: json['standard_name'] as String?,
+      subjectId: json['subject_id'] as String?,
+      subjectName: json['subject_name'] as String?,
       isLate: json['is_late'] as bool,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -94,6 +109,11 @@ class SubmissionModel {
     String? studentAdmissionNumber,
     String? studentRollNumber,
     String? studentSection,
+    String? studentName,
+    String? standardId,
+    String? standardName,
+    String? subjectId,
+    String? subjectName,
     bool? isLate,
     String? schoolId,
     DateTime? createdAt,
@@ -118,6 +138,11 @@ class SubmissionModel {
           studentAdmissionNumber ?? this.studentAdmissionNumber,
       studentRollNumber: studentRollNumber ?? this.studentRollNumber,
       studentSection: studentSection ?? this.studentSection,
+      studentName: studentName ?? this.studentName,
+      standardId: standardId ?? this.standardId,
+      standardName: standardName ?? this.standardName,
+      subjectId: subjectId ?? this.subjectId,
+      subjectName: subjectName ?? this.subjectName,
       isLate: isLate ?? this.isLate,
       schoolId: schoolId ?? this.schoolId,
       createdAt: createdAt ?? this.createdAt,

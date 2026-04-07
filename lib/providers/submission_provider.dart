@@ -12,6 +12,7 @@ class SubmissionListState {
   final int pageSize;
   final int totalPages;
   final bool isLoadingMore;
+  final String? sectionFilter;
 
   const SubmissionListState({
     this.items = const [],
@@ -20,6 +21,7 @@ class SubmissionListState {
     this.pageSize = 20,
     this.totalPages = 0,
     this.isLoadingMore = false,
+    this.sectionFilter,
   });
 
   bool get hasMore => page < totalPages;
@@ -31,6 +33,7 @@ class SubmissionListState {
     int? pageSize,
     int? totalPages,
     bool? isLoadingMore,
+    String? sectionFilter,
   }) {
     return SubmissionListState(
       items: items ?? this.items,
@@ -39,6 +42,7 @@ class SubmissionListState {
       pageSize: pageSize ?? this.pageSize,
       totalPages: totalPages ?? this.totalPages,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      sectionFilter: sectionFilter ?? this.sectionFilter,
     );
   }
 }
@@ -52,12 +56,17 @@ class SubmissionsNotifier
   @override
   Future<SubmissionListState> build(String assignmentId) async {
     _repo = ref.read(submissionRepositoryProvider);
-    return _fetchPage(assignmentId, 1);
+    return _fetchPage(assignmentId, 1, null);
   }
 
-  Future<SubmissionListState> _fetchPage(String assignmentId, int page) async {
+  Future<SubmissionListState> _fetchPage(
+    String assignmentId,
+    int page,
+    String? sectionFilter,
+  ) async {
     final response = await _repo.listSubmissions(
       assignmentId: assignmentId,
+      section: sectionFilter,
       page: page,
     );
     return SubmissionListState(
@@ -66,12 +75,19 @@ class SubmissionsNotifier
       page: response.page,
       pageSize: response.pageSize,
       totalPages: response.totalPages,
+      sectionFilter: sectionFilter,
     );
   }
 
   Future<void> refresh() async {
+    final sectionFilter = state.valueOrNull?.sectionFilter;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchPage(arg, 1));
+    state = await AsyncValue.guard(() => _fetchPage(arg, 1, sectionFilter));
+  }
+
+  Future<void> applySectionFilter(String? section) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetchPage(arg, 1, section));
   }
 
   Future<void> loadMore() async {
@@ -82,6 +98,7 @@ class SubmissionsNotifier
     try {
       final response = await _repo.listSubmissions(
         assignmentId: arg,
+        section: current.sectionFilter,
         page: current.page + 1,
       );
       state = AsyncData(current.copyWith(
@@ -112,9 +129,8 @@ class SubmissionsNotifier
     final current = state.valueOrNull;
     if (current != null) {
       state = AsyncData(current.copyWith(
-        items: current.items
-            .map((s) => s.id == updated.id ? updated : s)
-            .toList(),
+        items:
+            current.items.map((s) => s.id == updated.id ? updated : s).toList(),
       ));
     }
     return updated;
@@ -129,8 +145,8 @@ final submissionsProvider = AsyncNotifierProvider.autoDispose
 );
 
 // Single submission create — used in assignment detail screen
-final submissionCreateProvider =
-    StateNotifierProvider.autoDispose<SubmissionCreateNotifier, AsyncValue<SubmissionModel?>>(
+final submissionCreateProvider = StateNotifierProvider.autoDispose<
+    SubmissionCreateNotifier, AsyncValue<SubmissionModel?>>(
   (ref) => SubmissionCreateNotifier(ref.read(submissionRepositoryProvider)),
 );
 

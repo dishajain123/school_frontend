@@ -60,36 +60,47 @@ class DiaryRepository {
       if (date != null) 'date': date,
       if (academicYearId != null) 'academic_year_id': academicYearId,
     };
-
     try {
       final response = await _dio.post(_base, data: body);
       return DiaryModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      final data = e.response?.data;
-      String msg = '';
-      if (data is Map<String, dynamic>) {
-        final rawMsg = data['message'] ?? data['detail'];
-        msg = rawMsg?.toString() ?? '';
-      } else if (data != null) {
-        msg = data.toString();
+      final status = e.response?.statusCode;
+      if (!_shouldFallbackCreate(e.response?.data, status)) {
+        rethrow;
       }
 
-      // Compatibility fallback for strict/stale backend validators.
-      final isNoneBodyValidation =
-          e.response?.statusCode == 422 && msg.contains('Input should be None');
-      if (!isNoneBodyValidation) rethrow;
+      // Backward compatibility for deployments exposing create at /diary/create.
+      final fallback = await _dio.post('$_base/create', data: body);
+      return DiaryModel.fromJson(fallback.data as Map<String, dynamic>);
+    }
+  }
 
-      try {
-        final wrappedResponse =
-            await _dio.post(_base, data: {'payload': body});
-        return DiaryModel.fromJson(
-            wrappedResponse.data as Map<String, dynamic>);
-      } on DioException {
-        final explicitResponse = await _dio.post('$_base/create', data: body);
-        return DiaryModel.fromJson(
-            explicitResponse.data as Map<String, dynamic>);
+  bool _shouldFallbackCreate(dynamic responseData, int? statusCode) {
+    if (statusCode == 404 || statusCode == 405) return true;
+    if (statusCode != 422) return false;
+
+    final map = responseData is Map<String, dynamic> ? responseData : null;
+    final detail = map?['detail'];
+    if (detail is String) {
+      final msg = detail.toLowerCase();
+      if (msg.contains('input should be none')) return true;
+      return msg.contains('input') &&
+          (msg.contains('required') || msg.contains('not found'));
+    }
+
+    if (detail is List) {
+      for (final item in detail) {
+        if (item is! Map) continue;
+        final msg = item['msg']?.toString().toLowerCase() ?? '';
+        if (msg.contains('input should be none')) return true;
+        final loc = item['loc'];
+        if (loc is List &&
+            loc.any((p) => p.toString().toLowerCase() == 'input')) {
+          return true;
+        }
       }
     }
+    return false;
   }
 }
 

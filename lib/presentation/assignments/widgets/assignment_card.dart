@@ -56,153 +56,158 @@ class AssignmentCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Subject color stripe
-                Container(
-                  width: 4,
-                  decoration: BoxDecoration(
-                    color: subjectColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(AppDimensions.radiusMedium),
-                      bottomLeft: Radius.circular(AppDimensions.radiusMedium),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Subject color stripe
+                  Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: subjectColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(AppDimensions.radiusMedium),
+                        bottomLeft: Radius.circular(AppDimensions.radiusMedium),
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppDimensions.space12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Top row: title + status chip
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                assignment.title,
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: AppColors.grey800,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: AppDimensions.space8),
-                            _StatusChip(info: statusInfo),
-                          ],
-                        ),
-
-                        const SizedBox(height: AppDimensions.space6),
-
-                        // Subject + standard row
-                        Row(
-                          children: [
-                            Icon(Icons.book_outlined,
-                                size: 13, color: AppColors.grey400),
-                            const SizedBox(width: 4),
-                            Text(
-                              subjectName ?? '—',
-                              style: AppTypography.bodySmall
-                                  .copyWith(color: AppColors.grey600),
-                            ),
-                            if (standardName != null) ...[
-                              const SizedBox(width: AppDimensions.space8),
-                              Container(
-                                width: 3,
-                                height: 3,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.grey400,
-                                  shape: BoxShape.circle,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimensions.space12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top row: title + status chip
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  assignment.title,
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: AppColors.grey800,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: AppDimensions.space8),
+                              _StatusChip(info: statusInfo),
+                            ],
+                          ),
+
+                          const SizedBox(height: AppDimensions.space6),
+
+                          // Subject + standard row
+                          Row(
+                            children: [
+                              Icon(Icons.book_outlined,
+                                  size: 13, color: AppColors.grey400),
+                              const SizedBox(width: 4),
                               Text(
-                                standardName!,
+                                subjectName ?? '—',
                                 style: AppTypography.bodySmall
                                     .copyWith(color: AppColors.grey600),
                               ),
-                            ],
-                          ],
-                        ),
-
-                        const SizedBox(height: AppDimensions.space12),
-
-                        // Due date row
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 13,
-                              color: assignment.isOverdue
-                                  ? AppColors.errorRed
-                                  : AppColors.grey400,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Due ${DateFormatter.formatDate(assignment.dueDate)}',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: assignment.isOverdue
-                                    ? AppColors.errorRed
-                                    : AppColors.grey600,
-                                fontWeight: assignment.isOverdue
-                                    ? FontWeight.w500
-                                    : FontWeight.w400,
-                              ),
-                            ),
-                            if (assignment.isDueToday) ...[
-                              const SizedBox(width: AppDimensions.space6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warningLight,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'TODAY',
-                                  style: AppTypography.labelMedium.copyWith(
-                                    color: AppColors.warningAmber,
-                                    fontSize: 10,
+                              if (standardName != null) ...[
+                                const SizedBox(width: AppDimensions.space8),
+                                Container(
+                                  width: 3,
+                                  height: 3,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.grey400,
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                              ),
-                            ],
-                            const Spacer(),
-                            if (assignment.fileKey != null)
-                              Icon(Icons.attach_file,
-                                  size: 14, color: AppColors.grey400),
-                          ],
-                        ),
-                        if (showSubmissionAction && onViewSubmissions != null) ...[
-                          const SizedBox(height: AppDimensions.space12),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: OutlinedButton.icon(
-                              onPressed: onViewSubmissions,
-                              icon: const Icon(Icons.fact_check_outlined, size: 16),
-                              label: const Text('View Submissions'),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 34),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                const SizedBox(width: AppDimensions.space8),
+                                Text(
+                                  standardName!,
+                                  style: AppTypography.bodySmall
+                                      .copyWith(color: AppColors.grey600),
                                 ),
-                                side: const BorderSide(color: AppColors.navyLight),
-                                foregroundColor: AppColors.navyDeep,
-                                textStyle: AppTypography.labelMedium,
+                              ],
+                            ],
+                          ),
+
+                          const SizedBox(height: AppDimensions.space12),
+
+                          // Due date row
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 13,
+                                color: assignment.isOverdue
+                                    ? AppColors.errorRed
+                                    : AppColors.grey400,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Due ${DateFormatter.formatDate(assignment.dueDate)}',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: assignment.isOverdue
+                                      ? AppColors.errorRed
+                                      : AppColors.grey600,
+                                  fontWeight: assignment.isOverdue
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                              if (assignment.isDueToday) ...[
+                                const SizedBox(width: AppDimensions.space6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warningLight,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'TODAY',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      color: AppColors.warningAmber,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              if (assignment.fileKey != null)
+                                Icon(Icons.attach_file,
+                                    size: 14, color: AppColors.grey400),
+                            ],
+                          ),
+                          if (showSubmissionAction &&
+                              onViewSubmissions != null) ...[
+                            const SizedBox(height: AppDimensions.space12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                onPressed: onViewSubmissions,
+                                icon: const Icon(Icons.fact_check_outlined,
+                                    size: 16),
+                                label: const Text('View Submissions'),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(0, 34),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  side: const BorderSide(
+                                      color: AppColors.navyLight),
+                                  foregroundColor: AppColors.navyDeep,
+                                  textStyle: AppTypography.labelMedium,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

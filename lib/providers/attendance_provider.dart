@@ -299,7 +299,13 @@ final currentStudentIdProvider = FutureProvider<String?>((ref) async {
   if (user?.role != UserRole.student) return null;
 
   final repo = ref.read(studentRepositoryProvider);
-  final result = await repo.list(page: 1, pageSize: 1);
-  if (result.items.isEmpty) return null;
-  return result.items.first.id;
+  try {
+    final me = await repo.getMyProfile();
+    return me.id;
+  } catch (_) {
+    // Backward compatibility for deployments without /students/me.
+    final result = await repo.list(page: 1, pageSize: 1);
+    if (result.items.isEmpty) return null;
+    return result.items.first.id;
+  }
 });

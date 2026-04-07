@@ -6,10 +6,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/masters/standard_model.dart';
 import '../../../data/models/student/student_model.dart';
 import '../../../data/models/timetable/timetable_model.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/masters_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../providers/student_provider.dart';
 import '../../../providers/timetable_provider.dart';
@@ -44,6 +47,9 @@ class TimetableViewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final activeYear = ref.watch(activeYearProvider);
+    final canUpload = currentUser != null &&
+        (currentUser.role == UserRole.principal ||
+            currentUser.role == UserRole.teacher);
 
     if (currentUser == null) {
       return const AppScaffold(
@@ -68,22 +74,195 @@ class TimetableViewScreen extends ConsumerWidget {
       );
     }
 
-    // PRINCIPAL / TEACHER / etc — standardId must be provided
-    if (standardId == null) {
-      return AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: AppEmptyState(
-          icon: Icons.schedule_outlined,
-          title: 'No class selected',
-          subtitle: 'Please navigate here from a class page.',
-        ),
-      );
-    }
-
-    return _TimetableContent(
-      standardId: standardId!,
-      section: section,
+    return _AdminTimetableView(
+      initialStandardId: standardId,
+      initialSection: section,
       academicYearId: activeYear?.id,
+      canUpload: canUpload,
+    );
+  }
+}
+
+class _AdminTimetableView extends ConsumerStatefulWidget {
+  const _AdminTimetableView({
+    required this.academicYearId,
+    required this.canUpload,
+    this.initialStandardId,
+    this.initialSection,
+  });
+
+  final String? initialStandardId;
+  final String? initialSection;
+  final String? academicYearId;
+  final bool canUpload;
+
+  @override
+  ConsumerState<_AdminTimetableView> createState() =>
+      _AdminTimetableViewState();
+}
+
+class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
+  String? _selectedStandardId;
+  String? _selectedSection;
+  String? _loadedStandardId;
+  String? _loadedSection;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStandardId = widget.initialStandardId;
+    _selectedSection = widget.initialSection;
+    _loadedStandardId = widget.initialStandardId;
+    _loadedSection = widget.initialSection;
+  }
+
+  void _loadTimetable() {
+    if (_selectedStandardId == null || _selectedStandardId!.isEmpty) return;
+    setState(() {
+      _loadedStandardId = _selectedStandardId;
+      _loadedSection = _selectedSection;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final standardsAsync = ref.watch(standardsProvider(widget.academicYearId));
+    final sectionsAsync = _selectedStandardId == null
+        ? const AsyncData<List<String>>(<String>[])
+        : ref.watch(
+            timetableSectionsProvider((
+              standardId: _selectedStandardId!,
+              academicYearId: widget.academicYearId,
+            )),
+          );
+
+    return AppScaffold(
+      appBar: AppAppBar(
+        title: 'Timetable',
+        showBack: true,
+        actions: [
+          if (_loadedStandardId != null)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+              tooltip: 'Refresh',
+              onPressed: () {
+                ref.invalidate(
+                  timetableProvider((
+                    standardId: _loadedStandardId!,
+                    academicYearId: widget.academicYearId,
+                    section: _loadedSection,
+                  )),
+                );
+              },
+            ),
+          if (widget.canUpload)
+            IconButton(
+              icon: const Icon(Icons.upload_file_outlined,
+                  color: AppColors.white),
+              tooltip: 'Upload timetable',
+              onPressed: () async {
+                final uri = Uri(
+                  path: '/timetable/upload',
+                  queryParameters: {
+                    if (_selectedStandardId != null)
+                      'standard_id': _selectedStandardId!,
+                    if (_selectedSection != null &&
+                        _selectedSection!.trim().isNotEmpty)
+                      'section': _selectedSection!,
+                  },
+                );
+                await context.push(uri.toString());
+                if (_loadedStandardId != null) {
+                  ref.invalidate(
+                    timetableProvider((
+                      standardId: _loadedStandardId!,
+                      academicYearId: widget.academicYearId,
+                      section: _loadedSection,
+                    )),
+                  );
+                }
+              },
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.space16,
+              AppDimensions.space16,
+              AppDimensions.space16,
+              AppDimensions.space12,
+            ),
+            child: Column(
+              children: [
+                standardsAsync.when(
+                  loading: () => AppLoading.card(height: 52),
+                  error: (e, _) => _FilterError(message: e.toString()),
+                  data: (standards) => _ClassFilterField(
+                    standards: standards,
+                    value: _selectedStandardId,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedStandardId = value;
+                        _selectedSection = null;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space12),
+                sectionsAsync.when(
+                  loading: () => AppLoading.card(height: 52),
+                  error: (_, __) => _SectionFilterField(
+                    sections: const [],
+                    value: _selectedSection,
+                    enabled: _selectedStandardId != null,
+                    onChanged: (_) {},
+                  ),
+                  data: (sections) => _SectionFilterField(
+                    sections: sections,
+                    value: _selectedSection,
+                    enabled: _selectedStandardId != null,
+                    onChanged: (value) =>
+                        setState(() => _selectedSection = value),
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        _selectedStandardId == null ? null : _loadTimetable,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      backgroundColor: AppColors.navyDeep,
+                      foregroundColor: AppColors.white,
+                    ),
+                    icon: const Icon(Icons.filter_alt_outlined),
+                    label: const Text('Load Timetable'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _loadedStandardId == null
+                ? const AppEmptyState(
+                    icon: Icons.schedule_outlined,
+                    title: 'Select Class',
+                    subtitle:
+                        'Choose class and section filter to view timetable.',
+                  )
+                : _TimetableDataBody(
+                    standardId: _loadedStandardId!,
+                    section: _loadedSection,
+                    academicYearId: widget.academicYearId,
+                    canUpload: widget.canUpload,
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -206,9 +385,9 @@ class _TimetableContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    final isPrincipal = currentUser?.role.name == 'PRINCIPAL';
-    final timetableAsync = ref.watch(timetableProvider(_params));
-
+    final canUpload = currentUser != null &&
+        (currentUser.role == UserRole.principal ||
+            currentUser.role == UserRole.teacher);
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Timetable',
@@ -219,7 +398,7 @@ class _TimetableContent extends ConsumerWidget {
             tooltip: 'Refresh',
             onPressed: () => ref.invalidate(timetableProvider(_params)),
           ),
-          if (isPrincipal)
+          if (canUpload)
             IconButton(
               icon: const Icon(Icons.upload_file_outlined,
                   color: AppColors.white),
@@ -233,34 +412,195 @@ class _TimetableContent extends ConsumerWidget {
             ),
         ],
       ),
-      body: timetableAsync.when(
-        loading: () => AppLoading.fullPage(),
-        error: (e, _) {
-          final msg = e.toString();
-          // 404 / "Timetable" → no timetable uploaded yet
-          if (msg.contains('404') ||
-              msg.toLowerCase().contains('timetable') ||
-              msg.contains('Not Found')) {
-            return TimetablePlaceholder(canUpload: isPrincipal);
-          }
-          return AppErrorState(
-            message: msg,
-            onRetry: () => ref.invalidate(timetableProvider(_params)),
-          );
-        },
-        data: (timetable) {
-          if (timetable.fileUrl == null) {
-            return TimetablePlaceholder(canUpload: isPrincipal);
-          }
-          return Column(
-            children: [
-              _TimetableMetaBar(timetable: timetable),
-              Expanded(
-                child: TimetableViewer(timetable: timetable),
+      body: _TimetableDataBody(
+        standardId: standardId,
+        section: section,
+        academicYearId: academicYearId,
+        canUpload: canUpload,
+      ),
+    );
+  }
+}
+
+class _TimetableDataBody extends ConsumerWidget {
+  const _TimetableDataBody({
+    required this.standardId,
+    required this.academicYearId,
+    required this.canUpload,
+    this.section,
+  });
+
+  final String standardId;
+  final String? section;
+  final String? academicYearId;
+  final bool canUpload;
+
+  TimetableParams get _params => (
+        standardId: standardId,
+        academicYearId: academicYearId,
+        section: section,
+      );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timetableAsync = ref.watch(timetableProvider(_params));
+    return timetableAsync.when(
+      loading: () => AppLoading.fullPage(),
+      error: (e, _) {
+        final msg = e.toString();
+        if (msg.contains('404') ||
+            msg.toLowerCase().contains('timetable') ||
+            msg.contains('Not Found')) {
+          return TimetablePlaceholder(canUpload: canUpload);
+        }
+        return AppErrorState(
+          message: msg,
+          onRetry: () => ref.invalidate(timetableProvider(_params)),
+        );
+      },
+      data: (timetable) {
+        if (timetable.fileUrl == null) {
+          return TimetablePlaceholder(canUpload: canUpload);
+        }
+        return Column(
+          children: [
+            _TimetableMetaBar(timetable: timetable),
+            Expanded(
+              child: TimetableViewer(timetable: timetable),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ClassFilterField extends StatelessWidget {
+  const _ClassFilterField({
+    required this.standards,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<StandardModel> standards;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      decoration: BoxDecoration(
+        color: AppColors.surface50,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            'Select class',
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.grey400),
+          onChanged: onChanged,
+          items: standards
+              .map(
+                (s) => DropdownMenuItem<String>(
+                  value: s.id,
+                  child: Text(
+                    s.name,
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.grey800),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionFilterField extends StatelessWidget {
+  const _SectionFilterField({
+    required this.sections,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final List<String> sections;
+  final String? value;
+  final bool enabled;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      decoration: BoxDecoration(
+        color: enabled ? AppColors.surface50 : AppColors.surface100,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            enabled ? 'All sections' : 'Select class first',
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.grey400),
+          onChanged: enabled ? onChanged : null,
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: Text(
+                'All sections',
+                style:
+                    AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
               ),
-            ],
-          );
-        },
+            ),
+            ...sections.map(
+              (section) => DropdownMenuItem<String?>(
+                value: section,
+                child: Text(
+                  section,
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.grey800),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterError extends StatelessWidget {
+  const _FilterError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.space12),
+      decoration: BoxDecoration(
+        color: AppColors.errorLight,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.errorRed),
+      ),
+      child: Text(
+        message,
+        style: AppTypography.bodySmall.copyWith(color: AppColors.errorDark),
       ),
     );
   }

@@ -61,13 +61,13 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _approved = false;
+  _ReviewAction _action = _ReviewAction.reviewed;
 
   @override
   void initState() {
     super.initState();
     _gradeCtrl = TextEditingController(text: widget.existingGrade ?? '');
-    _feedbackCtrl =
-        TextEditingController(text: widget.existingFeedback ?? '');
+    _feedbackCtrl = TextEditingController(text: widget.existingFeedback ?? '');
     _approved = widget.existingApproved;
   }
 
@@ -82,8 +82,15 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final grade = _gradeCtrl.text.trim();
-    final feedback = _feedbackCtrl.text.trim();
-    if (grade.isEmpty && feedback.isEmpty && _approved == widget.existingApproved) {
+    var feedback = _feedbackCtrl.text.trim();
+    if (_action == _ReviewAction.reviewed && feedback.isEmpty) {
+      feedback = 'Reviewed by teacher';
+    } else if (_action == _ReviewAction.redo && feedback.isEmpty) {
+      feedback = 'Redo required. Please revise and resubmit.';
+    }
+    if (grade.isEmpty &&
+        feedback.isEmpty &&
+        _approved == widget.existingApproved) {
       SnackbarUtils.showError(
         context,
         'Add grade/feedback or change approval status',
@@ -134,105 +141,135 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
         top: AppDimensions.space20,
         bottom: AppDimensions.space24 + bottomPadding,
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.surface200,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space20),
-
-            // Header
-            Row(
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Review Submission',
-                        style: AppTypography.headlineSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.studentName,
-                        style: AppTypography.bodyMedium
-                            .copyWith(color: AppColors.grey600),
-                      ),
-                    ],
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface200,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.grey400),
-                  onPressed: () => Navigator.of(context).pop(),
+                const SizedBox(height: AppDimensions.space20),
+
+                // Header
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Review Submission',
+                            style: AppTypography.headlineSmall,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.studentName,
+                            style: AppTypography.bodyMedium
+                                .copyWith(color: AppColors.grey600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AppColors.grey400),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppDimensions.space24),
+
+                // Grade field
+                AppTextField(
+                  controller: _gradeCtrl,
+                  label: 'Grade (optional)',
+                  hint: 'e.g. A+, 85/100, Excellent',
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: AppDimensions.space16),
+
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Approve Submission',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.grey800,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Mark this submission as teacher-approved',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.grey600,
+                    ),
+                  ),
+                  value: _approved,
+                  onChanged:
+                      _isLoading ? null : (v) => setState(() => _approved = v),
+                  activeColor: AppColors.successGreen,
+                ),
+
+                const SizedBox(height: AppDimensions.space8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Reviewed'),
+                      selected: _action == _ReviewAction.reviewed,
+                      onSelected: _isLoading
+                          ? null
+                          : (_) =>
+                              setState(() => _action = _ReviewAction.reviewed),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Needs Redo'),
+                      selected: _action == _ReviewAction.redo,
+                      onSelected: _isLoading
+                          ? null
+                          : (_) => setState(() => _action = _ReviewAction.redo),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppDimensions.space12),
+
+                // Feedback field
+                AppTextField(
+                  controller: _feedbackCtrl,
+                  label: 'Feedback (optional)',
+                  hint: 'Write feedback for the student...',
+                  maxLines: 4,
+                  textInputAction: TextInputAction.done,
+                ),
+
+                const SizedBox(height: AppDimensions.space24),
+
+                // Submit button
+                AppButton.primary(
+                  label: 'Save Review',
+                  onTap: _submit,
+                  isLoading: _isLoading,
                 ),
               ],
             ),
-
-            const SizedBox(height: AppDimensions.space24),
-
-            // Grade field
-            AppTextField(
-              controller: _gradeCtrl,
-              label: 'Grade (optional)',
-              hint: 'e.g. A+, 85/100, Excellent',
-              textInputAction: TextInputAction.next,
-            ),
-
-            const SizedBox(height: AppDimensions.space16),
-
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Approve Submission',
-                style: AppTypography.titleSmall.copyWith(
-                  color: AppColors.grey800,
-                ),
-              ),
-              subtitle: Text(
-                'Mark this submission as teacher-approved',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.grey600,
-                ),
-              ),
-              value: _approved,
-              onChanged: _isLoading ? null : (v) => setState(() => _approved = v),
-              activeColor: AppColors.successGreen,
-            ),
-
-            const SizedBox(height: AppDimensions.space8),
-
-            // Feedback field
-            AppTextField(
-              controller: _feedbackCtrl,
-              label: 'Feedback (optional)',
-              hint: 'Write feedback for the student...',
-              maxLines: 4,
-              textInputAction: TextInputAction.done,
-            ),
-
-            const SizedBox(height: AppDimensions.space24),
-
-            // Submit button
-            AppButton.primary(
-              label: 'Save Review',
-              onTap: _submit,
-              isLoading: _isLoading,
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+enum _ReviewAction { reviewed, redo }

@@ -53,7 +53,7 @@ class AuthInterceptor extends Interceptor {
         // Use a fresh Dio instance scoped only for the refresh call
         final refreshDio = Dio(
           BaseOptions(
-            baseUrl: ApiConstants.baseUrl + ApiConstants.apiPrefix,
+            baseUrl: ApiConstants.resolvedBaseUrl + ApiConstants.apiPrefix,
             connectTimeout: const Duration(milliseconds: 10000),
             receiveTimeout: const Duration(milliseconds: 10000),
           ),
@@ -84,7 +84,7 @@ class AuthInterceptor extends Interceptor {
         // Use a fresh Dio to retry — its baseUrl is the same so path works
         final retryDio = Dio(
           BaseOptions(
-            baseUrl: ApiConstants.baseUrl + ApiConstants.apiPrefix,
+            baseUrl: ApiConstants.resolvedBaseUrl + ApiConstants.apiPrefix,
             connectTimeout: const Duration(milliseconds: 15000),
             receiveTimeout: const Duration(milliseconds: 30000),
           ),

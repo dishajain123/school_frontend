@@ -57,7 +57,8 @@ class ParentRepository {
     return ParentModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ParentModel> update(String parentId, Map<String, dynamic> payload) async {
+  Future<ParentModel> update(
+      String parentId, Map<String, dynamic> payload) async {
     final response = await _dio.patch(
       ApiConstants.parentById(parentId),
       data: payload,
@@ -74,8 +75,51 @@ class ParentRepository {
         .toList();
   }
 
+  Future<List<ChildSummaryModel>> assignChildren(
+    String parentId,
+    List<String> studentIds,
+  ) async {
+    final response = await _dio.patch(
+      ApiConstants.parentChildren(parentId),
+      data: {'student_ids': studentIds},
+    );
+    final data = response.data as Map<String, dynamic>;
+    final items = data['children'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => ChildSummaryModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<ChildSummaryModel>> getMyChildren() async {
     final response = await _dio.get(ApiConstants.myChildren);
+    final data = response.data as Map<String, dynamic>;
+    final items = data['children'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => ChildSummaryModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<ChildSummaryModel>> linkMyChild({
+    String? studentId,
+    String? admissionNumber,
+    String? studentEmail,
+    String? studentPhone,
+    String? studentPassword,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.myChildrenLink,
+      data: {
+        if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
+        if (admissionNumber != null && admissionNumber.isNotEmpty)
+          'admission_number': admissionNumber,
+        if (studentEmail != null && studentEmail.isNotEmpty)
+          'student_email': studentEmail,
+        if (studentPhone != null && studentPhone.isNotEmpty)
+          'student_phone': studentPhone,
+        if (studentPassword != null && studentPassword.isNotEmpty)
+          'student_password': studentPassword,
+      },
+    );
     final data = response.data as Map<String, dynamic>;
     final items = data['children'] as List<dynamic>? ?? [];
     return items

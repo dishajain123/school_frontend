@@ -6,6 +6,7 @@ import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/complaint/complaint_model.dart';
 import '../../../providers/complaint_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -40,7 +41,8 @@ class _ComplaintListScreenState extends ConsumerState<ComplaintListScreen> {
   Widget build(BuildContext context) {
     final complaintsAsync = ref.watch(complaintNotifierProvider);
     final user = ref.watch(currentUserProvider);
-    final canCreate = user?.hasPermission('complaint:create') ?? false;
+    final canCreate = (user?.hasPermission('complaint:create') ?? false) &&
+        user?.role != UserRole.principal;
 
     return AppScaffold(
       appBar: const AppAppBar(
@@ -62,7 +64,11 @@ class _ComplaintListScreenState extends ConsumerState<ComplaintListScreen> {
           onRetry: () => ref.read(complaintNotifierProvider.notifier).load(),
         ),
         data: (state) {
-          final items = state.items;
+          final items = user?.role == UserRole.principal
+              ? state.items
+                  .where((c) => c.status != ComplaintStatus.closed)
+                  .toList()
+              : state.items;
           if (state.error != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
@@ -148,6 +154,10 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleStatuses = ComplaintStatus.values
+        .where((s) => s != ComplaintStatus.closed)
+        .toList();
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(
@@ -165,7 +175,7 @@ class _FilterRow extends StatelessWidget {
             small: true,
           ),
           const SizedBox(width: AppDimensions.space8),
-          ...ComplaintStatus.values.map(
+          ...visibleStatuses.map(
             (s) => Padding(
               padding: const EdgeInsets.only(right: AppDimensions.space8),
               child: AppChip(

@@ -105,6 +105,38 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
   Future<void> refresh() async {
     await loadMyChildren();
   }
+
+  Future<void> linkChild({
+    String? studentId,
+    String? admissionNumber,
+    String? studentEmail,
+    String? studentPhone,
+    String? studentPassword,
+  }) async {
+    final repo = ref.read(parentRepositoryProvider);
+    final children = await repo.linkMyChild(
+      studentId: studentId,
+      admissionNumber: admissionNumber,
+      studentEmail: studentEmail,
+      studentPhone: studentPhone,
+      studentPassword: studentPassword,
+    );
+
+    final current = state.valueOrNull ?? const ChildrenState();
+    final selectedId = current.selectedChildId != null &&
+            children.any((c) => c.id == current.selectedChildId)
+        ? current.selectedChildId
+        : (children.isNotEmpty ? children.first.id : null);
+
+    state = AsyncData(
+      current.copyWith(
+        children: children,
+        selectedChildId: selectedId,
+        isLoading: false,
+        clearError: true,
+      ),
+    );
+  }
 }
 
 final childrenNotifierProvider =
@@ -244,6 +276,14 @@ class ParentNotifier extends AsyncNotifier<ParentListState> {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<List<ChildSummaryModel>> assignChildren(
+    String parentId,
+    List<String> studentIds,
+  ) async {
+    final repo = ref.read(parentRepositoryProvider);
+    return repo.assignChildren(parentId, studentIds);
   }
 }
 

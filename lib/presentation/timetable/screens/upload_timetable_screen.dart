@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../core/router/route_names.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/timetable_provider.dart';
@@ -17,19 +19,35 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 
 class UploadTimetableScreen extends ConsumerStatefulWidget {
-  const UploadTimetableScreen({super.key});
+  const UploadTimetableScreen({
+    super.key,
+    this.initialStandardId,
+    this.initialSection,
+  });
+
+  final String? initialStandardId;
+  final String? initialSection;
 
   @override
   ConsumerState<UploadTimetableScreen> createState() =>
       _UploadTimetableScreenState();
 }
 
-class _UploadTimetableScreenState
-    extends ConsumerState<UploadTimetableScreen> {
+class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
   String? _selectedStandardId;
   final _sectionController = TextEditingController();
-  File? _pickedFile;
-  String? _pickedFileName;
+  PlatformFile? _pickedFile;
+  Uint8List? _pickedBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStandardId = widget.initialStandardId;
+    final initialSection = widget.initialSection?.trim();
+    if (initialSection != null && initialSection.isNotEmpty) {
+      _sectionController.text = initialSection;
+    }
+  }
 
   @override
   void dispose() {
@@ -38,19 +56,19 @@ class _UploadTimetableScreenState
   }
 
   Future<void> _pickFile() async {
-    // Delegates to AppFilePicker / file_picker package (wired in FM01).
-    // For now, this is a stub — replace with actual picker integration.
     try {
-      // final result = await FilePicker.platform.pickFiles(
-      //   type: FileType.custom,
-      //   allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      // );
-      // if (result != null && result.files.single.path != null) {
-      //   setState(() {
-      //     _pickedFile = File(result.files.single.path!);
-      //     _pickedFileName = result.files.single.name;
-      //   });
-      // }
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final picked = result.files.single;
+      setState(() {
+        _pickedFile = picked;
+        _pickedBytes = picked.bytes;
+      });
     } catch (e) {
       if (mounted) SnackbarUtils.showError(context, 'Failed to pick file: $e');
     }
@@ -58,7 +76,7 @@ class _UploadTimetableScreenState
 
   void _clearFile() => setState(() {
         _pickedFile = null;
-        _pickedFileName = null;
+        _pickedBytes = null;
       });
 
   Future<void> _submit() async {
@@ -87,7 +105,12 @@ class _UploadTimetableScreenState
 
     if (success) {
       SnackbarUtils.showSuccess(context, 'Timetable uploaded successfully!');
-      context.pop(true);
+      final qp = <String, String>{'standard_id': _selectedStandardId!};
+      if (section != null && section.isNotEmpty) {
+        qp['section'] = section;
+      }
+      final uri = Uri(path: RouteNames.timetable, queryParameters: qp);
+      context.go(uri.toString());
     } else {
       final error = ref.read(timetableUploadProvider).error;
       SnackbarUtils.showError(
@@ -110,8 +133,7 @@ class _UploadTimetableScreenState
             onPressed: uploadState.isUploading ? null : () => context.pop(),
             child: Text(
               'Cancel',
-              style: AppTypography.titleSmall
-                  .copyWith(color: AppColors.white),
+              style: AppTypography.titleSmall.copyWith(color: AppColors.white),
             ),
           ),
         ],
@@ -177,14 +199,16 @@ class _UploadTimetableScreenState
                   _pickedFile == null
                       ? _FileTapTarget(onTap: _pickFile)
                       : _FileAttached(
-                          fileName: _pickedFileName ?? 'file',
+                          fileName: _pickedFile!.name,
+                          fileSizeBytes: _pickedFile!.size,
+                          bytesForPreview: _pickedBytes,
                           onRemove: _clearFile,
                         ),
                   const SizedBox(height: AppDimensions.space4),
                   Text(
                     'PDF, JPG or PNG · Max 10 MB',
-                    style:
-                        AppTypography.caption.copyWith(color: AppColors.grey400),
+                    style: AppTypography.caption
+                        .copyWith(color: AppColors.grey400),
                   ),
                 ],
               ),
@@ -242,8 +266,7 @@ class _DropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.surface50,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -254,12 +277,10 @@ class _DropdownField<T> extends StatelessWidget {
           value: value,
           isExpanded: true,
           hint: Text(hint,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.grey400)),
-          style: AppTypography.bodyMedium
-              .copyWith(color: AppColors.grey800),
-          icon: const Icon(Icons.keyboard_arrow_down,
-              color: AppColors.grey400),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.grey400),
           onChanged: onChanged,
           items: items,
         ),
@@ -285,8 +306,7 @@ class _TextInputField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.surface50,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -299,12 +319,11 @@ class _TextInputField extends StatelessWidget {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
-          hintStyle: AppTypography.bodyMedium
-              .copyWith(color: AppColors.grey400),
+          hintStyle:
+              AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
           counterText: '',
         ),
-        style:
-            AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+        style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
       ),
     );
   }
@@ -319,8 +338,7 @@ class _ReadOnlyField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.surface100,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -331,8 +349,8 @@ class _ReadOnlyField extends StatelessWidget {
           Icon(icon, size: 18, color: AppColors.grey400),
           const SizedBox(width: AppDimensions.space12),
           Text(value,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.grey600)),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey600)),
         ],
       ),
     );
@@ -352,8 +370,7 @@ class _FileTapTarget extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface50,
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          border: Border.all(
-              color: AppColors.navyDeep.withOpacity(0.20)),
+          border: Border.all(color: AppColors.navyDeep.withOpacity(0.20)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -376,42 +393,88 @@ class _FileTapTarget extends StatelessWidget {
 class _FileAttached extends StatelessWidget {
   const _FileAttached({
     required this.fileName,
+    required this.fileSizeBytes,
+    required this.bytesForPreview,
     required this.onRemove,
   });
   final String fileName;
+  final int fileSizeBytes;
+  final Uint8List? bytesForPreview;
   final VoidCallback onRemove;
+
+  bool get _isImagePreviewable {
+    final lower = fileName.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png');
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(2)} MB';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.all(AppDimensions.space12),
       decoration: BoxDecoration(
         color: AppColors.infoLight,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         border: Border.all(color: AppColors.infoBlue.withOpacity(0.30)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.insert_drive_file_outlined,
-              size: 18, color: AppColors.infoBlue),
-          const SizedBox(width: AppDimensions.space12),
-          Expanded(
-            child: Text(
-              fileName,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.infoBlue),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              const Icon(Icons.insert_drive_file_outlined,
+                  size: 18, color: AppColors.infoBlue),
+              const SizedBox(width: AppDimensions.space12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileName,
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: AppColors.infoBlue),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatBytes(fileSizeBytes),
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.grey600),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded,
+                    size: 18, color: AppColors.grey400),
+                onPressed: onRemove,
+                tooltip: 'Remove file',
+              ),
+            ],
+          ),
+          if (_isImagePreviewable && bytesForPreview != null) ...[
+            const SizedBox(height: AppDimensions.space8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              child: Image.memory(
+                bytesForPreview!,
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded,
-                size: 18, color: AppColors.grey400),
-            onPressed: onRemove,
-            tooltip: 'Remove file',
-          ),
+          ],
         ],
       ),
     );
@@ -426,8 +489,7 @@ class _InlineError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 52,
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
       decoration: BoxDecoration(
         color: AppColors.errorLight,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -435,12 +497,11 @@ class _InlineError extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline,
-              size: 16, color: AppColors.errorRed),
+          const Icon(Icons.error_outline, size: 16, color: AppColors.errorRed),
           const SizedBox(width: AppDimensions.space8),
           Text(message,
-              style: AppTypography.bodySmall
-                  .copyWith(color: AppColors.errorRed)),
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
         ],
       ),
     );

@@ -3,7 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/student/student_model.dart';
-import '../../common/widgets/app_avatar.dart';
 
 class StudentTile extends StatelessWidget {
   const StudentTile({
@@ -12,12 +11,18 @@ class StudentTile extends StatelessWidget {
     required this.onTap,
     this.standardName,
     this.isLast = false,
+    this.showSelection = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
   });
 
   final StudentModel student;
   final VoidCallback onTap;
   final String? standardName;
   final bool isLast;
+  final bool showSelection;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelectionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +78,7 @@ class StudentTile extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.infoBlue.withValues(alpha: 0.1),
+                              color: AppColors.infoBlue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(
                                   AppDimensions.radiusFull),
                             ),
@@ -126,11 +130,18 @@ class StudentTile extends StatelessWidget {
                   ),
                 ),
               const SizedBox(width: AppDimensions.space8),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 12,
-                color: AppColors.grey400,
-              ),
+              if (showSelection)
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (v) => onSelectionChanged?.call(v ?? false),
+                  activeColor: AppColors.navyDeep,
+                )
+              else
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: AppColors.grey400,
+                ),
             ],
           ),
         ),

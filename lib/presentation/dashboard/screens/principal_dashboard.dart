@@ -51,6 +51,18 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.feeDashboard),
       ),
       QuickActionItem(
+        icon: Icons.schedule_outlined,
+        label: 'Timetable',
+        color: AppColors.subjectScience,
+        onTap: () => context.go(RouteNames.timetable),
+      ),
+      QuickActionItem(
+        icon: Icons.assessment_outlined,
+        label: 'Results',
+        color: AppColors.subjectHindi,
+        onTap: () => context.go(RouteNames.results),
+      ),
+      QuickActionItem(
         icon: Icons.campaign_outlined,
         label: 'Announce',
         color: AppColors.subjectChem,

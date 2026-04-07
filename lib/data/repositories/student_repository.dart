@@ -65,6 +65,11 @@ class StudentRepository {
     return StudentModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<StudentModel> getMyProfile() async {
+    final response = await _dio.get(ApiConstants.studentsMe);
+    return StudentModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<StudentModel> create(Map<String, dynamic> payload) async {
     final response = await _dio.post(ApiConstants.students, data: payload);
     return StudentModel.fromJson(response.data as Map<String, dynamic>);
@@ -86,6 +91,24 @@ class StudentRepository {
       data: {'promotion_status': promotionStatus},
     );
     return StudentModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<StudentModel>> bulkUpdatePromotionStatus({
+    required List<String> studentIds,
+    required String promotionStatus,
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.studentBulkPromotionStatus,
+      data: {
+        'student_ids': studentIds,
+        'promotion_status': promotionStatus,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? const [];
+    return items
+        .map((e) => StudentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<String>> listSections({

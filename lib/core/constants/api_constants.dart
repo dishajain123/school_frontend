@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
   ApiConstants._();
 
@@ -5,6 +7,12 @@ class ApiConstants {
   static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator
   // static const String baseUrl = 'http://localhost:8000'; // iOS simulator
   static const String apiPrefix = '/api/v1';
+  static const String apiBaseUrlEnv = String.fromEnvironment('API_BASE_URL');
+
+  static String get resolvedBaseUrl {
+    if (apiBaseUrlEnv.isNotEmpty) return apiBaseUrlEnv;
+    return kIsWeb ? 'http://localhost:8000' : baseUrl;
+  }
 
   // ── Connect / Receive timeouts ────────────────────────────────────────────
   static const int connectTimeoutMs = 15000;
@@ -61,15 +69,19 @@ class ApiConstants {
 
   // ── Students ──────────────────────────────────────────────────────────────
   static const String students = '/students';
+  static const String studentsMe = '/students/me';
   static const String studentSections = '/students/sections';
   static String studentById(String id) => '/students/$id';
   static String studentPromotionStatus(String id) =>
       '/students/$id/promotion-status';
+  static const String studentBulkPromotionStatus =
+      '/students/promotion-status/bulk';
 
   // ── Parents ───────────────────────────────────────────────────────────────
   static const String parents = '/parents';
   static String parentById(String id) => '/parents/$id';
   static const String myChildren = '/parents/me/children';
+  static const String myChildrenLink = '/parents/me/children/link';
   static String parentChildren(String id) => '/parents/$id/children';
 
   // ── Attendance ────────────────────────────────────────────────────────────
@@ -99,6 +111,8 @@ class ApiConstants {
   static const String timetable = '/timetable';
   static String timetableByStandard(String standardId) =>
       '/timetable/$standardId';
+  static String timetableSections(String standardId) =>
+      '/timetable/$standardId/sections';
 
   // ── Exam Schedule ─────────────────────────────────────────────────────────
   static const String examSchedule = '/exam-schedule';
@@ -120,14 +134,14 @@ class ApiConstants {
       '/api/v1/results/report-card/$studentId';
 
   // ── Fees ──────────────────────────────────────────────────────────────────
-  static const String feeStructures = '/api/v1/fees/structures';
-  static const String feeLedgerGenerate = '/api/v1/fees/ledger/generate';
-  static const String feePayments = '/api/v1/fees/payments';
-  static const String feeDashboard = '/api/v1/fees';
+  static const String feeStructures = '/fees/structures';
+  static const String feeLedgerGenerate = '/fees/ledger/generate';
+  static const String feePayments = '/fees/payments';
+  static const String feeDashboard = '/fees';
   static String feePaymentReceipt(String paymentId) =>
-      '/api/v1/fees/payments/$paymentId/receipt';
+      '/fees/payments/$paymentId/receipt';
   static String feeReceiptUrl(String paymentId) =>
-      '/api/v1/fees/payments/$paymentId/receipt';
+      '/fees/payments/$paymentId/receipt';
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String notifications = '/notifications';

@@ -8,11 +8,15 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/result/result_model.dart';
+import '../../../data/models/masters/standard_model.dart';
+import '../../../data/models/student/student_model.dart';
+import '../../../data/repositories/student_repository.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../providers/result_provider.dart';
+import '../../../providers/student_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
@@ -20,6 +24,35 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../widgets/grade_badge.dart';
 import '../widgets/result_subject_tile.dart';
+
+typedef _StudentsByFilterParams = ({
+  String? standardId,
+  String? section,
+});
+
+final _studentsByFilterProvider =
+    FutureProvider.family<List<StudentModel>, _StudentsByFilterParams>(
+  (ref, params) async {
+    final repo = ref.read(studentRepositoryProvider);
+    final rows = <StudentModel>[];
+    var page = 1;
+    var totalPages = 1;
+
+    while (page <= totalPages) {
+      final result = await repo.list(
+        standardId: params.standardId,
+        section: params.section,
+        page: page,
+        pageSize: 100,
+      );
+      rows.addAll(result.items);
+      totalPages = result.totalPages;
+      if (result.items.isEmpty) break;
+      page += 1;
+    }
+    return rows;
+  },
+);
 
 class ResultListScreen extends ConsumerStatefulWidget {
   const ResultListScreen({super.key, this.studentId});
@@ -33,6 +66,9 @@ class ResultListScreen extends ConsumerStatefulWidget {
 
 class _ResultListScreenState extends ConsumerState<ResultListScreen> {
   ExamModel? _selectedExam;
+  String? _selectedStandardId;
+  String? _selectedSection;
+  String? _selectedStudentId;
 
   String? _resolveStudentId() {
     if (widget.studentId != null) return widget.studentId;
@@ -42,7 +78,7 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
     if (user.role == UserRole.parent) {
       return ref.read(selectedChildIdProvider);
     }
-    return null;
+    return _selectedStudentId;
   }
 
   @override
@@ -50,6 +86,11 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
     final user = ref.watch(currentUserProvider);
     final canCreate = user?.hasPermission('result:create') ?? false;
     final canPublish = user?.hasPermission('result:publish') ?? false;
+    final canBrowseStudents = user != null &&
+        (user.role == UserRole.principal ||
+            user.role == UserRole.trustee ||
+            user.role == UserRole.teacher ||
+            user.role == UserRole.superadmin);
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -58,8 +99,8 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
         actions: [
           if (canPublish)
             IconButton(
-              icon: const Icon(Icons.add_circle_outline,
-                  color: AppColors.white),
+              icon:
+                  const Icon(Icons.add_circle_outline, color: AppColors.white),
               tooltip: 'Create Exam',
               onPressed: () => context.push(RouteNames.enterResults),
             ),
@@ -69,6 +110,31 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
         studentId: _resolveStudentId(),
         selectedExam: _selectedExam,
         onExamSelected: (exam) => setState(() => _selectedExam = exam),
+        selectedStandardId: _selectedStandardId,
+        selectedSection: _selectedSection,
+        selectedStudentId: _selectedStudentId,
+        canBrowseStudents: canBrowseStudents,
+        onStandardChanged: (value) {
+          setState(() {
+            _selectedStandardId = value;
+            _selectedSection = null;
+            _selectedStudentId = null;
+            _selectedExam = null;
+          });
+        },
+        onSectionChanged: (value) {
+          setState(() {
+            _selectedSection = value;
+            _selectedStudentId = null;
+            _selectedExam = null;
+          });
+        },
+        onStudentChanged: (value) {
+          setState(() {
+            _selectedStudentId = value;
+            _selectedExam = null;
+          });
+        },
         canEnterResults: canCreate,
         canPublish: canPublish,
       ),
@@ -81,6 +147,13 @@ class _ResultListBody extends ConsumerWidget {
     required this.studentId,
     required this.selectedExam,
     required this.onExamSelected,
+    required this.selectedStandardId,
+    required this.selectedSection,
+    required this.selectedStudentId,
+    required this.canBrowseStudents,
+    required this.onStandardChanged,
+    required this.onSectionChanged,
+    required this.onStudentChanged,
     required this.canEnterResults,
     required this.canPublish,
   });
@@ -88,43 +161,104 @@ class _ResultListBody extends ConsumerWidget {
   final String? studentId;
   final ExamModel? selectedExam;
   final ValueChanged<ExamModel> onExamSelected;
+  final String? selectedStandardId;
+  final String? selectedSection;
+  final String? selectedStudentId;
+  final bool canBrowseStudents;
+  final ValueChanged<String?> onStandardChanged;
+  final ValueChanged<String?> onSectionChanged;
+  final ValueChanged<String?> onStudentChanged;
   final bool canEnterResults;
   final bool canPublish;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeYear = ref.watch(activeYearProvider);
+    final standardsAsync = ref.watch(standardsProvider(activeYear?.id));
+    final sectionsAsync =
+        ref.watch(studentSectionsProvider(selectedStandardId));
+    final studentsAsync = ref.watch(
+      _studentsByFilterProvider(
+        (standardId: selectedStandardId, section: selectedSection),
+      ),
+    );
+
+    final selectorCard = canBrowseStudents
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.space16,
+              AppDimensions.space16,
+              AppDimensions.space16,
+              AppDimensions.space8,
+            ),
+            child: _ResultFilterCard(
+              standardsAsync: standardsAsync,
+              sectionsAsync: sectionsAsync,
+              studentsAsync: studentsAsync,
+              selectedStandardId: selectedStandardId,
+              selectedSection: selectedSection,
+              selectedStudentId: selectedStudentId,
+              onStandardChanged: onStandardChanged,
+              onSectionChanged: onSectionChanged,
+              onStudentChanged: onStudentChanged,
+            ),
+          )
+        : const SizedBox.shrink();
+
     if (studentId == null) {
-      return const AppEmptyState(
-        icon: Icons.person_search_outlined,
-        title: 'No student selected',
-        subtitle: 'Please select a student to view results.',
+      return Column(
+        children: [
+          selectorCard,
+          const Expanded(
+            child: AppEmptyState(
+              icon: Icons.person_search_outlined,
+              title: 'No student selected',
+              subtitle: 'Please select a student to view results.',
+            ),
+          ),
+        ],
       );
     }
 
     if (selectedExam == null) {
-      return _ExamPickerView(
-        studentId: studentId!,
-        onExamSelected: onExamSelected,
-        canPublish: canPublish,
+      return Column(
+        children: [
+          selectorCard,
+          Expanded(
+            child: _ExamPickerView(
+              studentId: studentId!,
+              standardId: selectedStandardId,
+              onExamSelected: onExamSelected,
+              canPublish: canPublish,
+            ),
+          ),
+        ],
       );
     }
 
     final params = (studentId: studentId!, examId: selectedExam!.id);
     final resultsAsync = ref.watch(resultListProvider(params));
 
-    return resultsAsync.when(
-      loading: () => AppLoading.listView(withAvatar: false),
-      error: (e, _) => AppErrorState(
-        message: e.toString(),
-        onRetry: () => ref.invalidate(resultListProvider(params)),
-      ),
-      data: (response) => _ResultContent(
-        exam: selectedExam!,
-        results: response,
-        studentId: studentId!,
-        canPublish: canPublish,
-        onChangeExam: () => onExamSelected(selectedExam!),
-      ),
+    return Column(
+      children: [
+        selectorCard,
+        Expanded(
+          child: resultsAsync.when(
+            loading: () => AppLoading.listView(withAvatar: false),
+            error: (e, _) => AppErrorState(
+              message: e.toString(),
+              onRetry: () => ref.invalidate(resultListProvider(params)),
+            ),
+            data: (response) => _ResultContent(
+              exam: selectedExam!,
+              results: response,
+              studentId: studentId!,
+              canPublish: canPublish,
+              onChangeExam: () => onExamSelected(selectedExam!),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -134,47 +268,204 @@ class _ResultListBody extends ConsumerWidget {
 class _ExamPickerView extends ConsumerWidget {
   const _ExamPickerView({
     required this.studentId,
+    required this.standardId,
     required this.onExamSelected,
     required this.canPublish,
   });
 
   final String studentId;
+  final String? standardId;
   final ValueChanged<ExamModel> onExamSelected;
   final bool canPublish;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // For now, show a prompt to navigate to enter results or select exam manually.
-    // A real implementation would fetch exams for the student's standard.
-    return Column(
-      children: [
-        const SizedBox(height: AppDimensions.space24),
-        Padding(
-          padding: const EdgeInsets.all(AppDimensions.space16),
-          child: _InfoCard(
-            icon: Icons.quiz_outlined,
-            title: 'Select an Exam',
-            subtitle:
-                'Navigate from an exam to view subject-wise results, or use the Enter Results screen to select an exam and student.',
-            color: AppColors.navyMedium,
-          ),
+    final activeYear = ref.watch(activeYearProvider);
+    final examsAsync = ref.watch(
+      examListProvider(
+        (
+          studentId: studentId,
+          academicYearId: activeYear?.id,
+          standardId: standardId,
         ),
-        if (canPublish) ...[
-          const SizedBox(height: AppDimensions.space16),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space16),
-            child: _InfoCard(
-              icon: Icons.edit_note_outlined,
-              title: 'Enter Results',
-              subtitle:
-                  'Use the Enter Results screen to create exams and bulk enter subject marks.',
-              color: AppColors.infoBlue,
-              onTap: () => context.push(RouteNames.enterResults),
+      ),
+    );
+
+    return examsAsync.when(
+      loading: () => AppLoading.listView(withAvatar: false),
+      error: (e, _) => AppErrorState(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(examListProvider),
+      ),
+      data: (exams) {
+        if (exams.isEmpty) {
+          return Column(
+            children: [
+              const SizedBox(height: AppDimensions.space24),
+              Padding(
+                padding: const EdgeInsets.all(AppDimensions.space16),
+                child: _InfoCard(
+                  icon: Icons.quiz_outlined,
+                  title: 'No exams found',
+                  subtitle:
+                      'No exams available for this student and class yet.',
+                  color: AppColors.navyMedium,
+                ),
+              ),
+              if (canPublish) ...[
+                const SizedBox(height: AppDimensions.space16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.space16),
+                  child: _InfoCard(
+                    icon: Icons.edit_note_outlined,
+                    title: 'Enter Results',
+                    subtitle:
+                        'Create exam and enter marks from the Enter Results screen.',
+                    color: AppColors.infoBlue,
+                    onTap: () => context.push(RouteNames.enterResults),
+                  ),
+                ),
+              ],
+            ],
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppDimensions.space16),
+          itemCount: exams.length,
+          itemBuilder: (context, index) {
+            final exam = exams[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppDimensions.space12),
+              child: _InfoCard(
+                icon: Icons.assignment_turned_in_outlined,
+                title: exam.name,
+                subtitle:
+                    '${exam.examType.label} • ${exam.startDate.toLocal().toIso8601String().split("T").first} to ${exam.endDate.toLocal().toIso8601String().split("T").first}',
+                color: AppColors.navyMedium,
+                onTap: () => onExamSelected(exam),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ResultFilterCard extends StatelessWidget {
+  const _ResultFilterCard({
+    required this.standardsAsync,
+    required this.sectionsAsync,
+    required this.studentsAsync,
+    required this.selectedStandardId,
+    required this.selectedSection,
+    required this.selectedStudentId,
+    required this.onStandardChanged,
+    required this.onSectionChanged,
+    required this.onStudentChanged,
+  });
+
+  final AsyncValue<List<StandardModel>> standardsAsync;
+  final AsyncValue<List<String>> sectionsAsync;
+  final AsyncValue<List<StudentModel>> studentsAsync;
+  final String? selectedStandardId;
+  final String? selectedSection;
+  final String? selectedStudentId;
+  final ValueChanged<String?> onStandardChanged;
+  final ValueChanged<String?> onSectionChanged;
+  final ValueChanged<String?> onStudentChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.space12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: standardsAsync.when(
+                  loading: () => const LinearProgressIndicator(minHeight: 2),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (standards) => DropdownButtonFormField<String>(
+                    value: selectedStandardId,
+                    decoration: const InputDecoration(
+                      labelText: 'Class',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: standards
+                        .map(
+                          (s) => DropdownMenuItem<String>(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: onStandardChanged,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.space8),
+              Expanded(
+                child: sectionsAsync.when(
+                  loading: () => const LinearProgressIndicator(minHeight: 2),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (sections) => DropdownButtonFormField<String>(
+                    value: selectedSection,
+                    decoration: const InputDecoration(
+                      labelText: 'Section',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: sections
+                        .map(
+                          (s) => DropdownMenuItem<String>(
+                            value: s,
+                            child: Text(s),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: onSectionChanged,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.space8),
+          studentsAsync.when(
+            loading: () => const LinearProgressIndicator(minHeight: 2),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (students) => DropdownButtonFormField<String>(
+              value: selectedStudentId,
+              decoration: const InputDecoration(
+                labelText: 'Student',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: students
+                  .map(
+                    (s) => DropdownMenuItem<String>(
+                      value: s.id,
+                      child: Text(
+                        '${s.admissionNumber} (${s.section ?? '-'})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: onStudentChanged,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -238,8 +529,7 @@ class _InfoCard extends StatelessWidget {
               ),
             ),
             if (onTap != null)
-              Icon(Icons.chevron_right,
-                  color: color.withValues(alpha: 0.7)),
+              Icon(Icons.chevron_right, color: color.withValues(alpha: 0.7)),
           ],
         ),
       ),
@@ -266,16 +556,14 @@ class _ResultContent extends ConsumerWidget {
 
   double get _overallPercentage {
     if (results.items.isEmpty) return 0;
-    final total =
-        results.items.fold(0.0, (sum, e) => sum + e.marksObtained);
+    final total = results.items.fold(0.0, (sum, e) => sum + e.marksObtained);
     final max = results.items.fold(0.0, (sum, e) => sum + e.maxMarks);
     return max > 0 ? (total / max) * 100 : 0;
   }
 
   double get _totalMarks =>
       results.items.fold(0.0, (sum, e) => sum + e.marksObtained);
-  double get _maxMarks =>
-      results.items.fold(0.0, (sum, e) => sum + e.maxMarks);
+  double get _maxMarks => results.items.fold(0.0, (sum, e) => sum + e.maxMarks);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -290,7 +578,7 @@ class _ResultContent extends ConsumerWidget {
               {},
               (map, s) => map..putIfAbsent(s.id, () => s.code),
             ) ??
-        {};
+            {};
 
     if (results.items.isEmpty) {
       return const AppEmptyState(
@@ -335,12 +623,11 @@ class _ResultContent extends ConsumerWidget {
         ),
         SliverToBoxAdapter(
           child: Container(
-            margin: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space16),
+            margin:
+                const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               border: Border.all(color: AppColors.surface200),
             ),
             child: Column(
@@ -349,8 +636,7 @@ class _ResultContent extends ConsumerWidget {
                 final result = entry.value;
                 return ResultSubjectTile(
                   entry: result,
-                  subjectName:
-                      subjectMap[result.subjectId] ?? result.subjectId,
+                  subjectName: subjectMap[result.subjectId] ?? result.subjectId,
                   subjectCode: subjectCodeMap[result.subjectId],
                   isLast: idx == results.items.length - 1,
                   showPublishedBadge: canPublish,
@@ -485,9 +771,7 @@ class _SummaryCard extends ConsumerWidget {
                                   SnackBar(
                                     content: Text(success
                                         ? 'Results published!'
-                                        : ref
-                                                .read(publishExamProvider)
-                                                .error ??
+                                        : ref.read(publishExamProvider).error ??
                                             'Failed'),
                                     backgroundColor: success
                                         ? AppColors.successGreen
@@ -612,8 +896,7 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            vertical: AppDimensions.space8,
-            horizontal: AppDimensions.space12),
+            vertical: AppDimensions.space8, horizontal: AppDimensions.space12),
         decoration: BoxDecoration(
           color: AppColors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),

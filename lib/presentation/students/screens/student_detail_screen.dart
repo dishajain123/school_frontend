@@ -40,16 +40,21 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Ensure class labels are available/updated when promotion changes class.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(standardsNotifierProvider.notifier).refresh();
+    });
     if (widget.initialStudent != null) {
       _student = widget.initialStudent;
       _isLoading = false;
-    } else {
-      _loadStudent();
     }
+    _loadStudent(showLoader: widget.initialStudent == null);
   }
 
-  Future<void> _loadStudent() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadStudent({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() => _isLoading = true);
+    }
     final s = await ref
         .read(studentNotifierProvider.notifier)
         .getById(widget.studentId);
@@ -97,14 +102,14 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
 
     setState(() => _isPromotionLoading = true);
     try {
-      final updated = await ref
+      await ref
           .read(studentNotifierProvider.notifier)
           .updatePromotionStatus(widget.studentId, status);
       if (mounted) {
-        setState(() {
-          _student = updated;
-          _isPromotionLoading = false;
-        });
+        // Refetch to ensure latest class + age-related fields are reflected immediately.
+        await _loadStudent(showLoader: false);
+        await ref.read(studentNotifierProvider.notifier).load(refresh: true);
+        setState(() => _isPromotionLoading = false);
         SnackbarUtils.showSuccess(context, 'Student marked as $label.');
       }
     } catch (e) {

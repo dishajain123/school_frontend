@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
@@ -8,6 +11,7 @@ import '../../../data/models/attendance/attendance_model.dart';
 import '../../../data/models/attendance/attendance_snapshot.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_scaffold.dart';
@@ -15,6 +19,7 @@ import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_empty_state.dart';
+import '../../dashboard/widgets/stat_card.dart';
 
 class ClassSnapshotScreen extends ConsumerStatefulWidget {
   const ClassSnapshotScreen({super.key});
@@ -78,11 +83,105 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       appBar: const AppAppBar(title: 'Class Snapshot', showBack: true),
-      body: Column(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: _buildFilterPanel()),
+          const SliverToBoxAdapter(
+            child: Divider(height: 1, color: AppColors.surface100),
+          ),
+          SliverToBoxAdapter(child: _buildReportsOverview()),
+          const SliverToBoxAdapter(
+            child: Divider(height: 1, color: AppColors.surface100),
+          ),
+          ..._buildContentSlivers(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportsOverview() {
+    final statsAsync = ref.watch(principalDashboardStatsProvider);
+    final stats = statsAsync.valueOrNull;
+
+    String compactAmount(double amount) {
+      if (amount >= 10000000) {
+        return '${(amount / 10000000).toStringAsFixed(1)}Cr';
+      }
+      if (amount >= 100000) {
+        return '${(amount / 100000).toStringAsFixed(1)}L';
+      }
+      if (amount >= 1000) {
+        return '${(amount / 1000).toStringAsFixed(1)}K';
+      }
+      return amount.toStringAsFixed(0);
+    }
+
+    return Container(
+      color: AppColors.surface50,
+      padding: const EdgeInsets.all(AppDimensions.space16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFilterPanel(),
-          const Divider(height: 1, color: AppColors.surface100),
-          Expanded(child: _buildContent()),
+          Text(
+            'Reports Overview',
+            style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w700, color: AppColors.navyDeep),
+          ),
+          const SizedBox(height: AppDimensions.space12),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  label: 'Student Attendance',
+                  value:
+                      '${(stats?.studentAttendancePercentage ?? 0).toStringAsFixed(1)}%',
+                  icon: Icons.how_to_reg_outlined,
+                  iconColor: AppColors.successGreen,
+                  onTap: () => context.go(
+                      '${RouteNames.principalReportDetails}?metric=student_attendance'),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.space12),
+              Expanded(
+                child: StatCard(
+                  label: 'Fees Paid',
+                  value: '₹${compactAmount(stats?.feesPaidAmount ?? 0)}',
+                  icon: Icons.payments_outlined,
+                  iconColor: AppColors.goldPrimary,
+                  onTap: () => context.go(
+                      '${RouteNames.principalReportDetails}?metric=fees_paid'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.space12),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  label: 'Results Avg',
+                  value:
+                      '${(stats?.resultsAveragePercentage ?? 0).toStringAsFixed(1)}%',
+                  icon: Icons.analytics_outlined,
+                  iconColor: AppColors.infoBlue,
+                  onTap: () => context.go(
+                      '${RouteNames.principalReportDetails}?metric=results'),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.space12),
+              Expanded(
+                child: StatCard(
+                  label: 'Teacher Attendance',
+                  value:
+                      '${(stats?.teacherAttendancePercentage ?? 0).toStringAsFixed(1)}%',
+                  icon: Icons.co_present,
+                  iconColor: AppColors.subjectBio,
+                  onTap: () => context.go(
+                      '${RouteNames.principalReportDetails}?metric=teacher_attendance'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -135,13 +234,18 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
     );
   }
 
-  Widget _buildContent() {
+  List<Widget> _buildContentSlivers() {
     if (!_hasFetched || _currentParams == null) {
-      return const AppEmptyState(
-        icon: Icons.groups_outlined,
-        title: 'Select a class and date',
-        subtitle: 'Choose a class and date above, then tap Load Snapshot.',
-      );
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: AppEmptyState(
+            icon: Icons.groups_outlined,
+            title: 'Select a class and date',
+            subtitle: 'Choose a class and date above, then tap Load Snapshot.',
+          ),
+        ),
+      ];
     }
 
     final snapshotAsync = ref.watch(classSnapshotProvider(_currentParams!));
@@ -149,19 +253,55 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
     return snapshotAsync.when(
       data: (snapshot) {
         if (snapshot.records.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.event_busy_outlined,
-            title: 'No records found',
-            subtitle: 'No attendance was marked for this class on this date.',
-          );
+          return const [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: AppEmptyState(
+                icon: Icons.event_busy_outlined,
+                title: 'No records found',
+                subtitle:
+                    'No attendance was marked for this class on this date.',
+              ),
+            ),
+          ];
         }
-        return _SnapshotContent(snapshot: snapshot);
+        return [
+          SliverToBoxAdapter(child: _SnapshotSummaryBar(snapshot: snapshot)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.space16,
+              vertical: AppDimensions.space8,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _SnapshotRecordTile(
+                  record: snapshot.records[index],
+                  isLast: index == snapshot.records.length - 1,
+                ),
+                childCount: snapshot.records.length,
+              ),
+            ),
+          ),
+          const SliverPadding(
+            padding: EdgeInsets.only(bottom: AppDimensions.space40),
+          ),
+        ];
       },
-      loading: () => AppLoading.fullPage(),
-      error: (e, _) => AppErrorState(
-        message: e.toString(),
-        onRetry: _load,
-      ),
+      loading: () => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: SizedBox.expand(child: AppLoading.fullPage()),
+        ),
+      ],
+      error: (e, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: AppErrorState(
+            message: e.toString(),
+            onRetry: _load,
+          ),
+        ),
+      ],
     );
   }
 
@@ -182,38 +322,6 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
       'Dec'
     ];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]} ${d.year}';
-  }
-}
-
-class _SnapshotContent extends StatelessWidget {
-  const _SnapshotContent({required this.snapshot});
-  final ClassAttendanceSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        // Summary bar
-        SliverToBoxAdapter(child: _SnapshotSummaryBar(snapshot: snapshot)),
-        // Records
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.space16,
-              vertical: AppDimensions.space8),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _SnapshotRecordTile(
-                record: snapshot.records[index],
-                isLast: index == snapshot.records.length - 1,
-              ),
-              childCount: snapshot.records.length,
-            ),
-          ),
-        ),
-        const SliverPadding(
-            padding: EdgeInsets.only(bottom: AppDimensions.space40)),
-      ],
-    );
   }
 }
 
@@ -420,25 +528,25 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+            horizontal: AppDimensions.space12, vertical: AppDimensions.space12),
         decoration: BoxDecoration(
-          color: AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           border: Border.all(color: AppColors.surface200),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: AppColors.navyMedium),
-            const SizedBox(width: AppDimensions.space8),
-            Text(label,
-                style:
-                    AppTypography.bodyLarge.copyWith(color: AppColors.grey800)),
-            const Spacer(),
-            const Icon(Icons.arrow_drop_down, color: AppColors.grey400),
+            Icon(icon, size: AppDimensions.iconSM, color: AppColors.grey600),
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: Text(label, style: AppTypography.bodyMedium),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded,
+                color: AppColors.grey600),
           ],
         ),
       ),
@@ -448,19 +556,18 @@ class _FilterRow extends StatelessWidget {
 
 InputDecoration _dropdownDecoration(String hint) => InputDecoration(
       hintText: hint,
-      hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
-      filled: true,
-      fillColor: AppColors.surface50,
       contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+          horizontal: AppDimensions.space12, vertical: AppDimensions.space12),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide: const BorderSide(color: AppColors.surface200)),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderSide: const BorderSide(color: AppColors.surface200),
+      ),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide: const BorderSide(color: AppColors.surface200)),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderSide: const BorderSide(color: AppColors.surface200),
+      ),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide:
-              const BorderSide(color: AppColors.navyMedium, width: 1.5)),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderSide: const BorderSide(color: AppColors.navyMedium),
+      ),
     );

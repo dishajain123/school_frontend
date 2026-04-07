@@ -10,6 +10,12 @@ typedef ResultListParams = ({
   String examId,
 });
 
+typedef ExamListParams = ({
+  String? studentId,
+  String? academicYearId,
+  String? standardId,
+});
+
 typedef ReportCardParams = ({
   String studentId,
   String examId,
@@ -24,6 +30,17 @@ final resultListProvider =
     return repo.listResults(
       studentId: params.studentId,
       examId: params.examId,
+    );
+  },
+);
+
+final examListProvider = FutureProvider.family<List<ExamModel>, ExamListParams>(
+  (ref, params) async {
+    final repo = ref.read(resultRepositoryProvider);
+    return repo.listExams(
+      studentId: params.studentId,
+      academicYearId: params.academicYearId,
+      standardId: params.standardId,
     );
   },
 );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,9 +27,10 @@ class AssignmentListScreen extends ConsumerStatefulWidget {
 }
 
 class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _scrollCtrl = ScrollController();
   late TabController _tabController;
+  Timer? _autoRefreshTimer;
 
   // Active filter: null = all, true = active, false = inactive, 'overdue' = overdue
   String _activeFilter = 'all';
@@ -35,8 +38,13 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
     _scrollCtrl.addListener(_onScroll);
+    _autoRefreshTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => ref.read(assignmentsProvider.notifier).refresh(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyTabFilter(0);
     });
@@ -44,9 +52,18 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     _scrollCtrl.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(assignmentsProvider.notifier).refresh();
+    }
   }
 
   void _onScroll() {
@@ -59,8 +76,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   void _applyTabFilter(int index) {
     setState(() => _activeFilter = ['all', 'active', 'overdue'][index]);
     final filters = switch (index) {
-      1 => const AssignmentFilters(isOverdue: false),
-      2 => const AssignmentFilters(isOverdue: true),
+      1 => const AssignmentFilters(isActive: true, isOverdue: false),
+      2 => const AssignmentFilters(isActive: true, isOverdue: true),
       _ => const AssignmentFilters(),
     };
     ref.read(assignmentsProvider.notifier).applyFilters(filters);
@@ -72,7 +89,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     final currentUser = ref.watch(currentUserProvider);
     final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
     final canGrade = currentUser?.hasPermission('submission:grade') ?? false;
-    final canViewSubmissions = canGrade || currentUser?.role == UserRole.teacher;
+    final canViewSubmissions =
+        canGrade || currentUser?.role == UserRole.teacher;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -95,7 +113,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
       ),
       floatingActionButton: canCreate
           ? FloatingActionButton(
-              onPressed: () => context.push(RouteNames.createAssignment),
+              onPressed: () async {
+                await context.push(RouteNames.createAssignment);
+                if (!mounted) return;
+                await ref.read(assignmentsProvider.notifier).refresh();
+              },
               backgroundColor: AppColors.navyDeep,
               child: const Icon(Icons.add, color: AppColors.white),
             )
@@ -107,7 +129,15 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           onRetry: () => ref.read(assignmentsProvider.notifier).refresh(),
         ),
         data: (state) {
-          final filtered = state.items;
+          final filtered = switch (_activeFilter) {
+            'active' => state.items
+                .where((a) => a.isActive && !a.isOverdue)
+                .toList(growable: false),
+            'overdue' => state.items
+                .where((a) => a.isActive && a.isOverdue)
+                .toList(growable: false),
+            _ => state.items,
+          };
 
           if (filtered.isEmpty && !state.isLoadingMore) {
             return AppEmptyState(
@@ -120,7 +150,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                       : 'No assignments have been posted yet.',
               actionLabel: canCreate ? 'Create Assignment' : null,
               onAction: canCreate
-                  ? () => context.push(RouteNames.createAssignment)
+                  ? () async {
+                      await context.push(RouteNames.createAssignment);
+                      if (!mounted) return;
+                      await ref.read(assignmentsProvider.notifier).refresh();
+                    }
                   : null,
             );
           }

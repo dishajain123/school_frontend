@@ -26,36 +26,34 @@ class LeaveListScreen extends ConsumerStatefulWidget {
 }
 
 class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  bool _isPrincipal = false;
+    with TickerProviderStateMixin {
+  late TabController _principalTabController;
+  late TabController _teacherTabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _principalTabController = TabController(length: 2, vsync: this);
+    _teacherTabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _principalTabController.dispose();
+    _teacherTabController.dispose();
     super.dispose();
   }
 
   void _initLoad() {
-    final user = ref.read(currentUserProvider);
-    _isPrincipal = user?.role == UserRole.principal ||
-        user?.role == UserRole.trustee;
-
     ref.read(leaveNotifierProvider.notifier).load();
   }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final isPrincipal = user?.role == UserRole.principal ||
-        user?.role == UserRole.trustee;
+    final isPrincipal =
+        user?.role == UserRole.principal || user?.role == UserRole.trustee;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -74,13 +72,22 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
         ],
         bottom: isPrincipal
             ? TabBar(
-                controller: _tabController,
+                controller: _principalTabController,
                 tabs: const [
                   Tab(text: 'Pending'),
                   Tab(text: 'All Requests'),
                 ],
               )
-            : null,
+            : TabBar(
+                controller: _teacherTabController,
+                isScrollable: true,
+                tabs: const [
+                  Tab(text: 'All'),
+                  Tab(text: 'Pending'),
+                  Tab(text: 'Approved'),
+                  Tab(text: 'Rejected'),
+                ],
+              ),
       ),
       floatingActionButton: !isPrincipal
           ? FloatingActionButton(
@@ -91,7 +98,7 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
           : null,
       body: isPrincipal
           ? TabBarView(
-              controller: _tabController,
+              controller: _principalTabController,
               children: [
                 _LeaveListView(
                   statusFilter: LeaveStatus.pending,
@@ -103,9 +110,30 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
                 ),
               ],
             )
-          : _LeaveListView(
-              statusFilter: null,
-              isPrincipal: false,
+          : TabBarView(
+              controller: _teacherTabController,
+              children: const [
+                _LeaveListView(
+                  statusFilter: null,
+                  isPrincipal: false,
+                  showFilterChips: false,
+                ),
+                _LeaveListView(
+                  statusFilter: LeaveStatus.pending,
+                  isPrincipal: false,
+                  showFilterChips: false,
+                ),
+                _LeaveListView(
+                  statusFilter: LeaveStatus.approved,
+                  isPrincipal: false,
+                  showFilterChips: false,
+                ),
+                _LeaveListView(
+                  statusFilter: LeaveStatus.rejected,
+                  isPrincipal: false,
+                  showFilterChips: false,
+                ),
+              ],
             ),
     );
   }
@@ -117,10 +145,12 @@ class _LeaveListView extends ConsumerStatefulWidget {
   const _LeaveListView({
     this.statusFilter,
     required this.isPrincipal,
+    this.showFilterChips = true,
   });
 
   final LeaveStatus? statusFilter;
   final bool isPrincipal;
+  final bool showFilterChips;
 
   @override
   ConsumerState<_LeaveListView> createState() => _LeaveListViewState();
@@ -170,7 +200,7 @@ class _LeaveListViewState extends ConsumerState<_LeaveListView> {
           child: CustomScrollView(
             slivers: [
               // Filter chips (teacher view only)
-              if (!widget.isPrincipal)
+              if (!widget.isPrincipal && widget.showFilterChips)
                 SliverToBoxAdapter(
                   child: _FilterChipRow(
                     selected: _activeFilter,

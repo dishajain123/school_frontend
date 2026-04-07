@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/auth/current_user.dart';
 import '../data/models/fee/fee_ledger_model.dart';
 import '../data/models/fee/payment_model.dart';
+import '../data/models/student/student_model.dart';
 import '../data/repositories/fee_repository.dart';
 import '../data/repositories/student_repository.dart';
 import '../providers/auth_provider.dart';
@@ -17,6 +18,56 @@ final feeDashboardProvider =
   final repo = ref.read(feeRepositoryProvider);
   return repo.getDashboard(studentId);
 });
+
+typedef FeeAnalyticsParams = ({
+  String? academicYearId,
+  String? standardId,
+  String? section,
+  String? studentId,
+});
+
+final feeAnalyticsProvider =
+    FutureProvider.family<Map<String, dynamic>, FeeAnalyticsParams>(
+  (ref, params) async {
+    final repo = ref.read(feeRepositoryProvider);
+    return repo.getAnalytics(
+      academicYearId: params.academicYearId,
+      standardId: params.standardId,
+      section: params.section,
+      studentId: params.studentId,
+    );
+  },
+);
+
+typedef FeeStudentFilterParams = ({
+  String? academicYearId,
+  String? standardId,
+  String? section,
+});
+
+final feeReportStudentsProvider =
+    FutureProvider.family<List<StudentModel>, FeeStudentFilterParams>(
+  (ref, params) async {
+    final repo = ref.read(studentRepositoryProvider);
+    const pageSize = 100;
+    var page = 1;
+    var totalPages = 1;
+    final items = <StudentModel>[];
+    do {
+      final result = await repo.list(
+        academicYearId: params.academicYearId,
+        standardId: params.standardId,
+        section: params.section,
+        page: page,
+        pageSize: pageSize,
+      );
+      items.addAll(result.items);
+      totalPages = result.totalPages;
+      page += 1;
+    } while (page <= totalPages);
+    return items;
+  },
+);
 
 // ── My Student ID Provider ─────────────────────────────────────────────────────
 // For STUDENT role only. The student list endpoint is scoped by the backend

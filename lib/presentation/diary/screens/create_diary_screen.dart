@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../data/repositories/diary_repository.dart';
 import '../../../providers/academic_year_provider.dart';
@@ -42,6 +44,10 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
   String _toApiDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  static final RegExp _uuidPattern = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
   @override
   void dispose() {
     _topicCtrl.dispose();
@@ -74,12 +80,22 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
   Future<void> _submit(List<TeacherClassSubjectModel> assignments) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    if (_selectedStandardId == null) {
+    if (_selectedStandardId == null || _selectedStandardId!.trim().isEmpty) {
       SnackbarUtils.showError(context, 'Please select a class');
       return;
     }
-    if (_selectedSubjectId == null) {
+    if (_selectedSubjectId == null || _selectedSubjectId!.trim().isEmpty) {
       SnackbarUtils.showError(context, 'Please select a subject');
+      return;
+    }
+    if (!_uuidPattern.hasMatch(_selectedStandardId!.trim())) {
+      SnackbarUtils.showError(
+          context, 'Invalid class selection. Please reselect.');
+      return;
+    }
+    if (!_uuidPattern.hasMatch(_selectedSubjectId!.trim())) {
+      SnackbarUtils.showError(
+          context, 'Invalid subject selection. Please reselect.');
       return;
     }
 
@@ -88,8 +104,8 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
     try {
       final repo = ref.read(diaryRepositoryProvider);
       await repo.createDiary(
-        standardId: _selectedStandardId!,
-        subjectId: _selectedSubjectId!,
+        standardId: _selectedStandardId!.trim(),
+        subjectId: _selectedSubjectId!.trim(),
         topicCovered: _topicCtrl.text.trim(),
         homeworkNote: _homeworkNoteCtrl.text.trim().isEmpty
             ? null
@@ -104,11 +120,20 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, e.toString());
+        SnackbarUtils.showError(context, _readableError(e));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  String _readableError(Object e) {
+    if (e is DioException) {
+      final err = e.error;
+      if (err is AppException) return err.message;
+      if (e.message != null && e.message!.trim().isNotEmpty) return e.message!;
+    }
+    return e.toString();
   }
 
   @override

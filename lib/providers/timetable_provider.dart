@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/timetable/timetable_model.dart';
@@ -11,6 +10,11 @@ typedef TimetableParams = ({
   String standardId,
   String? academicYearId,
   String? section,
+});
+
+typedef TimetableSectionsParams = ({
+  String standardId,
+  String? academicYearId,
 });
 
 // ── Read provider ─────────────────────────────────────────────────────────────
@@ -26,6 +30,14 @@ final timetableProvider =
         standardId: params.standardId,
         academicYearId: params.academicYearId,
         section: params.section,
+      ),
+);
+
+final timetableSectionsProvider =
+    FutureProvider.family<List<String>, TimetableSectionsParams>(
+  (ref, params) => ref.read(timetableRepositoryProvider).listSections(
+        standardId: params.standardId,
+        academicYearId: params.academicYearId,
       ),
 );
 
@@ -63,7 +75,7 @@ class TimetableUploadNotifier extends Notifier<TimetableUploadState> {
 
   Future<bool> upload({
     required String standardId,
-    required File file,
+    required PlatformFile file,
     String? academicYearId,
     String? section,
   }) async {

@@ -50,6 +50,28 @@ class ResultRepository {
     return (response.data as Map<String, dynamic>)['updated'] as int? ?? 0;
   }
 
+  // ── GET /results/exams ─────────────────────────────────────────────────────
+  Future<List<ExamModel>> listExams({
+    String? studentId,
+    String? academicYearId,
+    String? standardId,
+  }) async {
+    final response = await _dio.get(
+      '$_base/exams',
+      queryParameters: {
+        if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
+        if (academicYearId != null && academicYearId.isNotEmpty)
+          'academic_year_id': academicYearId,
+        if (standardId != null && standardId.isNotEmpty)
+          'standard_id': standardId,
+      },
+    );
+    final data = response.data as List<dynamic>? ?? const [];
+    return data
+        .map((e) => ExamModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ── GET /results?student_id=...&exam_id=... ────────────────────────────────
   Future<ResultListResponse> listResults({
     required String studentId,

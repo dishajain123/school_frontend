@@ -64,6 +64,7 @@ class RouteNames {
   static const String results = '/results';
   static const String enterResults = '/results/enter';
   static const String reportCard = '/results/report-card';
+  static const String principalReportDetails = '/reports/details';
 
   static const String feeDashboard = '/fees';
   static const String paymentHistory = '/fees/payment-history';

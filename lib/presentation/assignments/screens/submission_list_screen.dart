@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -46,6 +48,74 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
     }
   }
 
+  Future<void> _openSubmissionFile(String url) async {
+    final lower = url.toLowerCase();
+    final isPdf = lower.contains('.pdf');
+    final isImage = lower.contains('.png') ||
+        lower.contains('.jpg') ||
+        lower.contains('.jpeg') ||
+        lower.contains('.webp');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.of(ctx).size.height * 0.82,
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surface200,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: isPdf
+                  ? SfPdfViewer.network(url)
+                  : isImage
+                      ? InteractiveViewer(
+                          child: Center(child: Image.network(url)),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(AppDimensions.space16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Preview not available for this file type.',
+                                style: AppTypography.titleMedium,
+                              ),
+                              const SizedBox(height: AppDimensions.space12),
+                              SelectableText(url),
+                              const SizedBox(height: AppDimensions.space12),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await Clipboard.setData(
+                                    ClipboardData(text: url),
+                                  );
+                                  if (!ctx.mounted) return;
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('File URL copied'),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Copy File URL'),
+                              ),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final submissionsAsync =
@@ -53,8 +123,7 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
     final assignmentAsync =
         ref.watch(assignmentDetailProvider(widget.assignmentId));
 
-    final assignmentTitle =
-        assignmentAsync.valueOrNull?.title ?? 'Submissions';
+    final assignmentTitle = assignmentAsync.valueOrNull?.title ?? 'Submissions';
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -70,17 +139,54 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
               .refresh(),
         ),
         data: (state) {
+          final sections = state.items
+              .map((e) => e.studentSection)
+              .whereType<String>()
+              .where((e) => e.trim().isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+
           return Column(
             children: [
               // ── Stats header ─────────────────────────────────────────
               _StatsHeader(
                 total: state.total,
-                graded:
-                    state.items.where((s) => s.isGraded).length,
-                ungraded:
-                    state.items.where((s) => !s.isGraded).length,
+                graded: state.items.where((s) => s.isGraded).length,
+                ungraded: state.items.where((s) => !s.isGraded).length,
                 late: state.items.where((s) => s.isLate).length,
               ),
+              if (sections.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.space16,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: DropdownButton<String?>(
+                      value: state.sectionFilter,
+                      hint: const Text('Filter by section'),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('All Sections'),
+                        ),
+                        ...sections.map(
+                          (s) => DropdownMenuItem<String?>(
+                            value: s,
+                            child: Text('Section $s'),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => ref
+                          .read(
+                              submissionsProvider(widget.assignmentId).notifier)
+                          .applySectionFilter(value),
+                    ),
+                  ),
+                ),
+              if (sections.isNotEmpty)
+                const SizedBox(height: AppDimensions.space8),
 
               // ── Submission list ──────────────────────────────────────
               Expanded(
@@ -107,8 +213,7 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                           itemBuilder: (context, index) {
                             if (index == state.items.length) {
                               return const Padding(
-                                padding:
-                                    EdgeInsets.all(AppDimensions.space16),
+                                padding: EdgeInsets.all(AppDimensions.space16),
                                 child: Center(
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2,
@@ -118,9 +223,9 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                             }
 
                             final submission = state.items[index];
-                            final isLast =
-                                index == state.items.length - 1;
-                            final studentLabel = submission.studentAdmissionNumber ??
+                            final isLast = index == state.items.length - 1;
+                            final studentLabel = submission.studentName ??
+                                submission.studentAdmissionNumber ??
                                 submission.studentRollNumber ??
                                 'Student ${submission.studentId.substring(0, 8)}';
 
@@ -133,6 +238,9 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                                 child: SubmissionTile(
                                   submission: submission,
                                   studentName: studentLabel,
+                                  standardName: submission.standardName,
+                                  subjectName: submission.subjectName,
+                                  section: submission.studentSection,
                                   isLast: isLast,
                                   onGrade: () async {
                                     await GradeBottomSheet.show(
@@ -148,7 +256,9 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                                   },
                                   onViewFile: submission.fileUrl != null
                                       ? () {
-                                          // Open presigned URL
+                                          _openSubmissionFile(
+                                            submission.fileUrl!,
+                                          );
                                         }
                                       : null,
                                 ),
@@ -212,8 +322,7 @@ class _StatsHeader extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(AppDimensions.space16),
       padding: const EdgeInsets.symmetric(
-          vertical: AppDimensions.space16,
-          horizontal: AppDimensions.space20),
+          vertical: AppDimensions.space16, horizontal: AppDimensions.space20),
       decoration: BoxDecoration(
         color: AppColors.navyDeep,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
@@ -221,9 +330,7 @@ class _StatsHeader extends StatelessWidget {
       child: Row(
         children: [
           _StatItem(
-              value: total.toString(),
-              label: 'Total',
-              color: AppColors.white),
+              value: total.toString(), label: 'Total', color: AppColors.white),
           _Divider(),
           _StatItem(
               value: graded.toString(),
@@ -236,9 +343,7 @@ class _StatsHeader extends StatelessWidget {
               color: AppColors.warningAmber),
           _Divider(),
           _StatItem(
-              value: late.toString(),
-              label: 'Late',
-              color: AppColors.errorRed),
+              value: late.toString(), label: 'Late', color: AppColors.errorRed),
         ],
       ),
     );

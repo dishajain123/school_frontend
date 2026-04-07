@@ -6,6 +6,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
 import '../widgets/login_form.dart';
+import '../widgets/school_logo.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -33,7 +34,7 @@ class LoginScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _LoginHeader(),
+              const _LoginHeader(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppDimensions.pageHorizontal,
@@ -52,6 +53,8 @@ class LoginScreen extends ConsumerWidget {
 }
 
 class _LoginHeader extends StatelessWidget {
+  const _LoginHeader();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -76,28 +79,7 @@ class _LoginHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.goldPrimary, AppColors.goldDark],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.goldPrimary.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.school_rounded,
-              size: 32,
-              color: AppColors.navyDeep,
-            ),
-          ),
+          const SchoolLogo(size: 56, borderRadius: 14, imagePadding: 7),
           const SizedBox(height: AppDimensions.space24),
           Text(
             'Welcome back',

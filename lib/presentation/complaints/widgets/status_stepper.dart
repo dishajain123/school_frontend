@@ -17,12 +17,13 @@ class StatusStepper extends StatelessWidget {
     ComplaintStatus.open,
     ComplaintStatus.inProgress,
     ComplaintStatus.resolved,
-    ComplaintStatus.closed,
   ];
 
   @override
   Widget build(BuildContext context) {
-    final currentIndex = currentStatus.indexValue;
+    final currentIndex = currentStatus == ComplaintStatus.closed
+        ? _steps.length - 1
+        : currentStatus.indexValue;
 
     return Row(
       children: List.generate(_steps.length * 2 - 1, (i) {

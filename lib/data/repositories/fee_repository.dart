@@ -21,7 +21,7 @@ class FeeRepository {
 
   final Dio _dio;
 
-  static const String _base = '/api/v1/fees';
+  static const String _base = '/fees';
 
   // ── POST /fees/structures ──────────────────────────────────────────────────
   // Permission: fee:create
@@ -87,8 +87,92 @@ class FeeRepository {
       _base,
       queryParameters: {'student_id': studentId},
     );
-    return FeeDashboardResult.fromJson(
-        response.data as Map<String, dynamic>);
+    return FeeDashboardResult.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> getAnalytics({
+    String? academicYearId,
+    String? standardId,
+    String? section,
+    String? studentId,
+    String? reportDate,
+  }) async {
+    final params = {
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+      if (standardId != null) 'standard_id': standardId,
+      if (section != null && section.trim().isNotEmpty) 'section': section,
+      if (studentId != null) 'student_id': studentId,
+      if (reportDate != null) 'report_date': reportDate,
+    };
+
+    try {
+      final response = await _dio.get(
+        '$_base/analytics',
+        queryParameters: params,
+      );
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      final isAnalytics404 = e.response?.statusCode == 404;
+      if (!isAnalytics404) rethrow;
+
+      // Backward-compatible fallback for servers that don't have /fees/analytics yet.
+      final reportResponse = await _dio.get(
+        '/principal-reports/details',
+        queryParameters: {
+          ...params,
+          'metric': 'fees_paid',
+        },
+      );
+      final details = Map<String, dynamic>.from(reportResponse.data as Map);
+      final feesPaid = Map<String, dynamic>.from(
+        details['fees_paid'] as Map? ?? const {},
+      );
+      final feesByStudent = List<Map<String, dynamic>>.from(
+        details['fees_by_student'] as List? ?? const [],
+      );
+
+      return {
+        'academic_year_id': details['academic_year_id'],
+        'report_date': details['report_date'],
+        'filters': details['filters'] ?? const {},
+        'summary': {
+          'total_billed_amount': 0.0,
+          'total_paid_amount': (feesPaid['amount'] ?? 0),
+          'total_outstanding_amount': 0.0,
+          'collection_percentage': 0.0,
+          'total_ledgers': 0,
+          'total_students': feesByStudent.length,
+          'paid_ledgers': 0,
+          'partial_ledgers': 0,
+          'pending_ledgers': 0,
+          'overdue_ledgers': 0,
+          'payments_count': (feesPaid['count'] ?? 0),
+          'late_payments_count': 0,
+        },
+        'by_category': const <Map<String, dynamic>>[],
+        'by_status': const <Map<String, dynamic>>[],
+        'by_payment_mode': const <Map<String, dynamic>>[],
+        'by_student': feesByStudent
+            .map(
+              (r) => {
+                'student_id': r['student_id'],
+                'admission_number': r['admission_number'],
+                'standard_id': null,
+                'section': null,
+                'billed_amount': 0.0,
+                'paid_amount': (r['paid_amount'] ?? 0),
+                'outstanding_amount': 0.0,
+                'ledgers': 0,
+                'paid_ledgers': 0,
+                'partial_ledgers': 0,
+                'pending_ledgers': 0,
+                'overdue_ledgers': 0,
+                'latest_payment_date': null,
+              },
+            )
+            .toList(),
+      };
+    }
   }
 
   // ── GET /fees/payments/{payment_id}/receipt ────────────────────────────────
@@ -97,14 +181,13 @@ class FeeRepository {
   // URL is short-lived — do not cache.
 
   Future<String> getReceiptUrl(String paymentId) async {
-    final response =
-        await _dio.get('$_base/payments/$paymentId/receipt');
+    final response = await _dio.get('$_base/payments/$paymentId/receipt');
     return (response.data as Map<String, dynamic>)['url'] as String;
   }
 
   // ── GET /fees/payments?fee_ledger_id={id} ──────────────────────────────────
-    // Lists payment history for a specific ledger entry.
-  
+  // Lists payment history for a specific ledger entry.
+
   Future<List<PaymentModel>> listPayments({
     required String feeLedgerId,
   }) async {
