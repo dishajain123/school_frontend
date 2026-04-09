@@ -12,6 +12,7 @@ import '../data/repositories/homework_repository.dart';
 //
 typedef HomeworkParams = ({
   String date,
+  String? standardId,
   String? subjectId,
   String? academicYearId,
 });
@@ -29,6 +30,7 @@ final homeworkListProvider =
     final repo = ref.read(homeworkRepositoryProvider);
     return repo.listHomework(
       date: params.date,
+      standardId: params.standardId,
       subjectId: params.subjectId,
       academicYearId: params.academicYearId,
       page: 1,

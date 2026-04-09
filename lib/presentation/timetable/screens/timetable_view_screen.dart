@@ -10,6 +10,7 @@ import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/masters/standard_model.dart';
 import '../../../data/models/student/student_model.dart';
 import '../../../data/models/timetable/timetable_model.dart';
+import '../../../data/repositories/student_repository.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
@@ -28,7 +29,12 @@ final _myStudentProfileProvider =
     FutureProvider.autoDispose<StudentModel?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
-  return ref.read(studentNotifierProvider.notifier).getById(user.id);
+  final repo = ref.read(studentRepositoryProvider);
+  try {
+    return await repo.getMyProfile();
+  } catch (_) {
+    return ref.read(studentNotifierProvider.notifier).getById(user.id);
+  }
 });
 
 class TimetableViewScreen extends ConsumerWidget {
@@ -59,7 +65,7 @@ class TimetableViewScreen extends ConsumerWidget {
     }
 
     // STUDENT — scope to own standard
-    if (currentUser.role.name == 'STUDENT') {
+    if (currentUser.role == UserRole.student) {
       return _StudentTimetableView(
         section: section,
         academicYearId: activeYear?.id,
@@ -67,7 +73,7 @@ class TimetableViewScreen extends ConsumerWidget {
     }
 
     // PARENT — scope to selected child's standard
-    if (currentUser.role.name == 'PARENT') {
+    if (currentUser.role == UserRole.parent) {
       return _ParentTimetableView(
         section: section,
         academicYearId: activeYear?.id,

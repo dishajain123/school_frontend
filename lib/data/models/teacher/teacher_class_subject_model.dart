@@ -10,6 +10,7 @@ class TeacherClassSubjectModel {
     this.subjectName,
     this.subjectCode,
     this.academicYearName,
+    this.teacherEmployeeCode,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class TeacherClassSubjectModel {
   final String? subjectName;
   final String? subjectCode;
   final String? academicYearName;
+  final String? teacherEmployeeCode;
 
   /// Human-readable label for standard+section dropdown
   String get classLabel {
@@ -56,6 +58,7 @@ class TeacherClassSubjectModel {
       subjectName: subject?['name'] as String?,
       subjectCode: subject?['code'] as String?,
       academicYearName: academicYear?['name'] as String?,
+      teacherEmployeeCode: teacher?['employee_code'] as String?,
     );
   }
 

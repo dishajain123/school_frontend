@@ -11,6 +11,8 @@ import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/document/document_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/document_provider.dart';
+import '../../../providers/parent_provider.dart';
+import '../../../data/repositories/student_repository.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/document_filter_bar.dart';
@@ -27,8 +29,7 @@ class DocumentListScreen extends ConsumerStatefulWidget {
   final String? studentId;
 
   @override
-  ConsumerState<DocumentListScreen> createState() =>
-      _DocumentListScreenState();
+  ConsumerState<DocumentListScreen> createState() => _DocumentListScreenState();
 }
 
 class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
@@ -63,11 +64,20 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
     if (widget.studentId != null) {
       _resolvedStudentId = widget.studentId;
     } else if (user.role == UserRole.student) {
-      // STUDENT: backend uses user_id from JWT to find student —
-      // we still need a student_id for the query param.
-      // This would normally come from a "my student profile" provider.
-      // For now we rely on the parent/admin path or query param.
-      _resolvedStudentId = widget.studentId;
+      try {
+        final student =
+            await ref.read(studentRepositoryProvider).getMyProfile();
+        _resolvedStudentId = student.id;
+      } catch (_) {
+        // Backward compatibility for deployments without /students/me.
+        final result = await ref
+            .read(studentRepositoryProvider)
+            .list(page: 1, pageSize: 1);
+        _resolvedStudentId =
+            result.items.isNotEmpty ? result.items.first.id : null;
+      }
+    } else if (user.role == UserRole.parent) {
+      _resolvedStudentId = ref.read(selectedChildIdProvider);
     }
 
     if (_resolvedStudentId != null) {
@@ -225,9 +235,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
 
   Widget _buildFab(BuildContext context, DocumentState state) {
     return FloatingActionButton.extended(
-      onPressed: state.isRequesting
-          ? null
-          : () => _showRequestSheet(context),
+      onPressed: state.isRequesting ? null : () => _showRequestSheet(context),
       backgroundColor: state.isRequesting
           ? AppColors.goldPrimary.withValues(alpha: 0.7)
           : AppColors.goldPrimary,
@@ -261,8 +269,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
       separatorBuilder: (_, __) =>
           const SizedBox(height: AppDimensions.space12),
       itemBuilder: (_, __) => const Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: AppDimensions.pageHorizontal),
+        padding: EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontal),
         child: _DocumentTileSkeleton(),
       ),
     );
@@ -338,8 +345,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
           backgroundColor: AppColors.warningAmber,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusMedium),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           ),
         ),
       );
@@ -471,8 +477,7 @@ class _DocumentTileSkeleton extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: AppColors.surface100,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
           ),
           const SizedBox(width: AppDimensions.space12),
@@ -507,8 +512,7 @@ class _DocumentTileSkeleton extends StatelessWidget {
             height: 24,
             decoration: BoxDecoration(
               color: AppColors.surface100,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
           ),
         ],
@@ -518,4 +522,3 @@ class _DocumentTileSkeleton extends StatelessWidget {
 }
 
 // ── Space constant ────────────────────────────────────────────────────────────
-

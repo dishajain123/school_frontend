@@ -8,6 +8,7 @@ class StudentModel {
     required this.createdAt,
     required this.updatedAt,
     this.userId,
+    this.studentName,
     this.standardId,
     this.academicYearId,
     this.section,
@@ -18,6 +19,7 @@ class StudentModel {
 
   final String id;
   final String? userId;
+  final String? studentName;
   final String schoolId;
   final String parentId;
   final String? standardId;
@@ -35,6 +37,7 @@ class StudentModel {
     return StudentModel(
       id: json['id'] as String,
       userId: json['user_id'] as String?,
+      studentName: json['student_name'] as String?,
       schoolId: json['school_id'] as String,
       parentId: json['parent_id'] as String,
       standardId: json['standard_id'] as String?,
@@ -57,6 +60,7 @@ class StudentModel {
   Map<String, dynamic> toJson() => {
         'id': id,
         'user_id': userId,
+        'student_name': studentName,
         'school_id': schoolId,
         'parent_id': parentId,
         'standard_id': standardId,
@@ -72,10 +76,8 @@ class StudentModel {
       };
 
   String get displayName {
-    final parts = <String>[];
-    if (rollNumber != null && rollNumber!.isNotEmpty) {
-      parts.add('Roll: $rollNumber');
-    }
+    final name = studentName?.trim();
+    if (name != null && name.isNotEmpty) return name;
     return admissionNumber;
   }
 
@@ -88,6 +90,7 @@ class StudentModel {
 
   StudentModel copyWith({
     String? userId,
+    String? studentName,
     String? standardId,
     String? academicYearId,
     String? section,
@@ -99,6 +102,7 @@ class StudentModel {
     return StudentModel(
       id: id,
       userId: userId ?? this.userId,
+      studentName: studentName ?? this.studentName,
       schoolId: schoolId,
       parentId: parentId,
       standardId: standardId ?? this.standardId,

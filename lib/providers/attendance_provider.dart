@@ -61,14 +61,22 @@ final studentsForAttendanceProvider =
     FutureProvider.family<List<StudentModel>, StudentsForAttendanceParams>(
   (ref, params) async {
     final repo = ref.read(studentRepositoryProvider);
-    final result = await repo.list(
-      standardId: params.standardId,
-      section: params.section,
-      academicYearId: params.academicYearId,
-      page: 1,
-      pageSize: 200,
-    );
-    final items = [...result.items];
+    final items = <StudentModel>[];
+    var page = 1;
+    var totalPages = 1;
+    do {
+      final result = await repo.list(
+        standardId: params.standardId,
+        section: params.section,
+        academicYearId: params.academicYearId,
+        page: page,
+        pageSize: 100, // backend cap
+      );
+      items.addAll(result.items);
+      totalPages = result.totalPages;
+      page += 1;
+    } while (page <= totalPages);
+
     int rollOrder(StudentModel s) {
       final raw = s.rollNumber?.trim() ?? '';
       final match = RegExp(r'\d+').firstMatch(raw);
@@ -146,6 +154,7 @@ class MarkAttendanceFormState {
     this.selectedAssignment,
     this.selectedSubjectId,
     this.attendanceMap = const {},
+    this.selectedStudentIds = const <String>{},
     this.isSubmitting = false,
     this.submitError,
   });
@@ -155,6 +164,7 @@ class MarkAttendanceFormState {
   final TeacherClassSubjectModel? selectedAssignment;
   final String? selectedSubjectId;
   final Map<String, AttendanceStatus> attendanceMap;
+  final Set<String> selectedStudentIds;
   final bool isSubmitting;
   final String? submitError;
 
@@ -164,6 +174,7 @@ class MarkAttendanceFormState {
     TeacherClassSubjectModel? selectedAssignment,
     String? selectedSubjectId,
     Map<String, AttendanceStatus>? attendanceMap,
+    Set<String>? selectedStudentIds,
     bool? isSubmitting,
     String? submitError,
     bool clearSubmitError = false,
@@ -175,6 +186,7 @@ class MarkAttendanceFormState {
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
       selectedSubjectId: selectedSubjectId ?? this.selectedSubjectId,
       attendanceMap: attendanceMap ?? this.attendanceMap,
+      selectedStudentIds: selectedStudentIds ?? this.selectedStudentIds,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitError: clearSubmitError ? null : (submitError ?? this.submitError),
     );
@@ -192,8 +204,13 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
   }
 
   void setAcademicYear(String? academicYearId) {
+    final changed = academicYearId != state.selectedAcademicYearId;
     state = state.copyWith(
       selectedAcademicYearId: academicYearId,
+      selectedAssignment: changed ? null : state.selectedAssignment,
+      selectedSubjectId: changed ? null : state.selectedSubjectId,
+      attendanceMap: changed ? const {} : state.attendanceMap,
+      selectedStudentIds: changed ? const <String>{} : state.selectedStudentIds,
       clearSubmitError: true,
     );
   }
@@ -203,6 +220,7 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
       selectedAssignment: assignment,
       selectedSubjectId: null,
       attendanceMap: const {},
+      selectedStudentIds: const <String>{},
       clearSubmitError: true,
     );
   }
@@ -211,16 +229,26 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
     state = state.copyWith(
       selectedSubjectId: subjectId,
       attendanceMap: const {},
+      selectedStudentIds: const <String>{},
       clearSubmitError: true,
     );
   }
 
   void initStudents(List<String> ids) {
     final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
+    final incoming = ids.toSet();
     for (final id in ids) {
       next.putIfAbsent(id, () => AttendanceStatus.absent);
     }
-    state = state.copyWith(attendanceMap: next);
+    next.removeWhere((key, _) => !incoming.contains(key));
+
+    final selected = Set<String>.from(state.selectedStudentIds)
+      ..removeWhere((id) => !incoming.contains(id));
+
+    state = state.copyWith(
+      attendanceMap: next,
+      selectedStudentIds: selected,
+    );
   }
 
   void preloadExisting(List<AttendanceModel> records) {
@@ -237,7 +265,39 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
     state = state.copyWith(attendanceMap: next, clearSubmitError: true);
   }
 
+  void toggleStudentSelection(String studentId, bool selected) {
+    final next = Set<String>.from(state.selectedStudentIds);
+    if (selected) {
+      next.add(studentId);
+    } else {
+      next.remove(studentId);
+    }
+    state = state.copyWith(selectedStudentIds: next, clearSubmitError: true);
+  }
+
+  void selectAll(List<String> studentIds) {
+    state = state.copyWith(
+      selectedStudentIds: studentIds.toSet(),
+      clearSubmitError: true,
+    );
+  }
+
+  void clearSelection() {
+    state = state.copyWith(
+      selectedStudentIds: const <String>{},
+      clearSubmitError: true,
+    );
+  }
+
   void markAll(AttendanceStatus status, List<String> studentIds) {
+    final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
+    for (final id in studentIds) {
+      next[id] = status;
+    }
+    state = state.copyWith(attendanceMap: next, clearSubmitError: true);
+  }
+
+  void markSelected(AttendanceStatus status, Iterable<String> studentIds) {
     final next = Map<String, AttendanceStatus>.from(state.attendanceMap);
     for (final id in studentIds) {
       next[id] = status;

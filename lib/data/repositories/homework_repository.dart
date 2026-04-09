@@ -8,15 +8,15 @@ class HomeworkRepository {
   const HomeworkRepository(this._dio);
   final Dio _dio;
 
-  // Matches FastAPI router prefix + app mount: /api/v1/homework
-  static const String _base = '/api/v1/homework';
+  // Dio already includes /api/v1 in its baseUrl.
+  static const String _base = '/homework';
 
   // ── List homework ──────────────────────────────────────────────────────────
 
   Future<HomeworkListResponse> listHomework({
-    String? date,          // ISO "yyyy-MM-dd" — backend defaults to today if omitted
-    String? standardId,    // UUID string
-    String? subjectId,     // UUID string — optional subject filter
+    String? date, // ISO "yyyy-MM-dd" — backend defaults to today if omitted
+    String? standardId, // UUID string
+    String? subjectId, // UUID string — optional subject filter
     String? academicYearId, // UUID string — backend uses active year if omitted
     int page = 1,
     int pageSize = 20,
@@ -32,8 +32,7 @@ class HomeworkRepository {
         if (academicYearId != null) 'academic_year_id': academicYearId,
       },
     );
-    return HomeworkListResponse.fromJson(
-        response.data as Map<String, dynamic>);
+    return HomeworkListResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
   // ── Create homework (TEACHER only) ────────────────────────────────────────
@@ -42,7 +41,7 @@ class HomeworkRepository {
     required String standardId,
     required String subjectId,
     required String description,
-    String? date,          // ISO "yyyy-MM-dd" — backend defaults to today if omitted
+    String? date, // ISO "yyyy-MM-dd" — backend defaults to today if omitted
     String? academicYearId, // backend uses active year if omitted
   }) async {
     final body = <String, dynamic>{

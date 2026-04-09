@@ -72,13 +72,33 @@ class TimetableRepository {
     required String standardId,
     String? academicYearId,
   }) async {
-    final response = await _dio.get(
-      ApiConstants.timetableSections(standardId),
+    final query = <String, dynamic>{
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+
+    try {
+      final response = await _dio.get(
+        ApiConstants.timetableSections(standardId),
+        queryParameters: query,
+      );
+      final data = response.data as List<dynamic>? ?? const [];
+      return data.map((e) => e.toString()).toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404 && e.response?.statusCode != 422) {
+        rethrow;
+      }
+    }
+
+    // Compatibility fallback for backends exposing:
+    // /timetable/sections?standard_id=<id>&academic_year_id=<id>
+    final fallback = await _dio.get(
+      '/timetable/sections',
       queryParameters: {
-        if (academicYearId != null) 'academic_year_id': academicYearId,
+        'standard_id': standardId,
+        ...query,
       },
     );
-    final data = response.data as List<dynamic>? ?? const [];
+    final data = fallback.data as List<dynamic>? ?? const [];
     return data.map((e) => e.toString()).toList();
   }
 }

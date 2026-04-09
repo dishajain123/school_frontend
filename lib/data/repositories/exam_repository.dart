@@ -9,7 +9,8 @@ class ExamRepository {
   const ExamRepository(this._dio);
   final Dio _dio;
 
-  static const String _base = '/api/v1/exam-schedule';
+  // Dio already includes /api/v1 in its baseUrl.
+  static const String _base = '/exam-schedule';
 
   // ── POST /exam-schedule ────────────────────────────────────────────────────
   Future<ExamSeriesModel> createSeries({

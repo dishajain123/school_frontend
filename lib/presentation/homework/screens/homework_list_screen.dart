@@ -10,6 +10,8 @@ import '../../../providers/academic_year_provider.dart';
 import '../../../providers/attendance_provider.dart'; // myTeacherAssignmentsProvider
 import '../../../providers/auth_provider.dart';
 import '../../../providers/homework_provider.dart';
+import '../../../providers/parent_provider.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
@@ -40,12 +42,6 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
   // ISO "yyyy-MM-dd" for the API
   String _toApiDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  HomeworkParams get _params => (
-        date: _toApiDate(_selectedDate),
-        subjectId: _selectedSubjectId,
-        academicYearId: null, // backend uses active year
-      );
 
   bool get _isToday {
     final t = _today();
@@ -94,20 +90,20 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
   }
 
   Future<void> _navigateToCreate() async {
-    final created =
-        await context.push<bool>('/homework/create');
+    final created = await context.push<bool>('/homework/create');
     // Invalidate so the list refreshes on return
     if (created == true && mounted) {
-      ref.invalidate(homeworkListProvider(_params));
+      ref.invalidate(homeworkListProvider);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
-    final isTeacher = currentUser?.role == 'TEACHER';
-    final canCreate =
-        currentUser?.hasPermission('homework:create') ?? false;
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final isParent = currentUser?.role == UserRole.parent;
+    final canCreate = currentUser?.hasPermission('homework:create') ?? false;
+    final selectedChild = ref.watch(selectedChildProvider);
 
     // Load teacher assignments for subject filter + name resolution
     final activeYear = ref.watch(activeYearProvider);
@@ -134,7 +130,13 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
       });
     }
 
-    final homeworkAsync = ref.watch(homeworkListProvider(_params));
+    final params = (
+      date: _toApiDate(_selectedDate),
+      standardId: isParent ? selectedChild?.standardId : null,
+      subjectId: _selectedSubjectId,
+      academicYearId: null,
+    );
+    final homeworkAsync = ref.watch(homeworkListProvider(params));
 
     return AppScaffold(
       appBar: const AppAppBar(title: 'Homework', showBack: false),
@@ -175,14 +177,12 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
           Expanded(
             child: RefreshIndicator(
               color: AppColors.navyDeep,
-              onRefresh: () async =>
-                  ref.invalidate(homeworkListProvider(_params)),
+              onRefresh: () async => ref.invalidate(homeworkListProvider(params)),
               child: homeworkAsync.when(
                 loading: () => _HomeworkShimmer(),
                 error: (e, _) => AppErrorState(
                   message: e.toString(),
-                  onRetry: () =>
-                      ref.invalidate(homeworkListProvider(_params)),
+                  onRetry: () => ref.invalidate(homeworkListProvider(params)),
                 ),
                 data: (response) {
                   if (response.items.isEmpty) {
@@ -377,12 +377,8 @@ class _SubjectFilterBar extends StatelessWidget {
                 label: Text(
                   entry.value,
                   style: AppTypography.labelMedium.copyWith(
-                    color: isSelected
-                        ? AppColors.white
-                        : AppColors.grey600,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w500,
+                    color: isSelected ? AppColors.white : AppColors.grey600,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
                 selected: isSelected,
@@ -392,9 +388,7 @@ class _SubjectFilterBar extends StatelessWidget {
                 checkmarkColor: AppColors.white,
                 showCheckmark: false,
                 side: BorderSide(
-                  color: isSelected
-                      ? AppColors.navyDeep
-                      : AppColors.surface200,
+                  color: isSelected ? AppColors.navyDeep : AppColors.surface200,
                 ),
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppDimensions.space4),

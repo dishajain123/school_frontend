@@ -73,7 +73,9 @@ class TrusteeDashboard extends ConsumerWidget {
         icon: Icons.bar_chart_outlined,
         label: 'Reports',
         color: AppColors.subjectScience,
-        onTap: () => context.go(RouteNames.attendance),
+        onTap: () => context.go(
+          '${RouteNames.principalReportDetails}?metric=student_attendance',
+        ),
       ),
       QuickActionItem(
         icon: Icons.quiz_outlined,

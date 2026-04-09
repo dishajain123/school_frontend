@@ -11,6 +11,7 @@ import '../../../providers/attendance_provider.dart'; // myTeacherAssignmentsPro
 import '../../../providers/auth_provider.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../providers/diary_provider.dart';
+import '../../../providers/parent_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
@@ -36,12 +37,6 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
 
   String _toApiDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  DiaryParams get _params => (
-        date: _toApiDate(_selectedDate),
-        subjectId: _selectedSubjectId,
-        academicYearId: null, // backend uses active year
-      );
 
   bool get _isToday {
     final t = _today();
@@ -92,7 +87,7 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
   Future<void> _navigateToCreate() async {
     final created = await context.push<bool>('/diary/create');
     if (created == true && mounted) {
-      ref.invalidate(diaryListProvider(_params));
+      ref.invalidate(diaryListProvider);
     }
   }
 
@@ -100,7 +95,9 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final isTeacher = currentUser?.role == UserRole.teacher;
+    final isParent = currentUser?.role == UserRole.parent;
     final canCreate = currentUser?.hasPermission('diary:create') ?? false;
+    final selectedChild = ref.watch(selectedChildProvider);
 
     // Load teacher assignments for subject filter + name resolution
     final activeYear = ref.watch(activeYearProvider);
@@ -127,7 +124,13 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
       });
     }
 
-    final diaryAsync = ref.watch(diaryListProvider(_params));
+    final params = (
+      date: _toApiDate(_selectedDate),
+      standardId: isParent ? selectedChild?.standardId : null,
+      subjectId: _selectedSubjectId,
+      academicYearId: null,
+    );
+    final diaryAsync = ref.watch(diaryListProvider(params));
 
     return AppScaffold(
       appBar: const AppAppBar(title: 'Class Diary', showBack: false),
@@ -168,12 +171,12 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
           Expanded(
             child: RefreshIndicator(
               color: AppColors.navyDeep,
-              onRefresh: () async => ref.invalidate(diaryListProvider(_params)),
+              onRefresh: () async => ref.invalidate(diaryListProvider(params)),
               child: diaryAsync.when(
                 loading: () => _DiaryShimmer(),
                 error: (e, _) => AppErrorState(
                   message: e.toString(),
-                  onRetry: () => ref.invalidate(diaryListProvider(_params)),
+                  onRetry: () => ref.invalidate(diaryListProvider(params)),
                 ),
                 data: (response) {
                   if (response.items.isEmpty) {

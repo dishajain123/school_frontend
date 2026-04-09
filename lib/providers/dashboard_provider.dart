@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/dio_client.dart';
 import '../data/models/complaint/complaint_model.dart';
 import '../data/models/leave/leave_model.dart';
+import '../data/models/student/student_model.dart';
+import '../data/models/teacher/teacher_class_subject_model.dart';
 import '../data/repositories/complaint_repository.dart';
 import '../data/repositories/leave_repository.dart';
 import '../data/repositories/student_repository.dart';
@@ -103,4 +105,27 @@ final principalDashboardStatsProvider =
     teacherAttendancePercentage:
         _asDouble(report['teacher_attendance_percentage']),
   );
+});
+
+typedef ClassTeachersParams = ({
+  String standardId,
+  String section,
+  String? academicYearId,
+});
+
+final classTeachersProvider =
+    FutureProvider.family<List<TeacherClassSubjectModel>, ClassTeachersParams>(
+  (ref, params) async {
+    final repo = ref.read(teacherClassSubjectRepositoryProvider);
+    return repo.listByClass(
+      standardId: params.standardId,
+      section: params.section,
+      academicYearId: params.academicYearId,
+    );
+  },
+);
+
+final myStudentProfileProvider = FutureProvider<StudentModel>((ref) async {
+  final repo = ref.read(studentRepositoryProvider);
+  return repo.getMyProfile();
 });

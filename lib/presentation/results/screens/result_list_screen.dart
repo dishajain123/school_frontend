@@ -54,6 +54,20 @@ final _studentsByFilterProvider =
   },
 );
 
+final _myStudentIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.read(currentUserProvider);
+  if (user == null || user.role != UserRole.student) return null;
+
+  final repo = ref.read(studentRepositoryProvider);
+  try {
+    final me = await repo.getMyProfile();
+    return me.id;
+  } catch (_) {
+    final result = await repo.list(page: 1, pageSize: 1);
+    return result.items.isNotEmpty ? result.items.first.id : null;
+  }
+});
+
 class ResultListScreen extends ConsumerStatefulWidget {
   const ResultListScreen({super.key, this.studentId});
 
@@ -70,20 +84,11 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
   String? _selectedSection;
   String? _selectedStudentId;
 
-  String? _resolveStudentId() {
-    if (widget.studentId != null) return widget.studentId;
-    final user = ref.read(currentUserProvider);
-    if (user == null) return null;
-    if (user.role == UserRole.student) return user.id;
-    if (user.role == UserRole.parent) {
-      return ref.read(selectedChildIdProvider);
-    }
-    return _selectedStudentId;
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final myStudentIdAsync = ref.watch(_myStudentIdProvider);
+    final selectedChildId = ref.watch(selectedChildIdProvider);
     final canCreate = user?.hasPermission('result:create') ?? false;
     final canPublish = user?.hasPermission('result:publish') ?? false;
     final canBrowseStudents = user != null &&
@@ -91,6 +96,34 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
             user.role == UserRole.trustee ||
             user.role == UserRole.teacher ||
             user.role == UserRole.superadmin);
+
+    String? resolvedStudentId;
+    if (widget.studentId != null) {
+      resolvedStudentId = widget.studentId;
+    } else if (user?.role == UserRole.student) {
+      resolvedStudentId = myStudentIdAsync.valueOrNull;
+    } else if (user?.role == UserRole.parent) {
+      resolvedStudentId = selectedChildId;
+    } else {
+      resolvedStudentId = _selectedStudentId;
+    }
+
+    if (user?.role == UserRole.student && myStudentIdAsync.isLoading) {
+      return const AppScaffold(
+        appBar: AppAppBar(title: 'Results', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (user?.role == UserRole.student && myStudentIdAsync.hasError) {
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Results', showBack: true),
+        body: AppErrorState(
+          message: myStudentIdAsync.error.toString(),
+          onRetry: () => ref.invalidate(_myStudentIdProvider),
+        ),
+      );
+    }
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -107,7 +140,7 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
         ],
       ),
       body: _ResultListBody(
-        studentId: _resolveStudentId(),
+        studentId: resolvedStudentId,
         selectedExam: _selectedExam,
         onExamSelected: (exam) => setState(() => _selectedExam = exam),
         selectedStandardId: _selectedStandardId,

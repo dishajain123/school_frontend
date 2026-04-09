@@ -8,24 +8,36 @@ class StudentAttendanceTile extends StatelessWidget {
   const StudentAttendanceTile({
     super.key,
     required this.studentId,
+    this.studentName,
     required this.admissionNumber,
     this.rollNumber,
     this.section,
     required this.currentStatus,
     required this.onStatusChanged,
+    required this.isSelected,
+    required this.onSelectionChanged,
     this.isLast = false,
   });
 
   final String studentId;
+  final String? studentName;
   final String admissionNumber;
   final String? rollNumber;
   final String? section;
   final AttendanceStatus currentStatus;
   final ValueChanged<AttendanceStatus> onStatusChanged;
+  final bool isSelected;
+  final ValueChanged<bool> onSelectionChanged;
   final bool isLast;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedName = (studentName ?? '').trim().isNotEmpty
+        ? studentName!.trim()
+        : 'Student $admissionNumber';
+    final roll = rollNumber?.trim();
+    final hasRoll = roll != null && roll.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         color: _rowBackground,
@@ -38,6 +50,12 @@ class StudentAttendanceTile extends StatelessWidget {
           horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
       child: Row(
         children: [
+          Checkbox(
+            value: isSelected,
+            activeColor: AppColors.navyMedium,
+            onChanged: (value) => onSelectionChanged(value ?? false),
+          ),
+          const SizedBox(width: AppDimensions.space4),
           // Student avatar / initials
           Container(
             width: 40,
@@ -48,9 +66,9 @@ class StudentAttendanceTile extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                admissionNumber.length >= 2
-                    ? admissionNumber.substring(0, 2).toUpperCase()
-                    : admissionNumber.toUpperCase(),
+                resolvedName.length >= 2
+                    ? resolvedName.substring(0, 2).toUpperCase()
+                    : resolvedName.toUpperCase(),
                 style: AppTypography.labelMedium.copyWith(
                   color: AppColors.navyMedium,
                   fontWeight: FontWeight.w600,
@@ -64,16 +82,14 @@ class StudentAttendanceTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                    rollNumber != null && rollNumber!.trim().isNotEmpty
-                        ? 'Roll ${rollNumber!.trim()}'
-                        : admissionNumber,
+                Text(resolvedName,
                     style: AppTypography.titleSmall,
                     overflow: TextOverflow.ellipsis),
-                if (rollNumber != null && rollNumber!.trim().isNotEmpty)
-                  Text(admissionNumber,
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey600)),
+                Text(
+                  hasRoll ? 'Roll $roll • $admissionNumber' : admissionNumber,
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey600),
+                ),
                 if (section != null && section!.isNotEmpty)
                   Text('Section $section',
                       style: AppTypography.caption

@@ -277,6 +277,11 @@ class _ClassSnapshotScreenState extends ConsumerState<ClassSnapshotScreen> {
                 (context, index) => _SnapshotRecordTile(
                   record: snapshot.records[index],
                   isLast: index == snapshot.records.length - 1,
+                  onTap: () => context.push(
+                    RouteNames.attendanceAnalyticsPath(
+                      snapshot.records[index].studentId,
+                    ),
+                  ),
                 ),
                 childCount: snapshot.records.length,
               ),
@@ -409,9 +414,14 @@ class _SnapStat extends StatelessWidget {
 }
 
 class _SnapshotRecordTile extends StatelessWidget {
-  const _SnapshotRecordTile({required this.record, required this.isLast});
+  const _SnapshotRecordTile({
+    required this.record,
+    required this.isLast,
+    this.onTap,
+  });
   final ClassSnapshotRecord record;
   final bool isLast;
+  final VoidCallback? onTap;
 
   Color get _statusColor {
     if (record.status == null) return AppColors.grey400;
@@ -451,69 +461,73 @@ class _SnapshotRecordTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.space8),
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x0D0B1F3A), blurRadius: 8, offset: Offset(0, 2))
-        ],
-      ),
-      child: Row(
-        children: [
-          // Initials avatar
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.surface100,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            child: Center(
-              child: Text(
-                record.admissionNumber.length >= 2
-                    ? record.admissionNumber.substring(0, 2).toUpperCase()
-                    : record.admissionNumber.toUpperCase(),
-                style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.navyMedium, fontWeight: FontWeight.w600),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppDimensions.space8),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x0D0B1F3A), blurRadius: 8, offset: Offset(0, 2))
+          ],
+        ),
+        child: Row(
+          children: [
+            // Initials avatar
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.surface100,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+              child: Center(
+                child: Text(
+                  record.admissionNumber.length >= 2
+                      ? record.admissionNumber.substring(0, 2).toUpperCase()
+                      : record.admissionNumber.toUpperCase(),
+                  style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.navyMedium, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: AppDimensions.space12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(record.admissionNumber, style: AppTypography.titleSmall),
-                if (record.rollNumber != null &&
-                    record.rollNumber!.trim().isNotEmpty)
-                  Text('Roll ${record.rollNumber}',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey600)),
-                if (record.section.isNotEmpty)
-                  Text('Sec ${record.section}',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey400)),
-              ],
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(record.admissionNumber, style: AppTypography.titleSmall),
+                  if (record.rollNumber != null &&
+                      record.rollNumber!.trim().isNotEmpty)
+                    Text('Roll ${record.rollNumber}',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.grey600)),
+                  if (record.section.isNotEmpty)
+                    Text('Sec ${record.section}',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.grey400)),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space8,
-                vertical: AppDimensions.space4),
-            decoration: BoxDecoration(
-              color: _statusBg,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.space8,
+                  vertical: AppDimensions.space4),
+              decoration: BoxDecoration(
+                color: _statusBg,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+              child: Text(_statusLabel,
+                  style: AppTypography.labelSmall.copyWith(
+                      color: _statusColor, fontWeight: FontWeight.w600)),
             ),
-            child: Text(_statusLabel,
-                style: AppTypography.labelSmall.copyWith(
-                    color: _statusColor, fontWeight: FontWeight.w600)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

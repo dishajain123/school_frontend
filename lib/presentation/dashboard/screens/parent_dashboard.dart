@@ -7,6 +7,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/parent/child_summary.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../../common/widgets/app_text_field.dart';
@@ -161,6 +164,7 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
   @override
   Widget build(BuildContext context) {
     final childrenAsync = ref.watch(childrenNotifierProvider);
+    final selectedChild = ref.watch(selectedChildProvider);
     final quickActions = [
       QuickActionItem(
         icon: Icons.fact_check_outlined,
@@ -217,6 +221,7 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(childrenNotifierProvider.notifier).refresh();
+          ref.invalidate(classTeachersProvider);
         },
         child: CustomScrollView(
           slivers: [
@@ -237,6 +242,8 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
                         .selectChild(id),
                     onAddChild: _showAddChildSheet,
                   ),
+                  const SizedBox(height: AppDimensions.space16),
+                  _ParentClassTeachersCard(selectedChild: selectedChild),
                   const SizedBox(height: AppDimensions.space16),
                   FeeDueBanner(
                     amountDue: 0,
@@ -277,6 +284,166 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ParentClassTeachersCard extends ConsumerWidget {
+  const _ParentClassTeachersCard({required this.selectedChild});
+
+  final ChildSummaryModel? selectedChild;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final child = selectedChild;
+    if (child == null) {
+      return _ClassTeachersCardShell(
+        child: Text(
+          'Select a child to view class teachers.',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+        ),
+      );
+    }
+
+    final standardId = child.standardId;
+    final section = child.section?.trim();
+    final yearId = child.academicYearId;
+
+    final sectionLabel = section != null && section.isNotEmpty
+        ? 'Section $section'
+        : 'Section not set';
+
+    if (standardId == null ||
+        standardId.isEmpty ||
+        section == null ||
+        section.isEmpty) {
+      return _ClassTeachersCardShell(
+        sectionLabel: sectionLabel,
+        child: Text(
+          'Class/section is not available for selected child.',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+        ),
+      );
+    }
+
+    final teachersAsync = ref.watch(classTeachersProvider((
+      standardId: standardId,
+      section: section,
+      academicYearId: yearId,
+    )));
+
+    return _ClassTeachersCardShell(
+      sectionLabel: sectionLabel,
+      child: teachersAsync.when(
+        loading: () => Text(
+          'Loading assigned teachers...',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+        ),
+        error: (e, _) => Text(
+          'Could not load teachers: $e',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+        ),
+        data: (rows) => _TeachersList(rows: rows),
+      ),
+    );
+  }
+}
+
+class _ClassTeachersCardShell extends StatelessWidget {
+  const _ClassTeachersCardShell({
+    required this.child,
+    this.sectionLabel,
+  });
+
+  final String? sectionLabel;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimensions.space12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Class Teachers',
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.navyDeep,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (sectionLabel != null) ...[
+            const SizedBox(height: AppDimensions.space4),
+            Text(
+              sectionLabel!,
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+            ),
+          ],
+          const SizedBox(height: AppDimensions.space8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _TeachersList extends StatelessWidget {
+  const _TeachersList({required this.rows});
+
+  final List<TeacherClassSubjectModel> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return Text(
+        'No teacher assignments found for this class/section.',
+        style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+      );
+    }
+
+    final byTeacher = <String, List<TeacherClassSubjectModel>>{};
+    for (final r in rows) {
+      final code = r.teacherEmployeeCode ?? 'Teacher';
+      final key = '${r.teacherId}|$code';
+      byTeacher.putIfAbsent(key, () => []).add(r);
+    }
+
+    return Column(
+      children: byTeacher.entries.map((entry) {
+        final teacherRows = entry.value;
+        final first = teacherRows.first;
+        final teacherCode =
+            (first.teacherEmployeeCode?.trim().isNotEmpty ?? false)
+                ? first.teacherEmployeeCode!
+                : 'Teacher';
+        final subjects = teacherRows.map((r) => r.subjectLabel).toSet().toList()
+          ..sort();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppDimensions.space8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.person_outline,
+                  size: 18, color: AppColors.navyMedium),
+              const SizedBox(width: AppDimensions.space8),
+              Expanded(
+                child: Text(
+                  '$teacherCode: ${subjects.join(', ')}',
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.grey800),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -338,13 +505,16 @@ class _ChildSwitcherCard extends StatelessWidget {
             )
           else
             DropdownButtonFormField<String>(
+              key: ValueKey<String?>('child-switcher-${selected ?? children.first.id}'),
               initialValue: selected ?? children.first.id,
               items: children
                   .map(
                     (child) => DropdownMenuItem<String>(
                       value: child.id,
                       child: Text(
-                        child.admissionNumber,
+                        child.section != null && child.section!.trim().isNotEmpty
+                            ? '${child.admissionNumber}  •  Sec ${child.section}'
+                            : child.admissionNumber,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

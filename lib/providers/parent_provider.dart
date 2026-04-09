@@ -51,7 +51,27 @@ class ChildrenState {
 class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
   @override
   Future<ChildrenState> build() async {
-    return const ChildrenState();
+    final repo = ref.read(parentRepositoryProvider);
+    final localStorage = ref.read(localStorageProvider);
+
+    try {
+      final children = await repo.getMyChildren();
+      String? savedChildId = localStorage.getString(StorageKeys.selectedChildId);
+      if (savedChildId != null && !children.any((c) => c.id == savedChildId)) {
+        savedChildId = null;
+      }
+
+      final selectedId =
+          savedChildId ?? (children.isNotEmpty ? children.first.id : null);
+      return ChildrenState(
+        children: children,
+        selectedChildId: selectedId,
+        isLoading: false,
+      );
+    } catch (_) {
+      // Parent-only provider: for non-parent sessions just stay empty.
+      return const ChildrenState();
+    }
   }
 
   Future<void> loadMyChildren() async {
@@ -114,6 +134,7 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
     String? studentPassword,
   }) async {
     final repo = ref.read(parentRepositoryProvider);
+    final previous = state.valueOrNull?.children ?? const <ChildSummaryModel>[];
     final children = await repo.linkMyChild(
       studentId: studentId,
       admissionNumber: admissionNumber,
@@ -123,10 +144,18 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
     );
 
     final current = state.valueOrNull ?? const ChildrenState();
+    final previousIds = previous.map((c) => c.id).toSet();
+    final newlyLinked = children.where((c) => !previousIds.contains(c.id)).toList();
+    final newLinkedId = newlyLinked.isNotEmpty ? newlyLinked.first.id : null;
     final selectedId = current.selectedChildId != null &&
             children.any((c) => c.id == current.selectedChildId)
-        ? current.selectedChildId
+        ? (newLinkedId ?? current.selectedChildId)
         : (children.isNotEmpty ? children.first.id : null);
+
+    if (selectedId != null) {
+      final localStorage = ref.read(localStorageProvider);
+      await localStorage.setString(StorageKeys.selectedChildId, selectedId);
+    }
 
     state = AsyncData(
       current.copyWith(

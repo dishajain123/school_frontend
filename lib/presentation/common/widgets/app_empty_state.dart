@@ -75,56 +75,66 @@ class _AppEmptyStateState extends State<AppEmptyState>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppDimensions.space32,
-              vertical: widget.compact
-                  ? AppDimensions.space24
-                  : AppDimensions.space48,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  widget.icon ?? Icons.inbox_outlined,
-                  size: iconSize,
-                  color: widget.iconColor ?? AppColors.grey400,
-                ),
-                SizedBox(
-                  height: widget.compact
-                      ? AppDimensions.space16
-                      : AppDimensions.space24,
-                ),
-                Text(
-                  widget.title,
-                  style: AppTypography.headlineSmall.copyWith(
-                    color: AppColors.grey800,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppDimensions.space32,
+                      vertical: widget.compact
+                          ? AppDimensions.space24
+                          : AppDimensions.space48,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.icon ?? Icons.inbox_outlined,
+                          size: iconSize,
+                          color: widget.iconColor ?? AppColors.grey400,
+                        ),
+                        SizedBox(
+                          height: widget.compact
+                              ? AppDimensions.space16
+                              : AppDimensions.space24,
+                        ),
+                        Text(
+                          widget.title,
+                          style: AppTypography.headlineSmall.copyWith(
+                            color: AppColors.grey800,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (widget.subtitle != null) ...[
+                          const SizedBox(height: AppDimensions.space8),
+                          Text(
+                            widget.subtitle!,
+                            style: AppTypography.bodyMedium,
+                            textAlign: TextAlign.center,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (widget.actionLabel != null &&
+                            widget.onAction != null) ...[
+                          const SizedBox(height: AppDimensions.space24),
+                          AppButton.primary(
+                            label: widget.actionLabel!,
+                            onTap: widget.onAction,
+                            fullWidth: false,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                if (widget.subtitle != null) ...[
-                  const SizedBox(height: AppDimensions.space8),
-                  Text(
-                    widget.subtitle!,
-                    style: AppTypography.bodyMedium,
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                if (widget.actionLabel != null &&
-                    widget.onAction != null) ...[
-                  const SizedBox(height: AppDimensions.space24),
-                  AppButton.primary(
-                    label: widget.actionLabel!,
-                    onTap: widget.onAction,
-                    fullWidth: false,
-                  ),
-                ],
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

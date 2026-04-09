@@ -80,10 +80,17 @@ final myStudentIdProvider = FutureProvider<String?>((ref) async {
 
   try {
     final repo = ref.read(studentRepositoryProvider);
-    final result = await repo.list(page: 1, pageSize: 1);
-    return result.items.isNotEmpty ? result.items.first.id : null;
+    final me = await repo.getMyProfile();
+    return me.id;
   } catch (_) {
-    return null;
+    // Backward compatibility for deployments without /students/me.
+    try {
+      final repo = ref.read(studentRepositoryProvider);
+      final result = await repo.list(page: 1, pageSize: 1);
+      return result.items.isNotEmpty ? result.items.first.id : null;
+    } catch (_) {
+      return null;
+    }
   }
 });
 

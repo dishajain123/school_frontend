@@ -12,6 +12,7 @@ import '../data/repositories/diary_repository.dart';
 //
 typedef DiaryParams = ({
   String date,
+  String? standardId,
   String? subjectId,
   String? academicYearId,
 });
@@ -29,6 +30,7 @@ final diaryListProvider =
     final repo = ref.read(diaryRepositoryProvider);
     return repo.listDiary(
       date: params.date,
+      standardId: params.standardId,
       subjectId: params.subjectId,
       academicYearId: params.academicYearId,
       page: 1,

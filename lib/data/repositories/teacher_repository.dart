@@ -157,6 +157,34 @@ class TeacherClassSubjectRepository {
     return _parseList(response.data);
   }
 
+  Future<List<TeacherClassSubjectModel>> listByClass({
+    required String standardId,
+    required String section,
+    String? academicYearId,
+  }) async {
+    final query = <String, dynamic>{
+      'standard_id': standardId,
+      'section': section,
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+
+    try {
+      final response = await _dio.get(
+        ApiConstants.teacherAssignments,
+        queryParameters: query,
+      );
+      return _parseList(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+    }
+
+    final legacy = await _dio.get(
+      '/teacher-class-subjects',
+      queryParameters: query,
+    );
+    return _parseList(legacy.data);
+  }
+
   Future<TeacherClassSubjectModel> createAssignment({
     required String teacherId,
     required String standardId,

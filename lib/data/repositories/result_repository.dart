@@ -8,7 +8,7 @@ class ResultRepository {
   const ResultRepository(this._dio);
   final Dio _dio;
 
-  static const String _base = '/api/v1/results';
+  static const String _base = '/results';
 
   // ── POST /results/exams ────────────────────────────────────────────────────
   Future<ExamModel> createExam({

@@ -64,7 +64,7 @@ abstract final class RoleShellConfig {
       icon: Icons.bar_chart_outlined,
       activeIcon: Icons.bar_chart,
       label: 'Reports',
-      rootPath: RouteNames.attendance,
+      rootPath: RouteNames.principalReportDetails,
     ),
     ShellTabItem(
       icon: Icons.person_outline,
