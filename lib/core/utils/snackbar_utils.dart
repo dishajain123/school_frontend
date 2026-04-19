@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimensions.dart';
+import '../theme/app_typography.dart';
 
 class SnackbarUtils {
   SnackbarUtils._();
@@ -68,7 +69,7 @@ class SnackbarUtils {
               Expanded(
                 child: Text(
                   message,
-                  style: const TextStyle(
+                  style: AppTypography.bodyMedium.copyWith(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

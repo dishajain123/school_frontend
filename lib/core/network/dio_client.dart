@@ -6,7 +6,6 @@ import '../storage/secure_storage.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
 
-/// Provider for the configured Dio HTTP client.
 final dioClientProvider = Provider<Dio>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
   final resolvedBaseUrl = _buildApiBaseUrl(
@@ -32,7 +31,6 @@ final dioClientProvider = Provider<Dio>((ref) {
     AuthInterceptor(
       secureStorage: secureStorage,
       onLogout: () {
-        // Clear tokens first, then notify the auth notifier via the bus.
         secureStorage.clearAll();
         AuthLogoutBus.instance.notifyLogout();
       },
@@ -42,11 +40,8 @@ final dioClientProvider = Provider<Dio>((ref) {
       requestBody: false,
       responseBody: false,
       logPrint: (o) {
-        assert(() {
-          // ignore: avoid_print
-          print('[Dio] $o');
-          return true;
-        }());
+        // ignore: avoid_print
+        print('[Dio] $o');
       },
     ),
   ]);

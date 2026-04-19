@@ -28,16 +28,21 @@ class UserSearchResult {
   const UserSearchResult({
     required this.id,
     required this.role,
+    this.displayNameOverride,
     this.email,
     this.phone,
   });
 
   final String id;
   final String role;
+  final String? displayNameOverride;
   final String? email;
   final String? phone;
 
   String get displayName {
+    if (displayNameOverride != null && displayNameOverride!.isNotEmpty) {
+      return displayNameOverride!;
+    }
     if (email != null && email!.isNotEmpty) return email!;
     return phone ?? id;
   }
@@ -46,6 +51,7 @@ class UserSearchResult {
     return UserSearchResult(
       id: json['id'] as String,
       role: json['role'] as String? ?? '',
+      displayNameOverride: json['display_name'] as String?,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
     );
@@ -141,25 +147,81 @@ class ChatRepository {
   // ── User search (for new conversation picker) ──────────────────────────────
 
   Future<List<UserSearchResult>> searchUsers({String? query}) async {
+    return searchUsersWithFilters(query: query);
+  }
+
+  Future<List<UserSearchResult>> searchUsersWithFilters({
+    String? query,
+    String? role,
+    String? standardId,
+    String? section,
+    String? subjectId,
+    String? academicYearId,
+  }) async {
     try {
       final params = <String, dynamic>{
         'page': 1,
         'page_size': 20,
         if (query != null && query.isNotEmpty) 'q': query,
+        if (role != null && role.isNotEmpty) 'role': role,
+        if (standardId != null && standardId.isNotEmpty)
+          'standard_id': standardId,
+        if (section != null && section.isNotEmpty) 'section': section,
+        if (subjectId != null && subjectId.isNotEmpty) 'subject_id': subjectId,
+        if (academicYearId != null && academicYearId.isNotEmpty)
+          'academic_year_id': academicYearId,
       };
       final response = await _dio.get(
-        ApiConstants.users,
+        ApiConstants.chatUsers,
         queryParameters: params,
       );
       final data = response.data as Map<String, dynamic>;
       final items = data['items'] as List<dynamic>? ?? [];
       return items
-          .map((e) =>
-              UserSearchResult.fromJson(e as Map<String, dynamic>))
+          .map((e) => UserSearchResult.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (_) {
       return [];
     }
+  }
+
+  Future<List<UserSearchResult>> searchUsersAcrossRoles({
+    String? query,
+    required List<String> roles,
+    String? standardId,
+    String? section,
+    String? subjectId,
+    String? academicYearId,
+  }) async {
+    if (roles.isEmpty) return const <UserSearchResult>[];
+    final uniqueRoles = roles
+        .map((r) => r.trim().toUpperCase())
+        .where((r) => r.isNotEmpty)
+        .toSet()
+        .toList();
+    if (uniqueRoles.isEmpty) return const <UserSearchResult>[];
+
+    final futures = uniqueRoles
+        .map(
+          (role) => searchUsersWithFilters(
+            query: query,
+            role: role,
+            standardId: standardId,
+            section: section,
+            subjectId: subjectId,
+            academicYearId: academicYearId,
+          ),
+        )
+        .toList();
+
+    final results = await Future.wait(futures);
+    final map = <String, UserSearchResult>{};
+    for (final list in results) {
+      for (final user in list) {
+        map.putIfAbsent(user.id, () => user);
+      }
+    }
+    return map.values.toList();
   }
 
   // ── WebSocket ──────────────────────────────────────────────────────────────

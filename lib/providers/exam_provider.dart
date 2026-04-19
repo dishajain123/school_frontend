@@ -8,16 +8,29 @@ import '../data/repositories/exam_repository.dart';
 
 typedef ExamScheduleParams = ({
   String standardId,
-  String seriesId,
+  String? seriesId,
 });
 
 // ── Schedule provider (load full table: series + entries) ─────────────────────
 
 final examScheduleProvider =
     FutureProvider.family<ExamScheduleTable, ExamScheduleParams>(
-  (ref, params) => ref.read(examRepositoryProvider).getSchedule(
+      (ref, params) => ref.read(examRepositoryProvider).getSchedule(
         standardId: params.standardId,
         seriesId: params.seriesId,
+      ),
+);
+
+typedef ExamSeriesListParams = ({
+  String standardId,
+  String? academicYearId,
+});
+
+final examSeriesListProvider =
+    FutureProvider.family<List<ExamSeriesModel>, ExamSeriesListParams>(
+  (ref, params) => ref.read(examRepositoryProvider).listSeries(
+        standardId: params.standardId,
+        academicYearId: params.academicYearId,
       ),
 );
 

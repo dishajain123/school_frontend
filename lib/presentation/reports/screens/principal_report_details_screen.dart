@@ -108,18 +108,35 @@ class PrincipalReportDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _PrincipalReportDetailsScreenState
-    extends ConsumerState<PrincipalReportDetailsScreen> {
+    extends ConsumerState<PrincipalReportDetailsScreen>
+    with SingleTickerProviderStateMixin {
   late String _metric;
   String? _standardId;
   String? _section;
   String? _studentId;
   String? _teacherId;
   String? _subjectId;
+  bool _filtersExpanded = false;
+
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
     _metric = _normalizeMetric(widget.initialMetric);
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   String _normalizeMetric(String raw) {
@@ -148,6 +165,47 @@ class _PrincipalReportDetailsScreenState
     }
   }
 
+  IconData _metricIcon(String metric) {
+    switch (metric) {
+      case 'fees_paid':
+        return Icons.account_balance_wallet_outlined;
+      case 'results':
+        return Icons.analytics_outlined;
+      case 'teacher_attendance':
+        return Icons.supervisor_account_outlined;
+      case 'student_attendance':
+      default:
+        return Icons.fact_check_outlined;
+    }
+  }
+
+  Color _metricColor(String metric) {
+    switch (metric) {
+      case 'fees_paid':
+        return AppColors.successGreen;
+      case 'results':
+        return AppColors.infoBlue;
+      case 'teacher_attendance':
+        return AppColors.warningAmber;
+      case 'student_attendance':
+      default:
+        return AppColors.navyMedium;
+    }
+  }
+
+  void _onMetricChanged(String v) {
+    _animCtrl.reset();
+    setState(() => _metric = v);
+    _animCtrl.forward();
+  }
+
+  bool get _hasActiveFilters =>
+      _standardId != null ||
+      _section != null ||
+      _studentId != null ||
+      _teacherId != null ||
+      _subjectId != null;
+
   @override
   Widget build(BuildContext context) {
     final activeYearId = ref.watch(activeYearProvider)?.id;
@@ -163,9 +221,7 @@ class _PrincipalReportDetailsScreenState
     )));
 
     final standardsAsync = ref.watch(standardsProvider(activeYearId));
-    final sectionsAsync = ref.watch(
-      studentSectionsProvider(_standardId),
-    );
+    final sectionsAsync = ref.watch(studentSectionsProvider(_standardId));
     final studentsAsync = ref.watch(
       reportStudentsProvider((
         academicYearId: activeYearId,
@@ -176,158 +232,385 @@ class _PrincipalReportDetailsScreenState
     final teachersAsync = ref.watch(reportTeachersProvider(activeYearId));
     final subjectsAsync = ref.watch(subjectsProvider(_standardId));
 
+    final accentColor = _metricColor(_metric);
+
     return AppScaffold(
       appBar: AppAppBar(
-        title: '${_metricLabel(_metric)} Analysis',
+        title: '${_metricLabel(_metric)} Report',
         showBack: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              onPressed: () =>
+                  setState(() => _filtersExpanded = !_filtersExpanded),
+              icon: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _hasActiveFilters
+                      ? AppColors.goldPrimary.withValues(alpha: 0.25)
+                      : AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.tune_rounded,
+                  color: _hasActiveFilters
+                      ? AppColors.goldPrimary
+                      : AppColors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(AppDimensions.space16),
-            child: Column(
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _metric,
-                  decoration: _decoration('Report Type'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'student_attendance',
-                        child: Text('Student Attendance')),
-                    DropdownMenuItem(
-                        value: 'fees_paid', child: Text('Fees Paid')),
-                    DropdownMenuItem(value: 'results', child: Text('Results')),
-                    DropdownMenuItem(
-                        value: 'teacher_attendance',
-                        child: Text('Teacher Attendance')),
-                  ],
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => _metric = v);
-                  },
-                ),
-                const SizedBox(height: AppDimensions.space12),
-                standardsAsync.when(
-                  data: (standards) => DropdownButtonFormField<String>(
-                    initialValue: _standardId,
-                    decoration: _decoration('Class'),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: null, child: Text('All Classes')),
-                      ...standards.map(
-                        (s) => DropdownMenuItem<String>(
-                          value: s.id,
-                          child: Text(s.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      setState(() {
-                        _standardId = v;
-                        _section = null;
-                        _subjectId = null;
-                        _studentId = null;
-                      });
-                    },
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppDimensions.space12),
-                sectionsAsync.when(
-                  data: (sections) => DropdownButtonFormField<String>(
-                    initialValue: _section,
-                    decoration: _decoration('Section'),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: null, child: Text('All Sections')),
-                      ...sections.map(
-                        (s) =>
-                            DropdownMenuItem<String>(value: s, child: Text(s)),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _section = v;
-                      _studentId = null;
-                    }),
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppDimensions.space12),
-                studentsAsync.when(
-                  data: (students) => DropdownButtonFormField<String>(
-                    initialValue: _studentId,
-                    decoration: _decoration('Student'),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: null, child: Text('All Students')),
-                      ...students.map(
-                        (s) => DropdownMenuItem<String>(
-                          value: s.id,
-                          child: Text('${s.admissionNumber} (${s.section})'),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _studentId = v),
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppDimensions.space12),
-                teachersAsync.when(
-                  data: (teachers) => DropdownButtonFormField<String>(
-                    initialValue: _teacherId,
-                    decoration: _decoration('Teacher'),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: null, child: Text('All Teachers')),
-                      ...teachers.map(
-                        (t) => DropdownMenuItem<String>(
-                          value: t.id,
-                          child: Text(t.displayName),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _teacherId = v),
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppDimensions.space12),
-                subjectsAsync.when(
-                  data: (subjects) => DropdownButtonFormField<String>(
-                    initialValue: _subjectId,
-                    decoration: _decoration('Subject'),
-                    items: [
-                      const DropdownMenuItem<String>(
-                          value: null, child: Text('All Subjects')),
-                      ...subjects.map(
-                        (SubjectModel s) => DropdownMenuItem<String>(
-                          value: s.id,
-                          child: Text(s.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _subjectId = v),
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-              ],
-            ),
+          _MetricTabBar(
+            selectedMetric: _metric,
+            onChanged: _onMetricChanged,
+            metricIcon: _metricIcon,
+            metricColor: _metricColor,
           ),
-          const Divider(height: 1),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: _FilterPanel(
+              standardsAsync: standardsAsync,
+              sectionsAsync: sectionsAsync,
+              studentsAsync: studentsAsync,
+              teachersAsync: teachersAsync,
+              subjectsAsync: subjectsAsync,
+              standardId: _standardId,
+              section: _section,
+              studentId: _studentId,
+              teacherId: _teacherId,
+              subjectId: _subjectId,
+              onStandardChanged: (v) => setState(() {
+                _standardId = v;
+                _section = null;
+                _subjectId = null;
+                _studentId = null;
+              }),
+              onSectionChanged: (v) =>
+                  setState(() {
+                    _section = v;
+                    _studentId = null;
+                  }),
+              onStudentChanged: (v) => setState(() => _studentId = v),
+              onTeacherChanged: (v) => setState(() => _teacherId = v),
+              onSubjectChanged: (v) => setState(() => _subjectId = v),
+              onClearAll: () => setState(() {
+                _standardId = null;
+                _section = null;
+                _studentId = null;
+                _teacherId = null;
+                _subjectId = null;
+              }),
+              hasActiveFilters: _hasActiveFilters,
+            ),
+            crossFadeState: _filtersExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 220),
+          ),
+          Container(height: 1, color: AppColors.surface100),
           Expanded(
             child: detailsAsync.when(
-              loading: () => AppLoading.fullPage(),
+              loading: () => _buildShimmer(),
               error: (e, _) => AppErrorState(
                 message: e.toString(),
                 onRetry: () => ref.invalidate(principalReportDetailsProvider),
               ),
-              data: (data) => _DetailsBody(metric: _metric, data: data),
+              data: (data) => FadeTransition(
+                opacity: _fade,
+                child: _DetailsBody(
+                  metric: _metric,
+                  data: data,
+                  accentColor: accentColor,
+                ),
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: AppLoading.card(height: 80),
+      ),
+    );
+  }
+}
+
+class _MetricTabBar extends StatelessWidget {
+  const _MetricTabBar({
+    required this.selectedMetric,
+    required this.onChanged,
+    required this.metricIcon,
+    required this.metricColor,
+  });
+
+  final String selectedMetric;
+  final ValueChanged<String> onChanged;
+  final IconData Function(String) metricIcon;
+  final Color Function(String) metricColor;
+
+  static const _metrics = [
+    ('student_attendance', 'Attendance'),
+    ('fees_paid', 'Fees'),
+    ('results', 'Results'),
+    ('teacher_attendance', 'Teachers'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      height: 52,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        itemCount: _metrics.length,
+        itemBuilder: (context, i) {
+          final metric = _metrics[i];
+          final isSelected = selectedMetric == metric.$1;
+          final color = metricColor(metric.$1);
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onChanged(metric.$1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? color.withValues(alpha: 0.1) : AppColors.surface100,
+                  borderRadius: BorderRadius.circular(20),
+                  border: isSelected
+                      ? Border.all(color: color.withValues(alpha: 0.4))
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      metricIcon(metric.$1),
+                      size: 13,
+                      color: isSelected ? color : AppColors.grey500,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      metric.$2,
+                      style: AppTypography.labelMedium.copyWith(
+                        color: isSelected ? color : AppColors.grey600,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FilterPanel extends StatelessWidget {
+  const _FilterPanel({
+    required this.standardsAsync,
+    required this.sectionsAsync,
+    required this.studentsAsync,
+    required this.teachersAsync,
+    required this.subjectsAsync,
+    required this.standardId,
+    required this.section,
+    required this.studentId,
+    required this.teacherId,
+    required this.subjectId,
+    required this.onStandardChanged,
+    required this.onSectionChanged,
+    required this.onStudentChanged,
+    required this.onTeacherChanged,
+    required this.onSubjectChanged,
+    required this.onClearAll,
+    required this.hasActiveFilters,
+  });
+
+  final AsyncValue<dynamic> standardsAsync;
+  final AsyncValue<dynamic> sectionsAsync;
+  final AsyncValue<dynamic> studentsAsync;
+  final AsyncValue<dynamic> teachersAsync;
+  final AsyncValue<dynamic> subjectsAsync;
+  final String? standardId;
+  final String? section;
+  final String? studentId;
+  final String? teacherId;
+  final String? subjectId;
+  final ValueChanged<String?> onStandardChanged;
+  final ValueChanged<String?> onSectionChanged;
+  final ValueChanged<String?> onStudentChanged;
+  final ValueChanged<String?> onTeacherChanged;
+  final ValueChanged<String?> onSubjectChanged;
+  final VoidCallback onClearAll;
+  final bool hasActiveFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Filters',
+                style: AppTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyDeep,
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              if (hasActiveFilters)
+                GestureDetector(
+                  onTap: onClearAll,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorRed.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Clear all',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.errorRed,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _CompactDropdown<String?>(
+                  label: 'Class',
+                  hint: 'All Classes',
+                  value: standardId,
+                  isLoading: standardsAsync.isLoading,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('All Classes')),
+                    ...((standardsAsync.valueOrNull as List?) ?? []).map(
+                      (s) => DropdownMenuItem<String?>(
+                          value: s.id as String,
+                          child: Text(s.name as String)),
+                    ),
+                  ],
+                  onChanged: onStandardChanged,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CompactDropdown<String?>(
+                  label: 'Section',
+                  hint: 'All Sections',
+                  value: section,
+                  isLoading: sectionsAsync.isLoading,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('All Sections')),
+                    ...((sectionsAsync.valueOrNull as List?) ?? []).map(
+                      (s) => DropdownMenuItem<String?>(
+                          value: s as String, child: Text(s as String)),
+                    ),
+                  ],
+                  onChanged: onSectionChanged,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _CompactDropdown<String?>(
+            label: 'Student',
+            hint: 'All Students',
+            value: studentId,
+            isLoading: studentsAsync.isLoading,
+            items: [
+              const DropdownMenuItem<String?>(
+                  value: null, child: Text('All Students')),
+              ...((studentsAsync.valueOrNull as List?) ?? []).map(
+                (s) => DropdownMenuItem<String?>(
+                  value: (s as StudentModel).id,
+                  child: Text(
+                    '${s.admissionNumber} (${s.section ?? '-'})',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: onStudentChanged,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _CompactDropdown<String?>(
+                  label: 'Teacher',
+                  hint: 'All Teachers',
+                  value: teacherId,
+                  isLoading: teachersAsync.isLoading,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('All Teachers')),
+                    ...((teachersAsync.valueOrNull as List?) ?? []).map(
+                      (t) => DropdownMenuItem<String?>(
+                        value: (t as TeacherModel).id,
+                        child: Text(t.displayName,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: onTeacherChanged,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CompactDropdown<String?>(
+                  label: 'Subject',
+                  hint: 'All Subjects',
+                  value: subjectId,
+                  isLoading: subjectsAsync.isLoading,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('All Subjects')),
+                    ...((subjectsAsync.valueOrNull as List?) ?? []).map(
+                      (s) => DropdownMenuItem<String?>(
+                        value: (s as SubjectModel).id,
+                        child: Text(s.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: onSubjectChanged,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -335,11 +618,85 @@ class _PrincipalReportDetailsScreenState
   }
 }
 
+class _CompactDropdown<T> extends StatelessWidget {
+  const _CompactDropdown({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final String hint;
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.grey500,
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.surface200, width: 1.2),
+          ),
+          child: isLoading
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 11),
+                  child: SizedBox(
+                    height: 14,
+                    width: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.navyMedium),
+                  ),
+                )
+              : DropdownButtonHideUnderline(
+                  child: DropdownButton<T>(
+                    value: value,
+                    isExpanded: true,
+                    hint: Text(hint,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.grey400, fontSize: 12)),
+                    style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.grey800, fontSize: 12),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.grey400, size: 16),
+                    onChanged: onChanged,
+                    items: items,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DetailsBody extends StatelessWidget {
-  const _DetailsBody({required this.metric, required this.data});
+  const _DetailsBody({
+    required this.metric,
+    required this.data,
+    required this.accentColor,
+  });
 
   final String metric;
   final Map<String, dynamic> data;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -360,183 +717,272 @@ class _DetailsBody extends StatelessWidget {
         data['teacher_attendance_items'] as List? ?? []);
 
     return ListView(
-      padding: const EdgeInsets.all(AppDimensions.space16),
+      padding: const EdgeInsets.all(16),
       children: [
-        _TopSummaryCards(
+        _SummaryGrid(
           studentAttendance: studentAttendance,
           feesPaid: feesPaid,
           results: results,
           teacherAttendance: teacherAttendance,
+          activeMetric: metric,
         ),
-        const SizedBox(height: AppDimensions.space16),
-        Text(
-          'Detailed Analysis',
-          style:
-              AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Container(
+              width: 3,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.navyDeep,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Detailed Breakdown',
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: AppDimensions.space12),
+        const SizedBox(height: 12),
         if (metric == 'student_attendance')
-          _SimpleTable(
-            headers: const ['Subject', 'Present', 'Total', '%'],
+          _DataTable(
+            headers: const ['Subject', 'Present', 'Total', 'Rate'],
             rows: attendanceBySubject
-                .map(
-                  (r) => [
-                    (r['subject_name'] ?? '-').toString(),
-                    (r['present'] ?? 0).toString(),
-                    (r['total'] ?? 0).toString(),
-                    '${(r['percentage'] ?? 0).toString()}%',
-                  ],
-                )
+                .map((r) => [
+                      (r['subject_name'] ?? '-').toString(),
+                      (r['present'] ?? 0).toString(),
+                      (r['total'] ?? 0).toString(),
+                      '${(r['percentage'] ?? 0).toString()}%',
+                    ])
                 .toList(),
-            emptyTitle: 'No attendance analysis data',
+            accentColor: accentColor,
+            emptyTitle: 'No attendance data found',
           ),
         if (metric == 'fees_paid')
-          _SimpleTable(
-            headers: const ['Student', 'Paid Amount', 'Transactions'],
+          _DataTable(
+            headers: const ['Student', 'Paid', 'Transactions'],
             rows: feesByStudent
-                .map(
-                  (r) => [
-                    (r['admission_number'] ?? '-').toString(),
-                    '₹${(r['paid_amount'] ?? 0).toString()}',
-                    (r['transactions'] ?? 0).toString(),
-                  ],
-                )
+                .map((r) => [
+                      (r['admission_number'] ?? '-').toString(),
+                      '₹${(r['paid_amount'] ?? 0).toString()}',
+                      (r['transactions'] ?? 0).toString(),
+                    ])
                 .toList(),
-            emptyTitle: 'No fee analysis data',
+            accentColor: accentColor,
+            emptyTitle: 'No fee data found',
           ),
         if (metric == 'results')
-          _SimpleTable(
+          _DataTable(
             headers: const ['Subject', 'Avg %', 'Entries'],
             rows: resultsBySubject
-                .map(
-                  (r) => [
-                    (r['subject_name'] ?? '-').toString(),
-                    '${(r['average_percentage'] ?? 0).toString()}%',
-                    (r['entries'] ?? 0).toString(),
-                  ],
-                )
+                .map((r) => [
+                      (r['subject_name'] ?? '-').toString(),
+                      '${(r['average_percentage'] ?? 0).toString()}%',
+                      (r['entries'] ?? 0).toString(),
+                    ])
                 .toList(),
-            emptyTitle: 'No results analysis data',
+            accentColor: accentColor,
+            emptyTitle: 'No results data found',
           ),
         if (metric == 'teacher_attendance')
-          _SimpleTable(
+          _DataTable(
             headers: const ['Teacher', 'Present', 'On Leave'],
             rows: teacherItems
-                .map(
-                  (r) => [
-                    (r['teacher_label'] ?? '-').toString(),
-                    ((r['is_present'] ?? false) as bool) ? 'Yes' : 'No',
-                    ((r['on_leave'] ?? false) as bool) ? 'Yes' : 'No',
-                  ],
-                )
+                .map((r) => [
+                      (r['teacher_label'] ?? '-').toString(),
+                      ((r['is_present'] ?? false) as bool) ? 'Yes' : 'No',
+                      ((r['on_leave'] ?? false) as bool) ? 'Yes' : 'No',
+                    ])
                 .toList(),
-            emptyTitle: 'No teacher attendance analysis data',
+            accentColor: accentColor,
+            emptyTitle: 'No teacher attendance data found',
           ),
+        const SizedBox(height: 24),
       ],
     );
   }
 }
 
-class _TopSummaryCards extends StatelessWidget {
-  const _TopSummaryCards({
+class _SummaryGrid extends StatelessWidget {
+  const _SummaryGrid({
     required this.studentAttendance,
     required this.feesPaid,
     required this.results,
     required this.teacherAttendance,
+    required this.activeMetric,
   });
 
   final Map<String, dynamic> studentAttendance;
   final Map<String, dynamic> feesPaid;
   final Map<String, dynamic> results;
   final Map<String, dynamic> teacherAttendance;
-
-  String _valuePct(Map<String, dynamic> data) =>
-      '${(data['value'] ?? 0).toString()}%';
+  final String activeMetric;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                title: 'Student Attendance',
-                value: _valuePct(studentAttendance),
-              ),
-            ),
-            const SizedBox(width: AppDimensions.space12),
-            Expanded(
-              child: _MetricCard(
-                title: 'Fees Paid',
-                value: '₹${(feesPaid['amount'] ?? 0).toString()}',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppDimensions.space12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                title: 'Results Avg',
-                value: _valuePct(results),
-              ),
-            ),
-            const SizedBox(width: AppDimensions.space12),
-            Expanded(
-              child: _MetricCard(
-                title: 'Teacher Attendance',
-                value: _valuePct(teacherAttendance),
-              ),
-            ),
-          ],
-        ),
-      ],
+    final cards = [
+      _SummaryData(
+        title: 'Student Attendance',
+        value: '${(studentAttendance['value'] ?? 0)}%',
+        icon: Icons.fact_check_outlined,
+        color: AppColors.navyMedium,
+        isActive: activeMetric == 'student_attendance',
+      ),
+      _SummaryData(
+        title: 'Fees Collected',
+        value: '₹${(feesPaid['amount'] ?? 0)}',
+        icon: Icons.account_balance_wallet_outlined,
+        color: AppColors.successGreen,
+        isActive: activeMetric == 'fees_paid',
+      ),
+      _SummaryData(
+        title: 'Results Avg',
+        value: '${(results['value'] ?? 0)}%',
+        icon: Icons.analytics_outlined,
+        color: AppColors.infoBlue,
+        isActive: activeMetric == 'results',
+      ),
+      _SummaryData(
+        title: 'Teacher Attend.',
+        value: '${(teacherAttendance['value'] ?? 0)}%',
+        icon: Icons.supervisor_account_outlined,
+        color: AppColors.warningAmber,
+        isActive: activeMetric == 'teacher_attendance',
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.8,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, i) => _SummaryKpiCard(data: cards[i]),
     );
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.title, required this.value});
-
+class _SummaryData {
+  const _SummaryData({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.isActive,
+  });
   final String title;
   final String value;
+  final IconData icon;
+  final Color color;
+  final bool isActive;
+}
+
+class _SummaryKpiCard extends StatelessWidget {
+  const _SummaryKpiCard({required this.data});
+  final _SummaryData data;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.space12),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.surface200),
+        color: data.isActive
+            ? data.color.withValues(alpha: 0.08)
+            : AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: data.isActive
+              ? data.color.withValues(alpha: 0.35)
+              : AppColors.surface100,
+          width: data.isActive ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.grey600)),
-          const SizedBox(height: AppDimensions.space4),
-          Text(value,
-              style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w700, color: AppColors.navyDeep)),
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(data.icon, size: 14, color: data.color),
+              ),
+              if (data.isActive) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: data.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.value,
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: data.isActive ? data.color : AppColors.navyDeep,
+                  fontSize: 20,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              Text(
+                data.title,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.grey500,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _SimpleTable extends StatelessWidget {
-  const _SimpleTable({
+class _DataTable extends StatelessWidget {
+  const _DataTable({
     required this.headers,
     required this.rows,
+    required this.accentColor,
     required this.emptyTitle,
   });
 
   final List<String> headers;
   final List<List<String>> rows;
+  final Color accentColor;
   final String emptyTitle;
 
   @override
@@ -545,56 +991,100 @@ class _SimpleTable extends StatelessWidget {
       return AppEmptyState(
         icon: Icons.insights_outlined,
         title: emptyTitle,
-        subtitle: 'Try changing filters.',
+        subtitle: 'Try adjusting your filters.',
       );
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.surface200),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: headers
-              .map(
-                (h) => DataColumn(
-                  label: Text(
-                    h,
-                    style: AppTypography.labelMedium
-                        .copyWith(color: AppColors.navyDeep),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.06),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: headers
+                  .map(
+                    (h) => Expanded(
+                      child: Text(
+                        h,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: accentColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                        textAlign: headers.indexOf(h) == 0
+                            ? TextAlign.left
+                            : TextAlign.center,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          ...rows.asMap().entries.map((entry) {
+            final index = entry.key;
+            final row = entry.value;
+            final isLast = index == rows.length - 1;
+            return Column(
+              children: [
+                if (index > 0)
+                  Container(height: 1, color: AppColors.surface100),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: index.isEven
+                        ? AppColors.white
+                        : AppColors.surface50.withValues(alpha: 0.5),
+                    borderRadius: isLast
+                        ? const BorderRadius.vertical(
+                            bottom: Radius.circular(16))
+                        : null,
+                  ),
+                  child: Row(
+                    children: row
+                        .map(
+                          (cell) => Expanded(
+                            child: Text(
+                              cell,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: row.indexOf(cell) == 0
+                                    ? AppColors.grey800
+                                    : AppColors.grey600,
+                                fontWeight: row.indexOf(cell) == 0
+                                    ? FontWeight.w500
+                                    : FontWeight.w400,
+                                fontSize: 12,
+                              ),
+                              textAlign: row.indexOf(cell) == 0
+                                  ? TextAlign.left
+                                  : TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
-              )
-              .toList(),
-          rows: rows
-              .map(
-                (row) => DataRow(
-                  cells: row
-                      .map(
-                        (c) => DataCell(
-                          Text(c, style: AppTypography.bodySmall),
-                        ),
-                      )
-                      .toList(),
-                ),
-              )
-              .toList(),
-        ),
+              ],
+            );
+          }),
+        ],
       ),
     );
   }
 }
-
-InputDecoration _decoration(String hint) => InputDecoration(
-      hintText: hint,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space12,
-        vertical: AppDimensions.space12,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-      ),
-    );

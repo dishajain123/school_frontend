@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/attendance/attendance_model.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
@@ -20,28 +19,19 @@ class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
 
   @override
-  ConsumerState<MarkAttendanceScreen> createState() =>
-      _MarkAttendanceScreenState();
+  ConsumerState<MarkAttendanceScreen> createState() => _MarkAttendanceScreenState();
 }
 
 class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   static const _weekdayNames = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
   ];
   bool _filtersExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initActiveYear();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initActiveYear());
   }
 
   void _initActiveYear() {
@@ -68,9 +58,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         child: child!,
       ),
     );
-    if (picked != null) {
-      ref.read(markAttendanceProvider.notifier).setDate(picked);
-    }
+    if (picked != null) ref.read(markAttendanceProvider.notifier).setDate(picked);
   }
 
   Future<void> _submit(List<String> studentIds) async {
@@ -97,116 +85,14 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
       appBar: const AppAppBar(title: 'Mark Attendance', showBack: true),
       body: Column(
         children: [
-          Container(
-            color: Colors.white,
-            child: InkWell(
-              onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimensions.space16,
-                  AppDimensions.space12,
-                  AppDimensions.space16,
-                  AppDimensions.space12,
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Filter Details',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: AppColors.navyDeep,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      _filtersExpanded
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                      color: AppColors.grey600,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          _FilterSection(
+            formState: formState,
+            activeYear: activeYear,
+            filtersExpanded: _filtersExpanded,
+            onToggle: () => setState(() => _filtersExpanded = !_filtersExpanded),
+            onPickDate: () => _pickDate(context),
+            weekdayLabel: _weekdayLabel(formState.date),
           ),
-          AnimatedCrossFade(
-            firstChild: Container(
-              color: Colors.white,
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(
-                AppDimensions.space16,
-                AppDimensions.space8,
-                AppDimensions.space16,
-                AppDimensions.space16,
-              ),
-              child: _CollapsedFiltersSummary(
-                date: formState.date,
-                day: _weekdayLabel(formState.date),
-                academicYearName: activeYear?.name,
-                assignment: formState.selectedAssignment,
-                subjectId: formState.selectedSubjectId,
-              ),
-            ),
-            secondChild: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(AppDimensions.space16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Date picker row
-                  const _SectionLabel(label: 'Date'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _DatePickerTile(
-                    date: formState.date,
-                    onTap: () => _pickDate(context),
-                  ),
-                  const SizedBox(height: AppDimensions.space16),
-                  _InfoRow(label: 'Day', value: _weekdayLabel(formState.date)),
-                  const SizedBox(height: AppDimensions.space16),
-
-                  // Academic year (read-only from active year)
-                  if (activeYear == null)
-                    AppLoading.listTile()
-                  else
-                    _InfoRow(label: 'Academic Year', value: activeYear.name),
-                  const SizedBox(height: AppDimensions.space16),
-
-                  // Class selector
-                  const _SectionLabel(label: 'Class'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _ClassDropdown(
-                    academicYearId: formState.selectedAcademicYearId,
-                    selectedAssignment: formState.selectedAssignment,
-                    onChanged: (assignment) => ref
-                        .read(markAttendanceProvider.notifier)
-                        .setAssignment(assignment),
-                  ),
-
-                  if (formState.selectedAssignment != null) ...[
-                    const SizedBox(height: AppDimensions.space16),
-                    // Subject selector (filtered by selected assignment)
-                    const _SectionLabel(label: 'Subject'),
-                    const SizedBox(height: AppDimensions.space8),
-                    _SubjectDropdown(
-                      academicYearId: formState.selectedAcademicYearId,
-                      selectedAssignment: formState.selectedAssignment,
-                      selectedSubjectId: formState.selectedSubjectId,
-                      onChanged: (subjectId) => ref
-                          .read(markAttendanceProvider.notifier)
-                          .setSubjectId(subjectId),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            crossFadeState: _filtersExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-          ),
-          const Divider(height: 1, color: AppColors.surface100),
-
-          // ── Student List ─────────────────────────────────────────────
           Expanded(
             child: _StudentList(
               formState: formState,
@@ -230,34 +116,215 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }
 }
 
-// ── Sub-widgets ──────────────────────────────────────────────────────────────
+class _FilterSection extends StatelessWidget {
+  const _FilterSection({
+    required this.formState,
+    required this.activeYear,
+    required this.filtersExpanded,
+    required this.onToggle,
+    required this.onPickDate,
+    required this.weekdayLabel,
+  });
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-  final String label;
+  final MarkAttendanceFormState formState;
+  final dynamic activeYear;
+  final bool filtersExpanded;
+  final VoidCallback onToggle;
+  final VoidCallback onPickDate;
+  final String weekdayLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Text(label,
-        style: AppTypography.labelMedium.copyWith(color: AppColors.grey600));
+    return Container(
+      color: AppColors.white,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.navyDeep.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.tune_rounded,
+                        size: 16, color: AppColors.navyDeep),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Filter Details',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.navyDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!filtersExpanded)
+                    _CollapsedSummaryPills(formState: formState, activeYear: activeYear),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 200),
+                    turns: filtersExpanded ? 0.5 : 0.0,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.grey500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: _ExpandedFilters(
+              formState: formState,
+              activeYear: activeYear,
+              onPickDate: onPickDate,
+              weekdayLabel: weekdayLabel,
+            ),
+            crossFadeState: filtersExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 220),
+          ),
+          Container(height: 1, color: AppColors.surface100),
+        ],
+      ),
+    );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+class _CollapsedSummaryPills extends ConsumerWidget {
+  const _CollapsedSummaryPills({required this.formState, required this.activeYear});
+  final MarkAttendanceFormState formState;
+  final dynamic activeYear;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classLabel = formState.selectedAssignment?.classLabel ?? 'No class';
+    return Row(
+      children: [
+        _Pill(label: classLabel),
+      ],
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label});
   final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text('$label: ',
-            style: AppTypography.bodySmall.copyWith(color: AppColors.grey400)),
-        Text(value,
-            style: AppTypography.titleSmall.copyWith(
-                color: AppColors.navyDeep, fontWeight: FontWeight.w600)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.grey600,
+          fontSize: 11,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _ExpandedFilters extends ConsumerWidget {
+  const _ExpandedFilters({
+    required this.formState,
+    required this.activeYear,
+    required this.onPickDate,
+    required this.weekdayLabel,
+  });
+
+  final MarkAttendanceFormState formState;
+  final dynamic activeYear;
+  final VoidCallback onPickDate;
+  final String weekdayLabel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _FieldLabel(label: 'Date'),
+          const SizedBox(height: 8),
+          _DatePickerTile(date: formState.date, onTap: onPickDate),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface50,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_view_week_rounded,
+                    size: 14, color: AppColors.grey400),
+                const SizedBox(width: 8),
+                Text(weekdayLabel,
+                    style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.grey600)),
+                if (activeYear != null) ...[
+                  const SizedBox(width: 8),
+                  Text('·', style: AppTypography.bodySmall.copyWith(color: AppColors.grey400)),
+                  const SizedBox(width: 8),
+                  Text(activeYear.name,
+                      style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.grey600)),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _FieldLabel(label: 'Class'),
+          const SizedBox(height: 8),
+          _ClassDropdown(
+            academicYearId: formState.selectedAcademicYearId,
+            selectedAssignment: formState.selectedAssignment,
+            onChanged: (a) => ref.read(markAttendanceProvider.notifier).setAssignment(a),
+          ),
+          if (formState.selectedAssignment != null) ...[
+            const SizedBox(height: 16),
+            _FieldLabel(label: 'Subject'),
+            const SizedBox(height: 8),
+            _SubjectDropdown(
+              academicYearId: formState.selectedAcademicYearId,
+              selectedAssignment: formState.selectedAssignment,
+              selectedSubjectId: formState.selectedSubjectId,
+              onChanged: (id) => ref.read(markAttendanceProvider.notifier).setSubjectId(id),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: AppTypography.labelMedium.copyWith(
+        color: AppColors.grey600,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+      ),
     );
   }
 }
@@ -268,21 +335,8 @@ class _DatePickerTile extends StatelessWidget {
   final VoidCallback onTap;
 
   String _format(DateTime d) {
-    const months = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
+    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]} ${d.year}';
   }
 
@@ -291,96 +345,21 @@ class _DatePickerTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          border: Border.all(color: AppColors.surface200),
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.surface200, width: 1.5),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined,
-                size: 18, color: AppColors.navyMedium),
-            const SizedBox(width: AppDimensions.space8),
+            const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.navyMedium),
+            const SizedBox(width: 10),
             Text(_format(date),
-                style:
-                    AppTypography.bodyLarge.copyWith(color: AppColors.grey800)),
+                style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800)),
             const Spacer(),
-            const Icon(Icons.arrow_drop_down, color: AppColors.grey400),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.grey400, size: 18),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CollapsedFiltersSummary extends StatelessWidget {
-  const _CollapsedFiltersSummary({
-    required this.date,
-    required this.day,
-    required this.academicYearName,
-    required this.assignment,
-    required this.subjectId,
-  });
-
-  final DateTime date;
-  final String day;
-  final String? academicYearName;
-  final TeacherClassSubjectModel? assignment;
-  final String? subjectId;
-
-  @override
-  Widget build(BuildContext context) {
-    final subjectText = assignment != null && subjectId != null
-        ? assignment!.subjectLabel
-        : 'Not selected';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Filters are optional. Tap above to expand.',
-          style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
-        ),
-        const SizedBox(height: AppDimensions.space8),
-        Wrap(
-          spacing: AppDimensions.space8,
-          runSpacing: AppDimensions.space8,
-          children: [
-            _SummaryPill(label: 'Day: $day'),
-            _SummaryPill(
-              label: assignment?.classLabel ?? 'Class: Not selected',
-            ),
-            _SummaryPill(label: 'Subject: $subjectText'),
-            if (academicYearName != null)
-              _SummaryPill(label: 'Year: $academicYearName'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryPill extends StatelessWidget {
-  const _SummaryPill({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space12,
-        vertical: AppDimensions.space6,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface100,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.labelSmall.copyWith(
-          color: AppColors.grey600,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -401,39 +380,32 @@ class _ClassDropdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (academicYearId == null) {
-      return Text(
-        'Loading academic year...',
-        style: AppTypography.bodySmall.copyWith(color: AppColors.grey400),
-      );
+      return Text('Loading academic year...',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey400));
     }
 
-    final assignmentsAsync =
-        ref.watch(myTeacherAssignmentsProvider(academicYearId));
+    final assignmentsAsync = ref.watch(myTeacherAssignmentsProvider(academicYearId));
 
     return assignmentsAsync.when(
       data: (assignments) {
-        // Deduplicate by standardId+section
         final uniqueClasses = <String, TeacherClassSubjectModel>{};
         for (final a in assignments) {
-          final key = '${a.standardId}_${a.section}';
-          uniqueClasses.putIfAbsent(key, () => a);
+          uniqueClasses.putIfAbsent('${a.standardId}_${a.section}', () => a);
         }
         final classes = uniqueClasses.values.toList();
 
         if (classes.isEmpty) {
           return Text('No classes assigned',
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.grey400));
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey400));
         }
 
         final selectedClassValue = selectedAssignment != null
             ? '${selectedAssignment!.standardId}_${selectedAssignment!.section}'
             : null;
         final hasSelectedClass = selectedClassValue != null &&
-            classes.any(
-              (c) => '${c.standardId}_${c.section}' == selectedClassValue,
-            );
+            classes.any((c) => '${c.standardId}_${c.section}' == selectedClassValue);
         final safeClassValue = hasSelectedClass ? selectedClassValue : null;
+
         if (selectedClassValue != null && !hasSelectedClass) {
           WidgetsBinding.instance.addPostFrameCallback((_) => onChanged(null));
         }
@@ -442,17 +414,12 @@ class _ClassDropdown extends ConsumerWidget {
           key: ValueKey<String?>('class-$safeClassValue'),
           initialValue: safeClassValue,
           decoration: _inputDecoration('Select class'),
-          items: classes
-              .map((c) => DropdownMenuItem(
-                    value: '${c.standardId}_${c.section}',
-                    child: Text(c.classLabel, style: AppTypography.bodyMedium),
-                  ))
-              .toList(),
+          items: classes.map((c) => DropdownMenuItem(
+                value: '${c.standardId}_${c.section}',
+                child: Text(c.classLabel, style: AppTypography.bodyMedium),
+              )).toList(),
           onChanged: (val) {
-            if (val == null) {
-              onChanged(null);
-              return;
-            }
+            if (val == null) { onChanged(null); return; }
             final found = classes.firstWhere(
                 (c) => '${c.standardId}_${c.section}' == val,
                 orElse: () => classes.first);
@@ -482,26 +449,19 @@ class _SubjectDropdown extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (selectedAssignment == null || academicYearId == null) {
-      return const SizedBox.shrink();
-    }
+    if (selectedAssignment == null || academicYearId == null) return const SizedBox.shrink();
 
-    final assignmentsAsync =
-        ref.watch(myTeacherAssignmentsProvider(academicYearId));
+    final assignmentsAsync = ref.watch(myTeacherAssignmentsProvider(academicYearId));
 
     return assignmentsAsync.when(
       data: (assignments) {
-        // Filter subjects for selected class
-        final subjects = assignments
-            .where((a) =>
-                a.standardId == selectedAssignment!.standardId &&
-                a.section == selectedAssignment!.section)
-            .toList();
+        final subjects = assignments.where((a) =>
+            a.standardId == selectedAssignment!.standardId &&
+            a.section == selectedAssignment!.section).toList();
 
         if (subjects.isEmpty) {
           return Text('No subjects found',
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.grey400));
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey400));
         }
 
         final hasSelectedSubject = selectedSubjectId != null &&
@@ -511,9 +471,8 @@ class _SubjectDropdown extends ConsumerWidget {
         if (selectedSubjectId != null && !hasSelectedSubject) {
           WidgetsBinding.instance.addPostFrameCallback((_) => onChanged(null));
         } else if (safeSubjectId == null && subjects.length == 1) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            onChanged(subjects.first.subjectId);
-          });
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => onChanged(subjects.first.subjectId));
         }
 
         return DropdownButtonFormField<String>(
@@ -521,13 +480,10 @@ class _SubjectDropdown extends ConsumerWidget {
               'subject-${selectedAssignment!.standardId}-${selectedAssignment!.section}-$safeSubjectId'),
           initialValue: safeSubjectId,
           decoration: _inputDecoration('Select subject'),
-          items: subjects
-              .map((s) => DropdownMenuItem(
-                    value: s.subjectId,
-                    child:
-                        Text(s.subjectLabel, style: AppTypography.bodyMedium),
-                  ))
-              .toList(),
+          items: subjects.map((s) => DropdownMenuItem(
+                value: s.subjectId,
+                child: Text(s.subjectLabel, style: AppTypography.bodyMedium),
+              )).toList(),
           onChanged: onChanged,
         );
       },
@@ -542,18 +498,16 @@ InputDecoration _inputDecoration(String hint) => InputDecoration(
       hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
       filled: true,
       fillColor: AppColors.surface50,
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide: const BorderSide(color: AppColors.surface200)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.surface200, width: 1.5)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide: const BorderSide(color: AppColors.surface200)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.surface200, width: 1.5)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          borderSide:
-              const BorderSide(color: AppColors.navyMedium, width: 1.5)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.navyMedium, width: 1.5)),
     );
 
 class _StudentList extends ConsumerWidget {
@@ -567,11 +521,11 @@ class _StudentList extends ConsumerWidget {
   });
 
   final MarkAttendanceFormState formState;
-  final void Function(String studentId, AttendanceStatus) onStatusChanged;
-  final void Function(String studentId, bool selected) onSelectionChanged;
-  final void Function(List<String> ids) onStudentsLoaded;
-  final void Function(List<AttendanceModel> records) onExistingLoaded;
-  final Future<void> Function(List<String> studentIds) onSubmit;
+  final void Function(String, AttendanceStatus) onStatusChanged;
+  final void Function(String, bool) onSelectionChanged;
+  final void Function(List<String>) onStudentsLoaded;
+  final void Function(List<AttendanceModel>) onExistingLoaded;
+  final Future<void> Function(List<String>) onSubmit;
 
   bool get _canLoad =>
       formState.selectedAssignment != null &&
@@ -589,15 +543,12 @@ class _StudentList extends ConsumerWidget {
     }
 
     final assignment = formState.selectedAssignment!;
-    final studentsAsync = ref.watch(
-      studentsForAttendanceProvider((
-        standardId: assignment.standardId,
-        section: assignment.section,
-        academicYearId: formState.selectedAcademicYearId!,
-      )),
-    );
+    final studentsAsync = ref.watch(studentsForAttendanceProvider((
+      standardId: assignment.standardId,
+      section: assignment.section,
+      academicYearId: formState.selectedAcademicYearId!,
+    )));
 
-    // Also load existing attendance to prefill
     final existingDate =
         '${formState.date.year}-${formState.date.month.toString().padLeft(2, '0')}-${formState.date.day.toString().padLeft(2, '0')}';
     final existingAsync = ref.watch(attendanceListProvider((
@@ -623,141 +574,53 @@ class _StudentList extends ConsumerWidget {
 
         final studentIds = students.map((s) => s.id).toList();
         final selectedIds = formState.selectedStudentIds
-            .where((id) => studentIds.contains(id))
-            .toList();
-        final allSelected =
-            studentIds.isNotEmpty && selectedIds.length == studentIds.length;
+            .where((id) => studentIds.contains(id)).toList();
+        final allSelected = studentIds.isNotEmpty && selectedIds.length == studentIds.length;
         final noneSelected = selectedIds.isEmpty;
 
-        // One-time initialization per loaded class/section/subject/date:
-        // 1) ensure every student has a local status,
-        // 2) then preload existing backend records once.
-        final needsStudentInit =
-            studentIds.any((id) => !formState.attendanceMap.containsKey(id));
+        final needsStudentInit = studentIds.any((id) => !formState.attendanceMap.containsKey(id));
         if (needsStudentInit) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            onStudentsLoaded(studentIds);
-          });
+          WidgetsBinding.instance.addPostFrameCallback((_) => onStudentsLoaded(studentIds));
         }
         existingAsync.whenData((existing) {
           if (existing.items.isNotEmpty && formState.attendanceMap.isEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              onExistingLoaded(existing.items);
-            });
+            WidgetsBinding.instance
+                .addPostFrameCallback((_) => onExistingLoaded(existing.items));
           }
         });
 
-        Widget actionButtons() => Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(
-                AppDimensions.space16,
-                AppDimensions.space8,
-                AppDimensions.space16,
-                AppDimensions.space8,
-              ),
-              child: Column(
-                children: [
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    runSpacing: AppDimensions.space8,
-                    spacing: AppDimensions.space8,
-                    children: [
-                      AppButton.small(
-                        label: allSelected ? 'Selected All' : 'Select All',
-                        onTap: () => ref
-                            .read(markAttendanceProvider.notifier)
-                            .selectAll(studentIds),
-                        fullWidth: false,
-                      ),
-                      AppButton.small(
-                        label: 'Clear Selection',
-                        onTap: noneSelected
-                            ? null
-                            : () => ref
-                                .read(markAttendanceProvider.notifier)
-                                .clearSelection(),
-                        fullWidth: false,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.space12,
-                          vertical: AppDimensions.space8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface100,
-                          borderRadius:
-                              BorderRadius.circular(AppDimensions.radiusFull),
-                        ),
-                        child: Text(
-                          'Selected ${selectedIds.length}/${studentIds.length}',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.navyMedium,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.space8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton.secondary(
-                          label: 'Mark Selected Absent',
-                          isDisabled: noneSelected,
-                          onTap: noneSelected
-                              ? null
-                              : () => ref
-                                  .read(markAttendanceProvider.notifier)
-                                  .markSelected(
-                                      AttendanceStatus.absent, selectedIds),
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.space8),
-                      Expanded(
-                        child: AppButton.primary(
-                          label: 'Mark Selected Present',
-                          isDisabled: noneSelected,
-                          onTap: noneSelected
-                              ? null
-                              : () => ref
-                                  .read(markAttendanceProvider.notifier)
-                                  .markSelected(
-                                      AttendanceStatus.present, selectedIds),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-
-        Widget submitButton() => Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(AppDimensions.space16),
-              child: AppButton.primary(
-                label: 'Final Submit (${students.length})',
-                isLoading: formState.isSubmitting,
-                onTap: () => onSubmit(studentIds),
-              ),
-            );
+        final presentCount = formState.attendanceMap.values
+            .where((s) => s == AttendanceStatus.present).length;
+        final absentCount = formState.attendanceMap.values
+            .where((s) => s == AttendanceStatus.absent).length;
+        final lateCount = formState.attendanceMap.values
+            .where((s) => s == AttendanceStatus.late).length;
 
         return CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: _AttendanceSummaryBar(
                 total: students.length,
-                statusMap: formState.attendanceMap,
+                present: presentCount,
+                absent: absentCount,
+                late: lateCount,
               ),
             ),
-            SliverToBoxAdapter(child: actionButtons()),
+            SliverToBoxAdapter(
+              child: _BulkActionBar(
+                allSelected: allSelected,
+                noneSelected: noneSelected,
+                selectedCount: selectedIds.length,
+                totalCount: studentIds.length,
+                studentIds: studentIds,
+                selectedIds: selectedIds,
+              ),
+            ),
             SliverList.builder(
               itemCount: students.length,
               itemBuilder: (context, index) {
                 final student = students[index];
-                final status = formState.attendanceMap[student.id] ??
-                    AttendanceStatus.absent;
+                final status = formState.attendanceMap[student.id] ?? AttendanceStatus.absent;
                 return StudentAttendanceTile(
                   key: ValueKey(student.id),
                   studentId: student.id,
@@ -768,29 +631,35 @@ class _StudentList extends ConsumerWidget {
                   currentStatus: status,
                   onStatusChanged: (s) => onStatusChanged(student.id, s),
                   isSelected: formState.selectedStudentIds.contains(student.id),
-                  onSelectionChanged: (selected) =>
-                      onSelectionChanged(student.id, selected),
+                  onSelectionChanged: (selected) => onSelectionChanged(student.id, selected),
                   isLast: index == students.length - 1,
                 );
               },
             ),
-            SliverToBoxAdapter(child: submitButton()),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: AppDimensions.space16),
+            SliverToBoxAdapter(
+              child: Container(
+                color: AppColors.white,
+                padding: const EdgeInsets.all(16),
+                child: AppButton.primary(
+                  label: 'Submit Attendance (${students.length})',
+                  isLoading: formState.isSubmitting,
+                  onTap: () => onSubmit(studentIds),
+                  icon: Icons.check_rounded,
+                ),
+              ),
             ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
           ],
         );
       },
       loading: () => Center(child: AppLoading.fullPage()),
       error: (e, _) => AppErrorState(
         message: e.toString(),
-        onRetry: () => ref.invalidate(
-          studentsForAttendanceProvider((
-            standardId: assignment.standardId,
-            section: assignment.section,
-            academicYearId: formState.selectedAcademicYearId!,
-          )),
-        ),
+        onRetry: () => ref.invalidate(studentsForAttendanceProvider((
+          standardId: assignment.standardId,
+          section: assignment.section,
+          academicYearId: formState.selectedAcademicYearId!,
+        ))),
       ),
     );
   }
@@ -799,56 +668,43 @@ class _StudentList extends ConsumerWidget {
 class _AttendanceSummaryBar extends StatelessWidget {
   const _AttendanceSummaryBar({
     required this.total,
-    required this.statusMap,
+    required this.present,
+    required this.absent,
+    required this.late,
   });
 
-  final int total;
-  final Map<String, AttendanceStatus> statusMap;
-
-  int get _presentCount =>
-      statusMap.values.where((s) => s == AttendanceStatus.present).length;
-  int get _absentCount =>
-      statusMap.values.where((s) => s == AttendanceStatus.absent).length;
-  int get _lateCount =>
-      statusMap.values.where((s) => s == AttendanceStatus.late).length;
+  final int total, present, absent, late;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
-      decoration: const BoxDecoration(
-        color: AppColors.surface50,
-        border: Border(bottom: BorderSide(color: AppColors.surface100)),
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: AppDimensions.space8,
-        runSpacing: AppDimensions.space8,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: AppColors.surface50,
+      child: Row(
         children: [
-          _SummaryChip(
-            count: _presentCount,
-            label: 'Present',
-            color: AppColors.successGreen,
-            bg: AppColors.successLight,
-          ),
-          _SummaryChip(
-            count: _absentCount,
-            label: 'Absent',
-            color: AppColors.errorRed,
-            bg: AppColors.errorLight,
-          ),
-          _SummaryChip(
-            count: _lateCount,
-            label: 'Late',
-            color: AppColors.warningAmber,
-            bg: AppColors.warningLight,
-          ),
-          _SummaryChip(
-            count: total,
-            label: 'Total',
-            color: AppColors.navyMedium,
-            bg: AppColors.surface100,
+          _SummaryChip(count: present, label: 'Present',
+              color: AppColors.successGreen, bg: AppColors.successLight),
+          const SizedBox(width: 8),
+          _SummaryChip(count: absent, label: 'Absent',
+              color: AppColors.errorRed, bg: AppColors.errorLight),
+          const SizedBox(width: 8),
+          _SummaryChip(count: late, label: 'Late',
+              color: AppColors.warningAmber, bg: AppColors.warningLight),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.navyDeep.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$total Total',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.navyMedium,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
           ),
         ],
       ),
@@ -866,28 +722,137 @@ class _SummaryChip extends StatelessWidget {
 
   final int count;
   final String label;
-  final Color color;
-  final Color bg;
+  final Color color, bg;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space12, vertical: AppDimensions.space4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$count',
-            style: AppTypography.labelLarge
-                .copyWith(color: color, fontWeight: FontWeight.w700),
-          ),
+          Text('$count',
+              style: AppTypography.labelMedium.copyWith(
+                  color: color, fontWeight: FontWeight.w700)),
           const SizedBox(width: 4),
-          Text(label, style: AppTypography.labelSmall.copyWith(color: color)),
+          Text(label,
+              style: AppTypography.caption.copyWith(color: color, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BulkActionBar extends ConsumerWidget {
+  const _BulkActionBar({
+    required this.allSelected,
+    required this.noneSelected,
+    required this.selectedCount,
+    required this.totalCount,
+    required this.studentIds,
+    required this.selectedIds,
+  });
+
+  final bool allSelected, noneSelected;
+  final int selectedCount, totalCount;
+  final List<String> studentIds, selectedIds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => ref.read(markAttendanceProvider.notifier).selectAll(studentIds),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: allSelected
+                        ? AppColors.navyDeep
+                        : AppColors.surface100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    allSelected ? 'All Selected' : 'Select All',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: allSelected ? AppColors.white : AppColors.grey700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: noneSelected
+                    ? null
+                    : () => ref.read(markAttendanceProvider.notifier).clearSelection(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: noneSelected ? AppColors.surface50 : AppColors.surface100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Clear',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: noneSelected ? AppColors.grey400 : AppColors.grey700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$selectedCount / $totalCount selected',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.grey500,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          if (!noneSelected) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton.secondary(
+                    label: 'Mark Absent',
+                    isDisabled: noneSelected,
+                    height: 40,
+                    onTap: noneSelected
+                        ? null
+                        : () => ref
+                            .read(markAttendanceProvider.notifier)
+                            .markSelected(AttendanceStatus.absent, selectedIds),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: AppButton.primary(
+                    label: 'Mark Present',
+                    isDisabled: noneSelected,
+                    height: 40,
+                    onTap: noneSelected
+                        ? null
+                        : () => ref
+                            .read(markAttendanceProvider.notifier)
+                            .markSelected(AttendanceStatus.present, selectedIds),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

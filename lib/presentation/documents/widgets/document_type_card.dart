@@ -1,10 +1,12 @@
+// presentation/documents/widgets/document_type_card.dart
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/document/document_model.dart';
-import '../../../core/theme/app_decorations.dart';
 
 class DocumentTypeCard extends StatefulWidget {
   const DocumentTypeCard({
@@ -50,14 +52,10 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
         return 'Official student identity card';
       case DocumentType.bonafide:
         return 'Certificate confirming enrollment status';
-      case DocumentType.leavingCertificate:
+      case DocumentType.leavingCert:
         return 'Required for school transfers';
       case DocumentType.reportCard:
         return 'Academic performance report';
-      case DocumentType.transferCertificate:
-        return 'For admission to another institution';
-      case DocumentType.characterCertificate:
-        return 'Certificate of good conduct';
     }
   }
 
@@ -76,15 +74,17 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
       child: ScaleTransition(
         scale: _scale,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(AppDimensions.space16),
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(AppDimensions.space12),
           decoration: BoxDecoration(
             color: isSelected
-                ? type.color.withValues(alpha: 0.06)
+                ? type.color.withValues(alpha: 0.05)
                 : AppColors.white,
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             border: Border.all(
-              color: isSelected ? type.color : AppColors.surface200,
+              color: isSelected
+                  ? type.color.withValues(alpha: 0.6)
+                  : AppColors.surface200,
               width: isSelected
                   ? AppDimensions.borderMedium
                   : AppDimensions.borderThin,
@@ -92,8 +92,8 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: type.color.withValues(alpha: 0.12),
-                      blurRadius: 12,
+                      color: type.color.withValues(alpha: 0.14),
+                      blurRadius: 14,
                       offset: const Offset(0, 4),
                     ),
                   ]
@@ -101,16 +101,19 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
           ),
           child: Row(
             children: [
-              // Icon
-              Container(
-                width: 48,
-                height: 48,
+              // Icon container
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: type.color.withValues(alpha: 0.12),
+                  color: isSelected
+                      ? type.color.withValues(alpha: 0.14)
+                      : type.color.withValues(alpha: 0.08),
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radiusMedium),
                 ),
-                child: Icon(type.icon, color: type.color, size: 22),
+                child: Icon(type.icon, color: type.color, size: 21),
               ),
               const SizedBox(width: AppDimensions.space12),
 
@@ -131,8 +134,8 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
                       _description(type),
                       style: AppTypography.caption.copyWith(
                         color: isSelected
-                            ? type.color.withValues(alpha: 0.7)
-                            : AppColors.grey600,
+                            ? type.color.withValues(alpha: 0.65)
+                            : AppColors.grey500,
                       ),
                     ),
                   ],
@@ -143,15 +146,17 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
 
               // Selection indicator
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
                 child: isSelected
                     ? Icon(Icons.check_circle_rounded,
                         key: const ValueKey('selected'),
                         color: type.color,
                         size: AppDimensions.iconMD)
-                    : Icon(Icons.radio_button_unchecked_rounded,
-                        key: const ValueKey('unselected'),
-                        color: AppColors.grey400,
+                    : const Icon(Icons.radio_button_unchecked_rounded,
+                        key: ValueKey('unselected'),
+                        color: AppColors.surface200,
                         size: AppDimensions.iconMD),
               ),
             ],
@@ -161,5 +166,3 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
     );
   }
 }
-
-// ignore: unused_import

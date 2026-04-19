@@ -88,36 +88,25 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
     } else if (_action == _ReviewAction.redo && feedback.isEmpty) {
       feedback = 'Redo required. Please revise and resubmit.';
     }
-    if (grade.isEmpty &&
-        feedback.isEmpty &&
-        _approved == widget.existingApproved) {
-      SnackbarUtils.showError(
-        context,
-        'Add grade/feedback or change approval status',
-      );
+    if (grade.isEmpty && feedback.isEmpty && _approved == widget.existingApproved) {
+      SnackbarUtils.showError(context, 'Add grade/feedback or change approval status');
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
-      await ref
-          .read(submissionsProvider(widget.assignmentId).notifier)
-          .gradeSubmission(
+      await ref.read(submissionsProvider(widget.assignmentId).notifier).gradeSubmission(
             widget.submissionId,
             grade: grade.isEmpty ? null : grade,
             feedback: feedback.isEmpty ? null : feedback,
             isApproved: _approved,
           );
-
       if (mounted) {
         SnackbarUtils.showSuccess(context, 'Submission reviewed successfully');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      if (mounted) {
-        SnackbarUtils.showError(context, e.toString());
-      }
+      if (mounted) SnackbarUtils.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -128,19 +117,11 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(AppDimensions.radiusXL),
-          topRight: Radius.circular(AppDimensions.radiusXL),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.only(
-        left: AppDimensions.space24,
-        right: AppDimensions.space24,
-        top: AppDimensions.space20,
-        bottom: AppDimensions.space24 + bottomPadding,
-      ),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomPadding),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -150,103 +131,112 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Drag handle
                 Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface200,
-                      borderRadius: BorderRadius.circular(2),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface200,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: AppDimensions.space20),
-
-                // Header
                 Row(
                   children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.navyDeep.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.rate_review_outlined,
+                          color: AppColors.navyDeep, size: 20),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Review Submission',
-                            style: AppTypography.headlineSmall,
-                          ),
+                          Text('Review Submission',
+                              style: AppTypography.titleLarge.copyWith(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
                           const SizedBox(height: 2),
-                          Text(
-                            widget.studentName,
-                            style: AppTypography.bodyMedium
-                                .copyWith(color: AppColors.grey600),
-                          ),
+                          Text(widget.studentName,
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.grey500)),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.grey400),
-                      onPressed: () => Navigator.of(context).pop(),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.close_rounded, color: AppColors.grey500, size: 16),
+                      ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: AppDimensions.space24),
-
-                // Grade field
+                const SizedBox(height: 20),
                 AppTextField(
                   controller: _gradeCtrl,
                   label: 'Grade (optional)',
                   hint: 'e.g. A+, 85/100, Excellent',
                   textInputAction: TextInputAction.next,
+                  prefixIconData: Icons.grade_outlined,
                 ),
-
-                const SizedBox(height: AppDimensions.space16),
-
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Approve Submission',
-                    style: AppTypography.titleSmall.copyWith(
-                      color: AppColors.grey800,
-                    ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.surface200),
                   ),
-                  subtitle: Text(
-                    'Mark this submission as teacher-approved',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.grey600,
-                    ),
+                  child: SwitchListTile.adaptive(
+                    contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+                    title: Text('Approve Submission',
+                        style: AppTypography.titleSmall.copyWith(color: AppColors.grey800)),
+                    subtitle: Text('Mark as teacher-approved',
+                        style: AppTypography.caption.copyWith(color: AppColors.grey500)),
+                    value: _approved,
+                    onChanged: _isLoading ? null : (v) => setState(() => _approved = v),
+                    activeColor: AppColors.successGreen,
                   ),
-                  value: _approved,
-                  onChanged:
-                      _isLoading ? null : (v) => setState(() => _approved = v),
-                  activeColor: AppColors.successGreen,
                 ),
-
-                const SizedBox(height: AppDimensions.space8),
-                Wrap(
-                  spacing: 8,
+                const SizedBox(height: 14),
+                Row(
                   children: [
-                    ChoiceChip(
-                      label: const Text('Reviewed'),
-                      selected: _action == _ReviewAction.reviewed,
-                      onSelected: _isLoading
+                    _ReviewChip(
+                      label: 'Reviewed',
+                      isSelected: _action == _ReviewAction.reviewed,
+                      color: AppColors.successGreen,
+                      bg: AppColors.successLight,
+                      icon: Icons.check_circle_outline_rounded,
+                      onTap: _isLoading
                           ? null
-                          : (_) =>
-                              setState(() => _action = _ReviewAction.reviewed),
+                          : () => setState(() => _action = _ReviewAction.reviewed),
                     ),
-                    ChoiceChip(
-                      label: const Text('Needs Redo'),
-                      selected: _action == _ReviewAction.redo,
-                      onSelected: _isLoading
+                    const SizedBox(width: 10),
+                    _ReviewChip(
+                      label: 'Needs Redo',
+                      isSelected: _action == _ReviewAction.redo,
+                      color: AppColors.warningAmber,
+                      bg: AppColors.warningLight,
+                      icon: Icons.refresh_rounded,
+                      onTap: _isLoading
                           ? null
-                          : (_) => setState(() => _action = _ReviewAction.redo),
+                          : () => setState(() => _action = _ReviewAction.redo),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: AppDimensions.space12),
-
-                // Feedback field
+                const SizedBox(height: 14),
                 AppTextField(
                   controller: _feedbackCtrl,
                   label: 'Feedback (optional)',
@@ -254,17 +244,68 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
                   maxLines: 4,
                   textInputAction: TextInputAction.done,
                 ),
-
-                const SizedBox(height: AppDimensions.space24),
-
-                // Submit button
+                const SizedBox(height: 24),
                 AppButton.primary(
                   label: 'Save Review',
                   onTap: _submit,
                   isLoading: _isLoading,
+                  icon: Icons.save_outlined,
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewChip extends StatelessWidget {
+  const _ReviewChip({
+    required this.label,
+    required this.isSelected,
+    required this.color,
+    required this.bg,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final Color color, bg;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? bg : AppColors.surface50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color.withValues(alpha: 0.4) : AppColors.surface200,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: isSelected ? color : AppColors.grey400),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTypography.labelMedium.copyWith(
+                  color: isSelected ? color : AppColors.grey500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       ),

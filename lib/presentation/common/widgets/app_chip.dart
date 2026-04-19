@@ -3,9 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Generic compact chip for tags, categories, and filter labels.
-///
-/// For backend status enums (PENDING, APPROVED, etc.), use [AppStatusChip] instead.
 class AppChip extends StatelessWidget {
   const AppChip({
     super.key,
@@ -30,10 +27,7 @@ class AppChip extends StatelessWidget {
   final bool isSelected;
   final Color? selectedColor;
   final Color? selectedTextColor;
-
-  /// When true, uses a more compact size (used in filter bars).
   final bool small;
-
   final Widget? trailing;
   final VoidCallback? onRemove;
 
@@ -43,19 +37,17 @@ class AppChip extends StatelessWidget {
 
   Color get _fg => isSelected
       ? (selectedTextColor ?? AppColors.white)
-      : (textColor ?? AppColors.grey800);
+      : (textColor ?? AppColors.grey700);
 
   @override
   Widget build(BuildContext context) {
-    final verticalPad = small ? AppDimensions.space4 : 6.0;
-    final horizontalPad = small
-        ? AppDimensions.space8
-        : AppDimensions.space12;
+    final verticalPad = small ? 4.0 : 6.0;
+    final horizontalPad = small ? 8.0 : 12.0;
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
         padding: EdgeInsets.symmetric(
           horizontal: horizontalPad,
@@ -63,20 +55,30 @@ class AppChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: _bg,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderRadius:
+              BorderRadius.circular(AppDimensions.radiusFull),
           border: isSelected
               ? null
               : Border.all(
                   color: AppColors.surface200,
-                  width: AppDimensions.borderThin,
+                  width: 1,
                 ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.navyDeep.withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: AppDimensions.iconXS, color: _fg),
-              const SizedBox(width: AppDimensions.space4),
+              Icon(icon, size: 12, color: _fg),
+              const SizedBox(width: 4),
             ],
             Text(
               label,
@@ -85,20 +87,21 @@ class AppChip extends StatelessWidget {
                       : AppTypography.labelMedium)
                   .copyWith(
                 color: _fg,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
             if (trailing != null) ...[
-              const SizedBox(width: AppDimensions.space4),
+              const SizedBox(width: 4),
               trailing!,
             ],
             if (onRemove != null) ...[
-              const SizedBox(width: AppDimensions.space4),
+              const SizedBox(width: 4),
               GestureDetector(
                 onTap: onRemove,
                 child: Icon(
                   Icons.close_rounded,
-                  size: AppDimensions.iconXS,
+                  size: 12,
                   color: _fg.withValues(alpha: 0.7),
                 ),
               ),

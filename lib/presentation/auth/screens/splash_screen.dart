@@ -15,11 +15,16 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _subtitleFade;
+    with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late AnimationController _textController;
+  late AnimationController _loaderController;
+
+  late Animation<double> _logoScale;
+  late Animation<double> _logoFade;
+  late Animation<double> _textFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _loaderFade;
 
   @override
   void initState() {
@@ -32,42 +37,55 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       ),
     );
 
-    _controller = AnimationController(
+    _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 800),
+    );
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _loaderController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    _logoScale = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-    _subtitleFade = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
-    );
+    _logoFade = CurvedAnimation(
+        parent: _logoController, curve: const Interval(0.0, 0.6));
+    _textFade = CurvedAnimation(parent: _textController, curve: Curves.easeOut);
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
+    _loaderFade =
+        CurvedAnimation(parent: _loaderController, curve: Curves.easeOut);
 
-    _controller.forward();
+    _runSequence();
+  }
 
-    // Initialize auth state after minimum splash duration
-    Future.delayed(const Duration(milliseconds: 1500), _initialize);
+  Future<void> _runSequence() async {
+    await _logoController.forward();
+    await Future.delayed(const Duration(milliseconds: 100));
+    await _textController.forward();
+    await Future.delayed(const Duration(milliseconds: 200));
+    await _loaderController.forward();
+    await Future.delayed(const Duration(milliseconds: 600));
+    await _initialize();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _logoController.dispose();
+    _textController.dispose();
+    _loaderController.dispose();
     super.dispose();
   }
 
   Future<void> _initialize() async {
     if (!mounted) return;
-    // This sets status to loading then authenticated/unauthenticated,
-    // which triggers the GoRouter redirect automatically.
     await ref.read(authNotifierProvider.notifier).initialize();
   }
 
@@ -75,112 +93,120 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.navyDeep,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.navyDeep, AppColors.navyMedium],
+      body: SizedBox.expand(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0B1F3A), Color(0xFF1A3A5C)],
+            ),
           ),
-        ),
-        child: SafeArea(
           child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: [
-              Positioned(
-                top: -60,
-                right: -40,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.navyLight.withValues(alpha: 0.15),
-                  ),
-                ),
+              const Positioned(
+                top: -80,
+                right: -60,
+                child: _GlowCircle(size: 260, opacity: 0.06),
+              ),
+              const Positioned(
+                bottom: -100,
+                left: -80,
+                child: _GlowCircle(size: 320, opacity: 0.05),
               ),
               Positioned(
-                bottom: -80,
-                left: -60,
-                child: Container(
-                  width: 260,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.navyLight.withValues(alpha: 0.1),
-                  ),
-                ),
+                top: MediaQuery.of(context).size.height * 0.3,
+                left: -40,
+                child: const _GlowCircle(size: 180, opacity: 0.04),
               ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: ScaleTransition(
-                        scale: _scaleAnimation,
-                        child: _LogoMark(),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        'EduNest',
-                        style: AppTypography.displayLarge.copyWith(
-                          color: AppColors.white,
-                          letterSpacing: 4,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    FadeTransition(
-                      opacity: _subtitleFade,
-                      child: Text(
-                        'Smart School Platform',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.white.withValues(alpha: 0.7),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                bottom: 48,
-                left: 0,
-                right: 0,
-                child: FadeTransition(
-                  opacity: _subtitleFade,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.goldPrimary.withValues(alpha: 0.8),
+              SafeArea(
+                child: Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 2),
+                        ScaleTransition(
+                          scale: _logoScale,
+                          child: FadeTransition(
+                            opacity: _logoFade,
+                            child: _LogoMark(),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Loading your campus',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.white.withValues(alpha: 0.65),
-                          letterSpacing: 0.3,
+                        const SizedBox(height: 32),
+                        FadeTransition(
+                          opacity: _textFade,
+                          child: SlideTransition(
+                            position: _textSlide,
+                            child: Column(
+                              children: [
+                                Text(
+                                  'EduNest',
+                                  style: AppTypography.displayLarge.copyWith(
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 2,
+                                    fontSize: 36,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Smart School Platform',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.55),
+                                    letterSpacing: 1.2,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'v1.0.0',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.white.withValues(alpha: 0.4),
+                        const Spacer(flex: 2),
+                        FadeTransition(
+                          opacity: _loaderFade,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 56),
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.goldPrimary
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Loading your campus...',
+                                  style: AppTypography.caption.copyWith(
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.45),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'v1.0.0',
+                                  style: AppTypography.caption.copyWith(
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.25),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -192,12 +218,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 }
 
+class _GlowCircle extends StatelessWidget {
+  const _GlowCircle({required this.size, required this.opacity});
+  final double size;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.white.withValues(alpha: opacity),
+      ),
+    );
+  }
+}
+
 class _LogoMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 96,
-      height: 96,
+      width: 88,
+      height: 88,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -207,15 +251,16 @@ class _LogoMark extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.goldPrimary.withValues(alpha: 0.4),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: AppColors.goldPrimary.withValues(alpha: 0.45),
+            blurRadius: 32,
+            offset: const Offset(0, 10),
+            spreadRadius: -4,
           ),
         ],
       ),
       child: const Center(
         child: SchoolLogo(
-          size: 64,
+          size: 60,
           borderRadius: 12,
           imagePadding: 6,
         ),

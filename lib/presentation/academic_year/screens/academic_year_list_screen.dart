@@ -12,11 +12,11 @@ import '../../../data/models/academic_year/academic_year_model.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
+import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_dialog.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_loading.dart';
-import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
 import '../widgets/year_tile.dart';
 
@@ -29,13 +29,30 @@ class AcademicYearListScreen extends ConsumerStatefulWidget {
 }
 
 class _AcademicYearListScreenState
-    extends ConsumerState<AcademicYearListScreen> {
+    extends ConsumerState<AcademicYearListScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
+
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(academicYearNotifierProvider.notifier).refresh();
     });
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   bool get _canManage {
@@ -48,6 +65,7 @@ class _AcademicYearListScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => _AcademicYearFormSheet(
         onSubmit: (payload) async {
           try {
@@ -55,13 +73,11 @@ class _AcademicYearListScreenState
                 .read(academicYearNotifierProvider.notifier)
                 .create(payload);
             if (mounted) {
-              SnackbarUtils.showSuccess(
-                  context, 'Academic year created.');
+              SnackbarUtils.showSuccess(context, 'Academic year created.');
             }
           } catch (e) {
             if (mounted) {
-              SnackbarUtils.showError(
-                  context, 'Failed: ${e.toString()}');
+              SnackbarUtils.showError(context, 'Failed: ${e.toString()}');
             }
           }
         },
@@ -74,6 +90,7 @@ class _AcademicYearListScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => _AcademicYearFormSheet(
         existing: year,
         onSubmit: (payload) async {
@@ -82,13 +99,11 @@ class _AcademicYearListScreenState
                 .read(academicYearNotifierProvider.notifier)
                 .updateAcademicYear(year.id, payload);
             if (mounted) {
-              SnackbarUtils.showSuccess(
-                  context, 'Academic year updated.');
+              SnackbarUtils.showSuccess(context, 'Academic year updated.');
             }
           } catch (e) {
             if (mounted) {
-              SnackbarUtils.showError(
-                  context, 'Failed: ${e.toString()}');
+              SnackbarUtils.showError(context, 'Failed: ${e.toString()}');
             }
           }
         },
@@ -112,8 +127,7 @@ class _AcademicYearListScreenState
             .read(academicYearNotifierProvider.notifier)
             .activate(year.id);
         if (mounted) {
-          SnackbarUtils.showSuccess(
-              context, '"${year.name}" is now active.');
+          SnackbarUtils.showSuccess(context, '"${year.name}" is now active.');
         }
       } catch (e) {
         if (mounted) {
@@ -132,25 +146,47 @@ class _AcademicYearListScreenState
       appBar: AppAppBar(
         title: 'Academic Years',
         showBack: true,
-        actions: _canManage
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.swap_horiz_rounded),
-                  tooltip: 'Rollover',
-                  onPressed: () => context.push(RouteNames.rollover),
+        actions: [
+          if (_canManage) ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: IconButton(
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.swap_horiz_rounded,
+                      color: AppColors.white, size: 18),
                 ),
-              ]
-            : [],
+                tooltip: 'Rollover',
+                onPressed: () => context.push(RouteNames.rollover),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: AppColors.white, size: 20),
+                ),
+                tooltip: 'Add Academic Year',
+                onPressed: _showCreateSheet,
+              ),
+            ),
+          ],
+        ],
       ),
-      floatingActionButton: _canManage
-          ? FloatingActionButton(
-              onPressed: _showCreateSheet,
-              tooltip: 'Add Academic Year',
-              child: const Icon(Icons.add),
-            )
-          : null,
       body: yearsAsync.when(
-        loading: () => AppLoading.listView(withAvatar: false),
+        loading: () => _buildShimmer(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
           onRetry: () =>
@@ -167,39 +203,175 @@ class _AcademicYearListScreenState
             );
           }
 
-          // Sort: active first, then by start date descending
           final sorted = [...years]..sort((a, b) {
               if (a.isActive && !b.isActive) return -1;
               if (!a.isActive && b.isActive) return 1;
               return b.startDate.compareTo(a.startDate);
             });
 
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(academicYearNotifierProvider.notifier).refresh(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
-              itemCount: sorted.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppDimensions.space8),
-              itemBuilder: (context, index) {
-                final year = sorted[index];
-                return YearTile(
-                  year: year,
-                  canManage: _canManage,
-                  onActivate: () => _confirmActivate(year),
-                  onEdit: () => _showEditSheet(year),
-                );
-              },
+          final activeYear = sorted.firstWhere(
+            (y) => y.isActive,
+            orElse: () => sorted.first,
+          );
+
+          return FadeTransition(
+            opacity: _fade,
+            child: RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(academicYearNotifierProvider.notifier).refresh(),
+              color: AppColors.navyDeep,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                children: [
+                  _ActiveYearBanner(year: activeYear),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppColors.navyDeep,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'All Years (${sorted.length})',
+                        style: AppTypography.titleSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navyDeep,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...sorted.map(
+                    (year) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: YearTile(
+                        year: year,
+                        canManage: _canManage,
+                        onActivate: () => _confirmActivate(year),
+                        onEdit: () => _showEditSheet(year),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
     );
   }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: AppLoading.card(height: 72),
+      ),
+    );
+  }
 }
 
-// ── Bottom Sheet Form ──────────────────────────────────────────────────────────
+class _ActiveYearBanner extends StatelessWidget {
+  const _ActiveYearBanner({required this.year});
+  final AcademicYearModel year;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!year.isActive) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B1F3A), Color(0xFF1A3A5C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AppColors.goldPrimary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: AppColors.goldPrimary.withValues(alpha: 0.35)),
+            ),
+            child: const Icon(Icons.calendar_today_rounded,
+                color: AppColors.goldPrimary, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.goldPrimary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppColors.goldPrimary.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        'Current Year',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.goldPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  year.name,
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${DateFormatter.formatDate(year.startDate)} – ${DateFormatter.formatDate(year.endDate)}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.6),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _AcademicYearFormSheet extends ConsumerStatefulWidget {
   const _AcademicYearFormSheet({
@@ -245,6 +417,15 @@ class _AcademicYearFormSheetState
       initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.navyDeep,
+            onPrimary: AppColors.white,
+          ),
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) setState(() => _startDate = picked);
   }
@@ -252,10 +433,19 @@ class _AcademicYearFormSheetState
   Future<void> _pickEndDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate:
-          _endDate ?? (_startDate?.add(const Duration(days: 365)) ?? DateTime.now()),
+      initialDate: _endDate ??
+          (_startDate?.add(const Duration(days: 365)) ?? DateTime.now()),
       firstDate: _startDate ?? DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.navyDeep,
+            onPrimary: AppColors.white,
+          ),
+        ),
+        child: child!,
+      ),
     );
     if (picked != null) setState(() => _endDate = picked);
   }
@@ -271,8 +461,7 @@ class _AcademicYearFormSheetState
       return;
     }
     if (!_endDate!.isAfter(_startDate!)) {
-      SnackbarUtils.showError(
-          context, 'End date must be after start date');
+      SnackbarUtils.showError(context, 'End date must be after start date');
       return;
     }
 
@@ -296,19 +485,11 @@ class _AcademicYearFormSheetState
     final isEditing = widget.existing != null;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppDimensions.space16,
-        AppDimensions.space16,
-        AppDimensions.space16,
-        AppDimensions.space16 + bottomPadding,
-      ),
       decoration: const BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(AppDimensions.radiusXL),
-          topRight: Radius.circular(AppDimensions.radiusXL),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPadding),
       child: Form(
         key: _formKey,
         child: Column(
@@ -317,34 +498,50 @@ class _AcademicYearFormSheetState
           children: [
             Center(
               child: Container(
-                width: AppDimensions.dragHandleWidth,
-                height: AppDimensions.dragHandleHeight,
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.surface200,
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radiusFull),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: AppDimensions.space16),
-            Text(
-              isEditing ? 'Edit Academic Year' : 'New Academic Year',
-              style: AppTypography.headlineSmall,
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.navyDeep.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.calendar_today_rounded,
+                      size: 18, color: AppColors.navyDeep),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  isEditing ? 'Edit Academic Year' : 'New Academic Year',
+                  style: AppTypography.headlineSmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppDimensions.space24),
+            const SizedBox(height: 20),
             AppTextField(
               controller: _nameController,
               label: 'Year Name',
               hint: 'e.g. 2024-25',
+              prefixIconData: Icons.label_outline_rounded,
               textInputAction: TextInputAction.done,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Name is required';
-                }
+                if (v == null || v.trim().isEmpty) return 'Name is required';
                 return null;
               },
             ),
-            const SizedBox(height: AppDimensions.space16),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -354,7 +551,7 @@ class _AcademicYearFormSheetState
                     onTap: _pickStartDate,
                   ),
                 ),
-                const SizedBox(width: AppDimensions.space12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _DatePickerField(
                     label: 'End Date',
@@ -364,11 +561,12 @@ class _AcademicYearFormSheetState
                 ),
               ],
             ),
-            const SizedBox(height: AppDimensions.space24),
+            const SizedBox(height: 24),
             AppButton.primary(
-              label: isEditing ? 'Update' : 'Create',
+              label: isEditing ? 'Update Year' : 'Create Year',
               onTap: _isLoading ? null : _submit,
               isLoading: _isLoading,
+              icon: isEditing ? Icons.save_outlined : Icons.add_circle_outline,
             ),
           ],
         ),
@@ -390,55 +588,58 @@ class _DatePickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16,
-          vertical: 14,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          border: Border.all(
-            color: AppColors.surface200,
-            width: AppDimensions.borderMedium,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            color: AppColors.grey500,
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.grey600,
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: value != null
+                    ? AppColors.navyMedium.withValues(alpha: 0.5)
+                    : AppColors.surface200,
+                width: value != null ? 1.5 : 1,
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
+            child: Row(
               children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: value != null ? AppColors.navyMedium : AppColors.grey400,
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     value != null
                         ? DateFormatter.formatDate(value!)
                         : 'Select date',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: value != null
-                          ? AppColors.grey800
-                          : AppColors.grey400,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: value != null ? AppColors.grey800 : AppColors.grey400,
+                      fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
+                      fontSize: 12,
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: AppDimensions.iconSM,
-                  color: AppColors.grey400,
-                ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

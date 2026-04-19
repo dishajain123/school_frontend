@@ -118,8 +118,7 @@ class _DocumentIcon extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: type.color.withValues(alpha: 0.12),
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             child: Icon(type.icon, color: type.color, size: 22),
           ),
@@ -133,42 +132,16 @@ class _DocumentIcon extends StatelessWidget {
   }
 }
 
-class _SpinningIndicator extends StatefulWidget {
+class _SpinningIndicator extends StatelessWidget {
   const _SpinningIndicator({required this.color});
   final Color color;
 
   @override
-  State<_SpinningIndicator> createState() => _SpinningIndicatorState();
-}
-
-class _SpinningIndicatorState extends State<_SpinningIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: _ctrl,
-      child: CircularProgressIndicator(
-        strokeWidth: 2.5,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          widget.color.withValues(alpha: 0.5),
-        ),
+    return CircularProgressIndicator(
+      strokeWidth: 2.5,
+      valueColor: AlwaysStoppedAnimation<Color>(
+        color.withValues(alpha: 0.5),
       ),
     );
   }
@@ -200,7 +173,7 @@ class _TimestampRow extends StatelessWidget {
           const SizedBox(height: AppDimensions.space2),
           Row(
             children: [
-              Icon(Icons.check_rounded,
+              const Icon(Icons.check_rounded,
                   size: 11, color: AppColors.successGreen),
               const SizedBox(width: 3),
               Text(
@@ -252,46 +225,28 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _AnimatedStatusIcon extends StatefulWidget {
+class _AnimatedStatusIcon extends StatelessWidget {
   const _AnimatedStatusIcon({required this.status});
   final DocumentStatus status;
 
   @override
-  State<_AnimatedStatusIcon> createState() => _AnimatedStatusIconState();
-}
-
-class _AnimatedStatusIconState extends State<_AnimatedStatusIcon>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.status == DocumentStatus.processing) {
-      _ctrl = AnimationController(
-        vsync: this,
-        duration: const Duration(seconds: 1),
-      )..repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    if (status == DocumentStatus.processing) {
+      return SizedBox(
+        width: AppDimensions.iconXS,
+        height: AppDimensions.iconXS,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.8,
+          valueColor: AlwaysStoppedAnimation<Color>(status.color),
+        ),
+      );
+    }
+
     final icon = Icon(
-      widget.status.icon,
-      color: widget.status.color,
+      status.icon,
+      color: status.color,
       size: AppDimensions.iconXS,
     );
-
-    if (_ctrl != null) {
-      return RotationTransition(turns: _ctrl!, child: icon);
-    }
     return icon;
   }
 }
@@ -346,8 +301,7 @@ class _DownloadButtonState extends State<_DownloadButton>
           ),
           decoration: BoxDecoration(
             color: AppColors.navyDeep,
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusFull),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -372,4 +326,3 @@ class _DownloadButtonState extends State<_DownloadButton>
     );
   }
 }
-

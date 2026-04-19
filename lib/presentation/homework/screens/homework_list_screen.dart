@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../providers/academic_year_provider.dart';
-import '../../../providers/attendance_provider.dart'; // myTeacherAssignmentsProvider
+import '../../../providers/attendance_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/homework_provider.dart';
 import '../../../providers/parent_provider.dart';
@@ -19,10 +18,6 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../widgets/homework_card.dart';
 
-// ── Route name constants (add to route_names.dart & app_router.dart) ──────────
-// static const String homeworkList   = '/homework';
-// static const String createHomework = '/homework/create';
-
 class HomeworkListScreen extends ConsumerStatefulWidget {
   const HomeworkListScreen({super.key});
 
@@ -30,16 +25,18 @@ class HomeworkListScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeworkListScreen> createState() => _HomeworkListScreenState();
 }
 
-class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
+class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
+    with SingleTickerProviderStateMixin {
   DateTime _selectedDate = _today();
-  String? _selectedSubjectId; // teacher-only filter
+  String? _selectedSubjectId;
+  late AnimationController _dateAnimCtrl;
+  late Animation<double> _dateFade;
 
   static DateTime _today() {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
   }
 
-  // ISO "yyyy-MM-dd" for the API
   String _toApiDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -50,19 +47,38 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
         _selectedDate.day == t.day;
   }
 
-  void _goToPrevDay() {
+  @override
+  void initState() {
+    super.initState();
+    _dateAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _dateFade = CurvedAnimation(parent: _dateAnimCtrl, curve: Curves.easeOut);
+    _dateAnimCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _dateAnimCtrl.dispose();
+    super.dispose();
+  }
+
+  void _changeDate(DateTime newDate) {
+    _dateAnimCtrl.reset();
     setState(() {
-      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+      _selectedDate = newDate;
       _selectedSubjectId = null;
     });
+    _dateAnimCtrl.forward();
   }
+
+  void _goToPrevDay() =>
+      _changeDate(_selectedDate.subtract(const Duration(days: 1)));
 
   void _goToNextDay() {
     if (_isToday) return;
-    setState(() {
-      _selectedDate = _selectedDate.add(const Duration(days: 1));
-      _selectedSubjectId = null;
-    });
+    _changeDate(_selectedDate.add(const Duration(days: 1)));
   }
 
   Future<void> _pickDate() async {
@@ -82,16 +98,12 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
       ),
     );
     if (picked != null && mounted) {
-      setState(() {
-        _selectedDate = DateTime(picked.year, picked.month, picked.day);
-        _selectedSubjectId = null;
-      });
+      _changeDate(DateTime(picked.year, picked.month, picked.day));
     }
   }
 
   Future<void> _navigateToCreate() async {
     final created = await context.push<bool>('/homework/create');
-    // Invalidate so the list refreshes on return
     if (created == true && mounted) {
       ref.invalidate(homeworkListProvider);
     }
@@ -105,12 +117,10 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
     final canCreate = currentUser?.hasPermission('homework:create') ?? false;
     final selectedChild = ref.watch(selectedChildProvider);
 
-    // Load teacher assignments for subject filter + name resolution
     final activeYear = ref.watch(activeYearProvider);
     final assignmentsAsync =
         ref.watch(myTeacherAssignmentsProvider(activeYear?.id));
 
-    // Build subjectId → label map for teacher cards
     final Map<String, String> subjectNameMap = {};
     if (isTeacher) {
       assignmentsAsync.whenData((assignments) {
@@ -120,7 +130,6 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
       });
     }
 
-    // Build unique subject options for the filter row (teacher only)
     final Map<String, String> subjectOptions = {};
     if (isTeacher) {
       assignmentsAsync.whenData((assignments) {
@@ -139,29 +148,41 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
     final homeworkAsync = ref.watch(homeworkListProvider(params));
 
     return AppScaffold(
-      appBar: const AppAppBar(title: 'Homework', showBack: false),
-      floatingActionButton: canCreate
-          ? FloatingActionButton(
-              onPressed: _navigateToCreate,
-              backgroundColor: AppColors.navyDeep,
-              tooltip: 'Post Homework',
-              child: const Icon(Icons.add, color: AppColors.white),
-            )
-          : null,
+      appBar: AppAppBar(
+        title: 'Homework',
+        showBack: true,
+        actions: [
+          if (canCreate)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: _navigateToCreate,
+                tooltip: 'Post Homework',
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: AppColors.white, size: 20),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
-          // ── Date navigation bar ────────────────────────────────────
-          _DateNavigationBar(
+          _DateBar(
             selectedDate: _selectedDate,
             isToday: _isToday,
             onPrev: _goToPrevDay,
             onNext: _goToNextDay,
             onTap: _pickDate,
           ),
-
-          // ── Subject filter chips (TEACHER only) ───────────────────
           if (isTeacher && subjectOptions.isNotEmpty)
-            _SubjectFilterBar(
+            _SubjectChipBar(
               subjectOptions: subjectOptions,
               selectedId: _selectedSubjectId,
               onSelected: (id) {
@@ -170,48 +191,46 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
                 });
               },
             ),
-
-          const Divider(height: 1, color: AppColors.surface100),
-
-          // ── Homework list ─────────────────────────────────────────
+          Container(height: 1, color: AppColors.surface100),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.navyDeep,
-              onRefresh: () async => ref.invalidate(homeworkListProvider(params)),
-              child: homeworkAsync.when(
-                loading: () => _HomeworkShimmer(),
-                error: (e, _) => AppErrorState(
-                  message: e.toString(),
-                  onRetry: () => ref.invalidate(homeworkListProvider(params)),
-                ),
-                data: (response) {
-                  if (response.items.isEmpty) {
-                    return AppEmptyState(
-                      icon: Icons.menu_book_outlined,
-                      title: _isToday
-                          ? 'Nothing due today'
-                          : 'No homework on this day',
-                      subtitle: _isToday
-                          ? 'Enjoy your day — check back tomorrow.'
-                          : 'No homework was posted for this date.',
-                    );
-                  }
-                  return ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(
-                      top: AppDimensions.space8,
-                      bottom: AppDimensions.space64,
-                    ),
-                    itemCount: response.items.length,
-                    itemBuilder: (context, index) {
-                      final hw = response.items[index];
-                      return HomeworkCard(
-                        homework: hw,
-                        subjectName: subjectNameMap[hw.subjectId],
+              onRefresh: () async =>
+                  ref.invalidate(homeworkListProvider(params)),
+              child: FadeTransition(
+                opacity: _dateFade,
+                child: homeworkAsync.when(
+                  loading: () => _buildShimmer(),
+                  error: (e, _) => AppErrorState(
+                    message: e.toString(),
+                    onRetry: () => ref.invalidate(homeworkListProvider(params)),
+                  ),
+                  data: (response) {
+                    if (response.items.isEmpty) {
+                      return AppEmptyState(
+                        icon: Icons.menu_book_outlined,
+                        title: _isToday
+                            ? 'Nothing due today'
+                            : 'No homework on this day',
+                        subtitle: _isToday
+                            ? 'Enjoy your day — check back tomorrow.'
+                            : 'No homework was posted for this date.',
                       );
-                    },
-                  );
-                },
+                    }
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 8, bottom: 80),
+                      itemCount: response.items.length,
+                      itemBuilder: (context, index) {
+                        final hw = response.items[index];
+                        return HomeworkCard(
+                          homework: hw,
+                          subjectName: subjectNameMap[hw.subjectId],
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -219,12 +238,21 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen> {
       ),
     );
   }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8),
+      itemCount: 5,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        child: AppLoading.card(height: 100),
+      ),
+    );
+  }
 }
 
-// ── Date navigation bar ───────────────────────────────────────────────────────
-
-class _DateNavigationBar extends StatelessWidget {
-  const _DateNavigationBar({
+class _DateBar extends StatelessWidget {
+  const _DateBar({
     required this.selectedDate,
     required this.isToday,
     required this.onPrev,
@@ -242,20 +270,11 @@ class _DateNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.white,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space8,
-        vertical: AppDimensions.space12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Row(
         children: [
-          // ← Previous day
-          _NavArrow(
-            icon: Icons.chevron_left_rounded,
-            onTap: onPrev,
-            enabled: true,
-          ),
-
-          // Date picker trigger
+          _ArrowButton(
+              icon: Icons.chevron_left_rounded, onTap: onPrev, enabled: true),
           Expanded(
             child: GestureDetector(
               onTap: onTap,
@@ -266,28 +285,35 @@ class _DateNavigationBar extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 14,
-                        color: AppColors.navyMedium,
-                      ),
-                      const SizedBox(width: AppDimensions.space6),
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 13, color: AppColors.navyMedium),
+                      const SizedBox(width: 7),
                       Text(
                         DateFormatter.formatDate(selectedDate),
                         style: AppTypography.titleMedium.copyWith(
                           color: AppColors.navyDeep,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
                   ),
                   if (isToday) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Today',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.navyLight,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.navyDeep.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Today',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.navyMedium,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
@@ -295,9 +321,7 @@ class _DateNavigationBar extends StatelessWidget {
               ),
             ),
           ),
-
-          // → Next day (disabled on today)
-          _NavArrow(
+          _ArrowButton(
             icon: Icons.chevron_right_rounded,
             onTap: isToday ? null : onNext,
             enabled: !isToday,
@@ -308,42 +332,36 @@ class _DateNavigationBar extends StatelessWidget {
   }
 }
 
-class _NavArrow extends StatelessWidget {
-  const _NavArrow({
-    required this.icon,
-    required this.onTap,
-    required this.enabled,
-  });
-
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton(
+      {required this.icon, required this.onTap, required this.enabled});
   final IconData icon;
   final VoidCallback? onTap;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.space8),
-          child: Icon(
-            icon,
-            size: 24,
-            color: enabled ? AppColors.navyDeep : AppColors.grey400,
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.surface100 : AppColors.surface50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 22,
+          color: enabled ? AppColors.navyDeep : AppColors.grey400,
         ),
       ),
     );
   }
 }
 
-// ── Subject filter bar (teacher only) ─────────────────────────────────────────
-
-class _SubjectFilterBar extends StatelessWidget {
-  const _SubjectFilterBar({
+class _SubjectChipBar extends StatelessWidget {
+  const _SubjectChipBar({
     required this.subjectOptions,
     required this.selectedId,
     required this.onSelected,
@@ -356,67 +374,48 @@ class _SubjectFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
+      height: 50,
       color: AppColors.white,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16,
-          vertical: AppDimensions.space8,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         itemCount: subjectOptions.length,
         itemBuilder: (context, index) {
           final entry = subjectOptions.entries.elementAt(index);
           final isSelected = selectedId == entry.key;
-
           return Padding(
-            padding: const EdgeInsets.only(right: AppDimensions.space8),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              child: FilterChip(
-                label: Text(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onSelected(entry.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.navyDeep : AppColors.surface100,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.navyDeep.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Text(
                   entry.value,
                   style: AppTypography.labelMedium.copyWith(
                     color: isSelected ? AppColors.white : AppColors.grey600,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 12,
                   ),
                 ),
-                selected: isSelected,
-                onSelected: (_) => onSelected(entry.key),
-                backgroundColor: AppColors.surface50,
-                selectedColor: AppColors.navyDeep,
-                checkmarkColor: AppColors.white,
-                showCheckmark: false,
-                side: BorderSide(
-                  color: isSelected ? AppColors.navyDeep : AppColors.surface200,
-                ),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.space4),
-                visualDensity: VisualDensity.compact,
               ),
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-// ── Shimmer skeleton ──────────────────────────────────────────────────────────
-
-class _HomeworkShimmer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: AppDimensions.space8),
-      itemCount: 5,
-      itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16,
-          vertical: AppDimensions.space6,
-        ),
-        child: AppLoading.card(),
       ),
     );
   }

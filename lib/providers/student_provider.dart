@@ -213,6 +213,34 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     );
     return updatedItems;
   }
+
+  Future<List<StudentModel>> bulkUpdatePromotionStatusBySection({
+    required String standardId,
+    required String section,
+    required String promotionStatus,
+    String? academicYearId,
+    List<String> excludedStudentIds = const <String>[],
+  }) async {
+    final repo = ref.read(studentRepositoryProvider);
+    final updatedItems = await repo.bulkUpdatePromotionStatusBySection(
+      standardId: standardId,
+      section: section,
+      promotionStatus: promotionStatus,
+      academicYearId: academicYearId,
+      excludedStudentIds: excludedStudentIds,
+    );
+
+    final updatedById = {for (final s in updatedItems) s.id: s};
+    final current = state.valueOrNull ?? const StudentState();
+    state = AsyncData(
+      current.copyWith(
+        items: current.items
+            .map((s) => updatedById.containsKey(s.id) ? updatedById[s.id]! : s)
+            .toList(),
+      ),
+    );
+    return updatedItems;
+  }
 }
 
 final studentNotifierProvider =
@@ -223,23 +251,13 @@ final studentNotifierProvider =
 final studentSectionsProvider =
     FutureProvider.family<List<String>, String?>((ref, standardId) async {
   final repo = ref.read(studentRepositoryProvider);
-  if (standardId == null || standardId.isEmpty) {
+  if (standardId != null && standardId.isNotEmpty) {
     try {
-      final sections = await repo.listSections();
+      final sections = await repo.listSections(standardId: standardId);
       if (sections.isNotEmpty) return sections;
     } catch (_) {
-      // Fall back to deriving from student list below.
+      // Fall back to deriving sections from students if dedicated endpoint fails.
     }
-  }
-
-  try {
-    final sections = await repo.listSections(
-      standardId:
-          (standardId != null && standardId.isNotEmpty) ? standardId : null,
-    );
-    if (sections.isNotEmpty) return sections;
-  } catch (_) {
-    // Fall back to deriving sections from students if dedicated endpoint fails.
   }
 
   const pageSize = 100; // Backend max page_size is 100.

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
+import '../../../core/theme/app_typography.dart';
 
-/// Displays a percentage-based grade badge with semantic colour.
 class GradeBadge extends StatelessWidget {
   const GradeBadge({
     super.key,
@@ -41,7 +40,7 @@ class GradeBadge extends StatelessWidget {
       );
 
   Color get _color {
-    if (percentage >= 90) return const Color(0xFF059669); // emerald
+    if (percentage >= 90) return const Color(0xFF059669);
     if (percentage >= 75) return AppColors.successGreen;
     if (percentage >= 60) return AppColors.infoBlue;
     if (percentage >= 40) return AppColors.warningAmber;
@@ -74,36 +73,57 @@ class GradeBadge extends StatelessWidget {
       case _GradeBadgeSize.medium:
         return 12;
       case _GradeBadgeSize.large:
-        return 16;
+        return 18;
     }
   }
 
-  double get _padding {
+  EdgeInsets get _padding {
     switch (size) {
       case _GradeBadgeSize.small:
-        return 6;
+        return const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
       case _GradeBadgeSize.medium:
-        return 8;
+        return const EdgeInsets.symmetric(horizontal: 10, vertical: 5);
       case _GradeBadgeSize.large:
-        return 12;
+        return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+    }
+  }
+
+  double get _borderRadius {
+    switch (size) {
+      case _GradeBadgeSize.small:
+        return 8;
+      case _GradeBadgeSize.medium:
+        return 10;
+      case _GradeBadgeSize.large:
+        return 14;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: _padding, vertical: _padding / 2),
+      padding: _padding,
       decoration: BoxDecoration(
         color: _bg,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        border: Border.all(color: _color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(_borderRadius),
+        border: Border.all(color: _color.withValues(alpha: 0.35), width: 1.2),
+        boxShadow: size == _GradeBadgeSize.large
+            ? [
+                BoxShadow(
+                  color: _color.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Text(
         _label,
-        style: TextStyle(
+        style: AppTypography.labelMedium.copyWith(
           color: _color,
           fontSize: _fontSize,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
         ),
       ),
     );

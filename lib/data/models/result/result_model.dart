@@ -14,10 +14,13 @@ extension ExamTypeX on ExamType {
   static ExamType fromString(String? v) {
     switch ((v ?? '').toUpperCase().replaceAll('-', '_')) {
       case 'UNIT_TEST':
+      case 'UNIT':
         return ExamType.unitTest;
       case 'MID_TERM':
+      case 'MIDTERM':
         return ExamType.midTerm;
       case 'FINAL_EXAM':
+      case 'FINAL':
         return ExamType.finalExam;
       case 'QUARTERLY':
         return ExamType.quarterly;
@@ -33,11 +36,11 @@ extension ExamTypeX on ExamType {
   String get backendValue {
     switch (this) {
       case ExamType.unitTest:
-        return 'UNIT_TEST';
+        return 'UNIT';
       case ExamType.midTerm:
-        return 'MID_TERM';
+        return 'MIDTERM';
       case ExamType.finalExam:
-        return 'FINAL_EXAM';
+        return 'FINAL';
       case ExamType.quarterly:
         return 'QUARTERLY';
       case ExamType.halfYearly:
@@ -45,7 +48,7 @@ extension ExamTypeX on ExamType {
       case ExamType.annual:
         return 'ANNUAL';
       case ExamType.other:
-        return 'OTHER';
+        return 'UNIT';
     }
   }
 
@@ -224,5 +227,106 @@ class ReportCardModel {
 
   factory ReportCardModel.fromJson(Map<String, dynamic> json) {
     return ReportCardModel(url: json['url'] as String);
+  }
+}
+
+@immutable
+class ResultDistributionSubjectModel {
+  const ResultDistributionSubjectModel({
+    required this.subjectId,
+    required this.subjectName,
+    required this.marksObtained,
+    required this.maxMarks,
+    required this.percentage,
+    required this.isPublished,
+    this.gradeLetter,
+  });
+
+  final String subjectId;
+  final String subjectName;
+  final double marksObtained;
+  final double maxMarks;
+  final double percentage;
+  final bool isPublished;
+  final String? gradeLetter;
+
+  factory ResultDistributionSubjectModel.fromJson(Map<String, dynamic> json) {
+    return ResultDistributionSubjectModel(
+      subjectId: json['subject_id'].toString(),
+      subjectName: (json['subject_name'] as String?) ?? 'Subject',
+      marksObtained: (json['marks_obtained'] as num).toDouble(),
+      maxMarks: (json['max_marks'] as num).toDouble(),
+      percentage: (json['percentage'] as num).toDouble(),
+      isPublished: json['is_published'] as bool? ?? false,
+      gradeLetter: json['grade_letter'] as String?,
+    );
+  }
+}
+
+@immutable
+class ResultDistributionStudentModel {
+  const ResultDistributionStudentModel({
+    required this.studentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.totalObtained,
+    required this.totalMax,
+    required this.overallPercentage,
+    required this.subjects,
+    this.section,
+    this.rollNumber,
+  });
+
+  final String studentId;
+  final String studentName;
+  final String admissionNumber;
+  final String? section;
+  final String? rollNumber;
+  final double totalObtained;
+  final double totalMax;
+  final double overallPercentage;
+  final List<ResultDistributionSubjectModel> subjects;
+
+  factory ResultDistributionStudentModel.fromJson(Map<String, dynamic> json) {
+    final rawSubjects = json['subjects'] as List<dynamic>? ?? const [];
+    return ResultDistributionStudentModel(
+      studentId: json['student_id'].toString(),
+      studentName: (json['student_name'] as String?) ?? 'Student',
+      admissionNumber: (json['admission_number'] as String?) ?? '',
+      section: json['section'] as String?,
+      rollNumber: json['roll_number'] as String?,
+      totalObtained: (json['total_obtained'] as num).toDouble(),
+      totalMax: (json['total_max'] as num).toDouble(),
+      overallPercentage: (json['overall_percentage'] as num).toDouble(),
+      subjects: rawSubjects
+          .map((e) => ResultDistributionSubjectModel.fromJson(
+              e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+@immutable
+class ResultDistributionModel {
+  const ResultDistributionModel({
+    required this.exam,
+    required this.totalStudents,
+    required this.items,
+  });
+
+  final ExamModel exam;
+  final int totalStudents;
+  final List<ResultDistributionStudentModel> items;
+
+  factory ResultDistributionModel.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List<dynamic>? ?? const [];
+    return ResultDistributionModel(
+      exam: ExamModel.fromJson(json['exam'] as Map<String, dynamic>),
+      totalStudents: json['total_students'] as int? ?? rawItems.length,
+      items: rawItems
+          .map((e) => ResultDistributionStudentModel.fromJson(
+              e as Map<String, dynamic>))
+          .toList(),
+    );
   }
 }

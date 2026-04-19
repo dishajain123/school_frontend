@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
@@ -23,7 +22,6 @@ class UpcomingItem {
   final VoidCallback? onTap;
 }
 
-/// Horizontal scroll row of upcoming event cards.
 class UpcomingCard extends StatelessWidget {
   const UpcomingCard({
     super.key,
@@ -38,52 +36,43 @@ class UpcomingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title, style: AppTypography.headlineSmall),
-            if (onSeeAll != null)
-              GestureDetector(
-                onTap: onSeeAll,
-                child: Text('See all',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.navyMedium,
-                      fontWeight: FontWeight.w600,
-                    )),
-              ),
-          ],
+    if (items.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.surface100),
         ),
-        const SizedBox(height: AppDimensions.space12),
-        if (items.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppDimensions.space16),
-            decoration: AppDecorations.cardFlat,
-            child: Text(
+        child: Column(
+          children: [
+            const Icon(
+              Icons.event_available_outlined,
+              size: 32,
+              color: AppColors.grey400,
+            ),
+            const SizedBox(height: 8),
+            Text(
               'Nothing upcoming',
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.grey400,
               ),
-              textAlign: TextAlign.center,
             ),
-          )
-        else
-          SizedBox(
-            height: 112,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: AppDimensions.space12),
-              itemBuilder: (context, i) =>
-                  _UpcomingItemCard(item: items[i]),
-            ),
-          ),
-      ],
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 116,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: AppDimensions.space12),
+        itemBuilder: (context, i) => _UpcomingItemCard(item: items[i]),
+      ),
     );
   }
 }
@@ -99,15 +88,22 @@ class _UpcomingItemCard extends StatelessWidget {
     return GestureDetector(
       onTap: item.onTap,
       child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(AppDimensions.space12),
+        width: 156,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius:
-              BorderRadius.circular(AppDimensions.radiusMedium),
-          boxShadow: AppDecorations.shadow1,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
           border: Border.all(
-              color: AppColors.surface200, width: AppDimensions.borderThin),
+            color: AppColors.surface100,
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +114,10 @@ class _UpcomingItemCard extends StatelessWidget {
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: AppDecorations.quickActionContainer(color),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Icon(
                     item.icon ?? Icons.event_outlined,
                     size: 14,
@@ -127,19 +126,19 @@ class _UpcomingItemCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.space6,
-                      vertical: AppDimensions.space2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusFull),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                   child: Text(
                     item.dateLabel,
                     style: AppTypography.labelSmall.copyWith(
-                        color: color, fontWeight: FontWeight.w600,
-                        fontSize: 9),
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
+                    ),
                   ),
                 ),
               ],
@@ -149,14 +148,19 @@ class _UpcomingItemCard extends StatelessWidget {
               children: [
                 Text(
                   item.title,
-                  style: AppTypography.titleSmall,
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: AppDimensions.space2),
+                const SizedBox(height: 2),
                 Text(
                   item.subtitle,
-                  style: AppTypography.caption,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.grey500,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

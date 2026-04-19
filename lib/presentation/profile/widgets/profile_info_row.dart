@@ -22,29 +22,38 @@ class ProfileInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.space12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: AppColors.surface100,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              color: AppColors.navyDeep.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, size: AppDimensions.iconSM, color: AppColors.grey600),
+            child: Icon(icon, size: 18, color: AppColors.navyMedium),
           ),
-          const SizedBox(width: AppDimensions.space12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: AppTypography.caption),
+                Text(
+                  label,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.grey400,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   value.isEmpty ? '—' : value,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.grey800,
+                    color: value.isEmpty ? AppColors.grey400 : AppColors.grey800,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
                   ),
                 ),
               ],
@@ -53,11 +62,18 @@ class ProfileInfoRow extends StatelessWidget {
           if (trailing != null)
             trailing!
           else if (onEdit != null)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined,
-                  size: AppDimensions.iconSM, color: AppColors.grey400),
-              onPressed: onEdit,
-              splashRadius: 20,
+            GestureDetector(
+              onTap: onEdit,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.surface100,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.edit_outlined,
+                    size: 15, color: AppColors.grey500),
+              ),
             ),
         ],
       ),

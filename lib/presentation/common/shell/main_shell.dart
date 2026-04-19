@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../providers/notification_provider.dart';
+import '../bottom_nav/nav_item.dart';
 import 'role_shell_config.dart';
 
 final shellTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -25,58 +24,93 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell>
+    with SingleTickerProviderStateMixin {
   late final List<ShellTabItem> _tabs;
-  late int _currentIndex;
-  late final List<GlobalKey<NavigatorState>> _navigatorKeys;
+  late AnimationController _navRevealCtrl;
+  late Animation<Offset> _navSlide;
+  int _lastSyncedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabs = RoleShellConfig.tabsForRole(widget.role);
-    _currentIndex = 0;
-    _navigatorKeys =
-        List.generate(_tabs.length, (_) => GlobalKey<NavigatorState>());
+    _lastSyncedIndex = 0;
 
-    // Load notification count on shell init
+    _navRevealCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _navSlide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _navRevealCtrl, curve: Curves.easeOutCubic),
+    );
+    _navRevealCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationNotifierProvider.notifier).loadUnreadCount();
     });
   }
 
+  @override
+  void dispose() {
+    _navRevealCtrl.dispose();
+    super.dispose();
+  }
+
+  int _currentIndexForLocation(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    return RoleShellConfig.indexForPath(_tabs, location);
+  }
+
   void _onTabTapped(int index, BuildContext context) {
-    if (index == _currentIndex) {
-      _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
+    final currentIndex = _currentIndexForLocation(context);
+    if (index == currentIndex) {
+      context.go(_tabs[index].rootPath);
       return;
     }
 
     HapticFeedback.selectionClick();
 
-    setState(() {
-      _currentIndex = index;
-    });
-
     ref.read(shellTabIndexProvider.notifier).state = index;
-
     context.go(_tabs[index].rootPath);
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = _currentIndexForLocation(context);
+    if (_lastSyncedIndex != currentIndex) {
+      _lastSyncedIndex = currentIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(shellTabIndexProvider.notifier).state = currentIndex;
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      body: widget.child,
-      bottomNavigationBar: _BottomNav(
-        tabs: _tabs,
-        currentIndex: _currentIndex,
-        onTabTapped: (i) => _onTabTapped(i, context),
+      body: SafeArea(
+        bottom: true,
+        top: false,
+        child: widget.child,
+      ),
+      extendBody: true,
+      bottomNavigationBar: SlideTransition(
+        position: _navSlide,
+        child: _PremiumBottomNav(
+          tabs: _tabs,
+          currentIndex: currentIndex,
+          onTabTapped: (i) => _onTabTapped(i, context),
+        ),
       ),
     );
   }
 }
 
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({
+class _PremiumBottomNav extends StatelessWidget {
+  const _PremiumBottomNav({
     required this.tabs,
     required this.currentIndex,
     required this.onTabTapped,
@@ -89,48 +123,43 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.white,
+        border: const Border(
+          top: BorderSide(
+            color: AppColors.surface100,
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x0D0B1F3A),
-            blurRadius: 8,
-            offset: Offset(0, -2),
+            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+            spreadRadius: -2,
           ),
         ],
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: AppDimensions.bottomNavHeight,
-          child: BottomNavigationBar(
-            currentIndex: currentIndex,
-            onTap: onTabTapped,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: AppColors.white,
-            elevation: 0,
-            selectedItemColor: AppColors.navyDeep,
-            unselectedItemColor: AppColors.grey400,
-            selectedFontSize: 10,
-            unselectedFontSize: 10,
-            selectedLabelStyle: AppTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
-            ),
-            unselectedLabelStyle: AppTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.w400,
-              fontSize: 10,
-            ),
-            items: tabs
-                .map(
-                  (tab) => BottomNavigationBarItem(
-                    icon: Icon(tab.icon, size: AppDimensions.iconSM),
-                    activeIcon:
-                        Icon(tab.activeIcon, size: AppDimensions.iconSM),
-                    label: tab.label,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(tabs.length, (i) {
+                return Expanded(
+                  child: NavItem(
+                    icon: tabs[i].icon,
+                    activeIcon: tabs[i].activeIcon,
+                    label: tabs[i].label,
+                    isSelected: i == currentIndex,
+                    onTap: () => onTabTapped(i),
                   ),
-                )
-                .toList(),
+                );
+              }),
+            ),
           ),
         ),
       ),

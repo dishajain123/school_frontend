@@ -50,6 +50,7 @@ import '../../presentation/exam_schedule/screens/exam_schedule_table_screen.dart
 import '../../presentation/results/screens/result_list_screen.dart';
 import '../../presentation/results/screens/enter_results_screen.dart';
 import '../../presentation/results/screens/report_card_screen.dart';
+import '../../presentation/results/screens/principal_results_distribution_screen.dart';
 import '../../presentation/reports/screens/principal_report_details_screen.dart';
 import '../../presentation/documents/screens/document_list_screen.dart';
 import '../../presentation/documents/screens/request_document_screen.dart';
@@ -88,6 +89,8 @@ import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
 import '../../data/models/auth/current_user.dart';
 import '../../providers/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import 'route_names.dart';
 
 class PlaceholderScreen extends StatelessWidget {
@@ -114,16 +117,19 @@ class PlaceholderScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: AppTypography.titleLarge.copyWith(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF2D3748),
+                color: AppColors.grey800,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Coming soon',
-              style: TextStyle(fontSize: 13, color: Color(0xFF637082)),
+              style: AppTypography.bodySmall.copyWith(
+                fontSize: 13,
+                color: AppColors.grey600,
+              ),
             ),
           ],
         ),
@@ -391,6 +397,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.attendance,
             builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              if (studentId != null && studentId.isNotEmpty) {
+                return AttendanceListScreen(studentId: studentId);
+              }
+
               final user = ref.read(currentUserProvider);
               final role = user?.role;
 
@@ -404,7 +415,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 return const ClassSnapshotScreen();
               }
 
-              final studentId = state.uri.queryParameters['student_id'];
               return AttendanceListScreen(studentId: studentId);
             },
             routes: [
@@ -590,7 +600,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: "enter",
-                builder: (_, __) => const EnterResultsScreen(),
+                builder: (context, state) => EnterResultsScreen(
+                  examId: state.uri.queryParameters["exam_id"],
+                  standardId: state.uri.queryParameters["standard_id"],
+                  section: state.uri.queryParameters["section"],
+                ),
               ),
               GoRoute(
                 path: "report-card",
@@ -629,6 +643,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: RouteNames.principalResultsDistribution,
+            builder: (_, __) => const PrincipalResultsDistributionScreen(),
           ),
           GoRoute(
             path: RouteNames.principalReportDetails,
@@ -858,18 +876,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const Icon(Icons.error_outline_rounded,
                 size: 48, color: Color(0xFFEF4444)),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               '404 — Page Not Found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2D3748),
-              ),
+              style: AppTypography.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
               state.error?.toString() ?? 'Unknown error',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF637082)),
+              style: AppTypography.bodySmall.copyWith(
+                fontSize: 13,
+                color: AppColors.grey600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

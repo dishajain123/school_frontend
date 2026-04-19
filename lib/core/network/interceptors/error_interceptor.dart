@@ -29,7 +29,8 @@ class ErrorInterceptor extends Interceptor {
         final target = '${uri.host}:${uri.port}';
         return NetworkException(
           message:
-              'Cannot reach local backend at $target. Start backend server and try again.',
+              'Cannot reach local backend at $target. '
+              'If backend is running, verify API_BASE_URL/device host mapping and try again.',
         );
       }
       return const NetworkException(
@@ -95,7 +96,11 @@ class ErrorInterceptor extends Interceptor {
     }
   }
 
-  bool _isLocalApi(String host) => host == 'localhost' || host == '127.0.0.1';
+  bool _isLocalApi(String host) =>
+      host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '10.0.2.2' ||
+      host == 'host.docker.internal';
 
   /// Extracts the human-readable message from backend error body.
   /// Backend sends: { "error": "...", "detail": "...", "request_id": "..." }

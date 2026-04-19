@@ -22,8 +22,7 @@ class SubmissionListScreen extends ConsumerStatefulWidget {
   const SubmissionListScreen({super.key, required this.assignmentId});
 
   @override
-  ConsumerState<SubmissionListScreen> createState() =>
-      _SubmissionListScreenState();
+  ConsumerState<SubmissionListScreen> createState() => _SubmissionListScreenState();
 }
 
 class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
@@ -42,8 +41,7 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 200) {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
       ref.read(submissionsProvider(widget.assignmentId).notifier).loadMore();
     }
   }
@@ -51,57 +49,55 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
   Future<void> _openSubmissionFile(String url) async {
     final lower = url.toLowerCase();
     final isPdf = lower.contains('.pdf');
-    final isImage = lower.contains('.png') ||
-        lower.contains('.jpg') ||
-        lower.contains('.jpeg') ||
-        lower.contains('.webp');
+    final isImage = lower.contains('.png') || lower.contains('.jpg') ||
+        lower.contains('.jpeg') || lower.contains('.webp');
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.of(ctx).size.height * 0.82,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.surface200,
-                borderRadius: BorderRadius.circular(4),
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 4),
+              child: Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface200,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
             Expanded(
               child: isPdf
                   ? SfPdfViewer.network(url)
                   : isImage
-                      ? InteractiveViewer(
-                          child: Center(child: Image.network(url)),
-                        )
+                      ? InteractiveViewer(child: Center(child: Image.network(url)))
                       : Padding(
-                          padding: const EdgeInsets.all(AppDimensions.space16),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Preview not available for this file type.',
-                                style: AppTypography.titleMedium,
-                              ),
-                              const SizedBox(height: AppDimensions.space12),
+                              Text('Preview not available for this file type.',
+                                  style: AppTypography.titleMedium),
+                              const SizedBox(height: 12),
                               SelectableText(url),
-                              const SizedBox(height: AppDimensions.space12),
+                              const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: () async {
-                                  await Clipboard.setData(
-                                    ClipboardData(text: url),
-                                  );
+                                  await Clipboard.setData(ClipboardData(text: url));
                                   if (!ctx.mounted) return;
                                   ScaffoldMessenger.of(ctx).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('File URL copied'),
-                                    ),
+                                    const SnackBar(content: Text('File URL copied')),
                                   );
                                 },
                                 child: const Text('Copy File URL'),
@@ -118,25 +114,17 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final submissionsAsync =
-        ref.watch(submissionsProvider(widget.assignmentId));
-    final assignmentAsync =
-        ref.watch(assignmentDetailProvider(widget.assignmentId));
-
+    final submissionsAsync = ref.watch(submissionsProvider(widget.assignmentId));
+    final assignmentAsync = ref.watch(assignmentDetailProvider(widget.assignmentId));
     final assignmentTitle = assignmentAsync.valueOrNull?.title ?? 'Submissions';
 
     return AppScaffold(
-      appBar: AppAppBar(
-        title: assignmentTitle,
-        showBack: true,
-      ),
+      appBar: AppAppBar(title: assignmentTitle, showBack: true),
       body: submissionsAsync.when(
         loading: () => _buildShimmer(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
-          onRetry: () => ref
-              .read(submissionsProvider(widget.assignmentId).notifier)
-              .refresh(),
+          onRetry: () => ref.read(submissionsProvider(widget.assignmentId).notifier).refresh(),
         ),
         data: (state) {
           final sections = state.items
@@ -149,7 +137,6 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
 
           return Column(
             children: [
-              // ── Stats header ─────────────────────────────────────────
               _StatsHeader(
                 total: state.total,
                 graded: state.items.where((s) => s.isGraded).length,
@@ -158,70 +145,60 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
               ),
               if (sections.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.space16,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: DropdownButton<String?>(
-                      value: state.sectionFilter,
-                      hint: const Text('Filter by section'),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('All Sections'),
-                        ),
-                        ...sections.map(
-                          (s) => DropdownMenuItem<String?>(
-                            value: s,
-                            child: Text('Section $s'),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) => ref
-                          .read(
-                              submissionsProvider(widget.assignmentId).notifier)
-                          .applySectionFilter(value),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.surface200, width: 1.5),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: state.sectionFilter,
+                        isExpanded: true,
+                        hint: Text('Filter by section',
+                            style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+                        style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.grey400),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('All Sections')),
+                          ...sections.map((s) => DropdownMenuItem<String?>(
+                                value: s, child: Text('Section $s'),
+                              )),
+                        ],
+                        onChanged: (value) => ref
+                            .read(submissionsProvider(widget.assignmentId).notifier)
+                            .applySectionFilter(value),
+                      ),
                     ),
                   ),
                 ),
-              if (sections.isNotEmpty)
-                const SizedBox(height: AppDimensions.space8),
-
-              // ── Submission list ──────────────────────────────────────
               Expanded(
                 child: state.items.isEmpty
-                    ? AppEmptyState(
+                    ? const AppEmptyState(
                         icon: Icons.inbox_outlined,
                         title: 'No submissions yet',
-                        subtitle:
-                            'Students have not submitted this assignment yet.',
+                        subtitle: 'Students have not submitted this assignment yet.',
                       )
                     : RefreshIndicator(
                         onRefresh: () => ref
-                            .read(submissionsProvider(widget.assignmentId)
-                                .notifier)
+                            .read(submissionsProvider(widget.assignmentId).notifier)
                             .refresh(),
                         color: AppColors.navyDeep,
                         child: ListView.builder(
                           controller: _scrollCtrl,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppDimensions.space8),
-                          itemCount: state.items.length +
-                              (state.isLoadingMore ? 1 : 0),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                          itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index == state.items.length) {
                               return const Padding(
-                                padding: EdgeInsets.all(AppDimensions.space16),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.navyDeep),
-                                ),
+                                padding: EdgeInsets.all(16),
+                                child: Center(child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppColors.navyDeep)),
                               );
                             }
-
                             final submission = state.items[index];
                             final isLast = index == state.items.length - 1;
                             final studentLabel = submission.studentName ??
@@ -230,9 +207,7 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                                 'Student ${submission.studentId.substring(0, 8)}';
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.space16,
-                                  vertical: AppDimensions.space4),
+                              padding: const EdgeInsets.only(bottom: 10),
                               child: AppCard(
                                 padding: EdgeInsets.zero,
                                 child: SubmissionTile(
@@ -252,14 +227,9 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
                                       existingFeedback: submission.feedback,
                                       existingApproved: submission.isApproved,
                                     );
-                                    // Provider is updated inside GradeBottomSheet
                                   },
                                   onViewFile: submission.fileUrl != null
-                                      ? () {
-                                          _openSubmissionFile(
-                                            submission.fileUrl!,
-                                          );
-                                        }
+                                      ? () => _openSubmissionFile(submission.fileUrl!)
                                       : null,
                                 ),
                               ),
@@ -279,21 +249,20 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.all(AppDimensions.space16),
-          height: 80,
+          margin: const EdgeInsets.all(16),
+          height: 100,
           decoration: BoxDecoration(
             color: AppColors.surface100,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         Expanded(
           child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 5,
             itemBuilder: (_, __) => Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.space16,
-                  vertical: AppDimensions.space4),
-              child: AppLoading.card(),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppLoading.card(height: 100),
             ),
           ),
         ),
@@ -302,14 +271,7 @@ class _SubmissionListScreenState extends ConsumerState<SubmissionListScreen> {
   }
 }
 
-// ── Stats header widget ───────────────────────────────────────────────────────
-
 class _StatsHeader extends StatelessWidget {
-  final int total;
-  final int graded;
-  final int ungraded;
-  final int late;
-
   const _StatsHeader({
     required this.total,
     required this.graded,
@@ -317,33 +279,37 @@ class _StatsHeader extends StatelessWidget {
     required this.late,
   });
 
+  final int total, graded, ungraded, late;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(AppDimensions.space16),
-      padding: const EdgeInsets.symmetric(
-          vertical: AppDimensions.space16, horizontal: AppDimensions.space20),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.navyDeep,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B1F3A), Color(0xFF1A3A5C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _StatItem(
-              value: total.toString(), label: 'Total', color: AppColors.white),
-          _Divider(),
-          _StatItem(
-              value: graded.toString(),
-              label: 'Graded',
-              color: AppColors.successGreen),
-          _Divider(),
-          _StatItem(
-              value: ungraded.toString(),
-              label: 'Pending',
-              color: AppColors.warningAmber),
-          _Divider(),
-          _StatItem(
-              value: late.toString(), label: 'Late', color: AppColors.errorRed),
+          _StatItem(value: total.toString(), label: 'Total', color: AppColors.white),
+          _VerticalDivider(),
+          _StatItem(value: graded.toString(), label: 'Graded', color: AppColors.successGreen),
+          _VerticalDivider(),
+          _StatItem(value: ungraded.toString(), label: 'Pending', color: AppColors.warningAmber),
+          _VerticalDivider(),
+          _StatItem(value: late.toString(), label: 'Late', color: AppColors.errorRed),
         ],
       ),
     );
@@ -351,41 +317,35 @@ class _StatsHeader extends StatelessWidget {
 }
 
 class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
+  const _StatItem({required this.value, required this.label, required this.color});
+  final String value, label;
   final Color color;
-
-  const _StatItem(
-      {required this.value, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Column(
         children: [
-          Text(
-            value,
-            style: AppTypography.headlineMedium.copyWith(color: color),
-          ),
+          Text(value,
+              style: AppTypography.headlineMedium.copyWith(
+                  color: color, fontWeight: FontWeight.w800, fontSize: 24)),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: AppTypography.labelMedium
-                .copyWith(color: AppColors.white.withOpacity(0.6)),
-          ),
+          Text(label,
+              style: AppTypography.caption.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.55), fontSize: 11)),
         ],
       ),
     );
   }
 }
 
-class _Divider extends StatelessWidget {
+class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 1,
-      height: 32,
-      color: AppColors.white.withOpacity(0.15),
+      height: 36,
+      color: AppColors.white.withValues(alpha: 0.12),
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
 class FeeDueBanner extends StatelessWidget {
@@ -23,35 +22,35 @@ class FeeDueBanner extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16,
-          vertical: AppDimensions.space12,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.goldLight,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          border: Border.all(
-            color: AppColors.goldPrimary.withValues(alpha: 0.4),
-            width: AppDimensions.borderThin,
+          gradient: LinearGradient(
+            colors: [
+              AppColors.goldPrimary.withValues(alpha: 0.15),
+              AppColors.goldPrimary.withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.goldPrimary.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: AppColors.goldPrimary.withValues(alpha: 0.15),
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusSmall),
+                color: AppColors.goldPrimary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.account_balance_wallet_outlined,
-                size: AppDimensions.iconSM,
+                size: 20,
                 color: AppColors.goldDark,
               ),
             ),
-            const SizedBox(width: AppDimensions.space12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,22 +59,34 @@ class FeeDueBanner extends StatelessWidget {
                     'Fee Payment Due',
                     style: AppTypography.titleSmall.copyWith(
                       color: AppColors.goldDark,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    '₹${amountDue.toStringAsFixed(2)} pending',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.goldDark.withValues(alpha: 0.8),
+                    '₹${amountDue.toStringAsFixed(2)} pending — tap to pay',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.goldDark.withValues(alpha: 0.75),
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: AppDimensions.iconXS,
-              color: AppColors.goldDark,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.goldPrimary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Pay',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
             ),
           ],
         ),

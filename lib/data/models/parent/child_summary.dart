@@ -3,8 +3,6 @@ class ChildSummaryModel {
     required this.id,
     required this.admissionNumber,
     required this.isPromoted,
-    required this.createdAt,
-    required this.updatedAt,
     this.section,
     this.rollNumber,
     this.dateOfBirth,
@@ -12,6 +10,8 @@ class ChildSummaryModel {
     this.academicYearId,
     this.standardId,
     this.userId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -24,8 +24,8 @@ class ChildSummaryModel {
   final bool isPromoted;
   final String? academicYearId;
   final String? standardId;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   factory ChildSummaryModel.fromJson(Map<String, dynamic> json) {
     return ChildSummaryModel(
@@ -43,8 +43,12 @@ class ChildSummaryModel {
       isPromoted: json['is_promoted'] as bool? ?? false,
       academicYearId: json['academic_year_id'] as String?,
       standardId: json['standard_id'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -66,7 +70,7 @@ class ChildSummaryModel {
         'is_promoted': isPromoted,
         'academic_year_id': academicYearId,
         'standard_id': standardId,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
+        'created_at': createdAt?.toIso8601String(),
+        'updated_at': updatedAt?.toIso8601String(),
       };
 }

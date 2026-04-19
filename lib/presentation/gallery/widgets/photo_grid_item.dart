@@ -6,7 +6,7 @@ import "../../../core/theme/app_dimensions.dart";
 import "../../../core/theme/app_typography.dart";
 import "../../../data/models/gallery/photo_model.dart";
 
-class PhotoGridItem extends StatelessWidget {
+class PhotoGridItem extends StatefulWidget {
   const PhotoGridItem({
     super.key,
     required this.photo,
@@ -21,88 +21,137 @@ class PhotoGridItem extends StatelessWidget {
   final bool canToggleFeature;
 
   @override
+  State<PhotoGridItem> createState() => _PhotoGridItemState();
+}
+
+class _PhotoGridItemState extends State<PhotoGridItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 120));
+    _scale = Tween<double>(begin: 1.0, end: 0.94)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              CachedNetworkImage(
-                imageUrl: photo.photoUrl ?? "",
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: AppColors.surface100),
-                errorWidget: (_, __, ___) => Container(
-                  color: AppColors.surface100,
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    size: AppDimensions.iconLG,
-                    color: AppColors.grey400,
-                  ),
-                ),
-              ),
-              if (photo.isFeatured)
-                Positioned(
-                  top: AppDimensions.space8,
-                  left: AppDimensions.space8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.space6,
-                      vertical: AppDimensions.space4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.goldPrimary,
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusFull),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: AppDimensions.iconXS,
-                          color: AppColors.white,
-                        ),
-                        const SizedBox(width: AppDimensions.space2),
-                        Text(
-                          "Featured",
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+      onTapDown: widget.onTap != null ? (_) => _ctrl.forward() : null,
+      onTapUp: widget.onTap != null
+          ? (_) {
+              _ctrl.reverse();
+              widget.onTap?.call();
+            }
+          : null,
+      onTapCancel: widget.onTap != null ? () => _ctrl.reverse() : null,
+      onLongPress: widget.onLongPress,
+      child: ScaleTransition(
+        scale: _scale,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: widget.photo.photoUrl ?? "",
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: AppColors.surface100,
+                    child: const Center(
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                     ),
                   ),
+                  errorWidget: (_, __, ___) => Container(
+                    color: AppColors.surface100,
+                    child: const Icon(Icons.broken_image_outlined,
+                        size: 28, color: AppColors.grey400),
+                  ),
                 ),
-              if (canToggleFeature)
-                Positioned(
-                  right: AppDimensions.space8,
-                  bottom: AppDimensions.space8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.space6,
-                      vertical: AppDimensions.space4,
-                    ),
+                if (widget.photo.isFeatured) ...[
+                  Container(
                     decoration: BoxDecoration(
-                      color: AppColors.black.withValues(alpha: 0.45),
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusSmall),
-                    ),
-                    child: Text(
-                      "Hold to feature",
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w600,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.goldPrimary.withValues(alpha: 0.25),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
                   ),
-                ),
-            ],
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.goldPrimary,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.goldPrimary.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 10, color: AppColors.white),
+                          const SizedBox(width: 3),
+                          Text(
+                            "Featured",
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                if (widget.canToggleFeature)
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        "Hold",
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -111,6 +111,31 @@ class StudentRepository {
         .toList();
   }
 
+  Future<List<StudentModel>> bulkUpdatePromotionStatusBySection({
+    required String standardId,
+    required String section,
+    required String promotionStatus,
+    String? academicYearId,
+    List<String> excludedStudentIds = const <String>[],
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.studentSectionPromotionStatus,
+      data: {
+        'standard_id': standardId,
+        'section': section,
+        'promotion_status': promotionStatus,
+        if (academicYearId != null && academicYearId.isNotEmpty)
+          'academic_year_id': academicYearId,
+        'excluded_student_ids': excludedStudentIds,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? const [];
+    return items
+        .map((e) => StudentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<String>> listSections({
     String? standardId,
     String? academicYearId,
@@ -124,6 +149,25 @@ class StudentRepository {
     );
     final data = response.data as List<dynamic>? ?? const [];
     return data.map((e) => e.toString()).toList();
+  }
+
+  Future<String> createSection({
+    required String standardId,
+    required String sectionName,
+    String? academicYearId,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.studentSections,
+      data: {
+        'standard_id': standardId,
+        'section': sectionName,
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+      },
+    );
+    final data = response.data as Map<String, dynamic>? ?? const {};
+    final section = (data['section'] ?? '').toString().trim();
+    if (section.isEmpty) return sectionName.trim();
+    return section;
   }
 }
 

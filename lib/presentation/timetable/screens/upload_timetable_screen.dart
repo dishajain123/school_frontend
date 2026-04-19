@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
-import '../../../core/router/route_names.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/timetable_provider.dart';
@@ -33,11 +33,16 @@ class UploadTimetableScreen extends ConsumerStatefulWidget {
       _UploadTimetableScreenState();
 }
 
-class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
+class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
+    with SingleTickerProviderStateMixin {
   String? _selectedStandardId;
   final _sectionController = TextEditingController();
   PlatformFile? _pickedFile;
   Uint8List? _pickedBytes;
+
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
 
   @override
   void initState() {
@@ -47,11 +52,21 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
     if (initialSection != null && initialSection.isNotEmpty) {
       _sectionController.text = initialSection;
     }
+
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _animCtrl.forward();
   }
 
   @override
   void dispose() {
     _sectionController.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
@@ -63,7 +78,6 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
         withData: true,
       );
       if (result == null || result.files.isEmpty) return;
-
       final picked = result.files.single;
       setState(() {
         _pickedFile = picked;
@@ -106,9 +120,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
     if (success) {
       SnackbarUtils.showSuccess(context, 'Timetable uploaded successfully!');
       final qp = <String, String>{'standard_id': _selectedStandardId!};
-      if (section != null && section.isNotEmpty) {
-        qp['section'] = section;
-      }
+      if (section != null && section.isNotEmpty) qp['section'] = section;
       final uri = Uri(path: RouteNames.timetable, queryParameters: qp);
       context.go(uri.toString());
     } else {
@@ -125,109 +137,183 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
     final standardsAsync = ref.watch(standardsProvider(activeYear?.id));
 
     return AppScaffold(
-      appBar: AppAppBar(
+      appBar: const AppAppBar(
         title: 'Upload Timetable',
         showBack: true,
-        actions: [
-          TextButton(
-            onPressed: uploadState.isUploading ? null : () => context.pop(),
-            child: Text(
-              'Cancel',
-              style: AppTypography.titleSmall.copyWith(color: AppColors.white),
-            ),
+      ),
+      body: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _FormCard(
+                      title: 'Class Selection',
+                      icon: Icons.school_outlined,
+                      children: [
+                        _FieldLabel('Class'),
+                        const SizedBox(height: 8),
+                        standardsAsync.when(
+                          loading: () => AppLoading.card(height: 46),
+                          error: (_, __) => _InlineError('Could not load classes'),
+                          data: (standards) => _StyledDropdown<String>(
+                            hint: 'Select class',
+                            value: _selectedStandardId,
+                            items: standards
+                                .map((s) => DropdownMenuItem(
+                                      value: s.id,
+                                      child: Text(s.name,
+                                          style: AppTypography.bodyMedium
+                                              .copyWith(color: AppColors.grey800)),
+                                    ))
+                                .toList(),
+                            onChanged: (id) =>
+                                setState(() => _selectedStandardId = id),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _FieldLabel('Section (optional)'),
+                        const SizedBox(height: 8),
+                        _SectionInput(
+                          controller: _sectionController,
+                          hint: 'e.g. A, B, C — leave blank for all sections',
+                        ),
+                        const SizedBox(height: 16),
+                        _FieldLabel('Academic Year'),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 13),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.surface100),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.date_range_outlined,
+                                  size: 16, color: AppColors.grey400),
+                              const SizedBox(width: 10),
+                              Text(
+                                activeYear?.name ?? '—',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.grey600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _FormCard(
+                      title: 'File Attachment',
+                      icon: Icons.attach_file_rounded,
+                      children: [
+                        _pickedFile == null
+                            ? _FileTapTarget(onTap: _pickFile)
+                            : _FileAttached(
+                                fileName: _pickedFile!.name,
+                                fileSizeBytes: _pickedFile!.size,
+                                bytesForPreview: _pickedBytes,
+                                onRemove: _clearFile,
+                              ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded,
+                                size: 13, color: AppColors.grey400),
+                            const SizedBox(width: 5),
+                            Text(
+                              'PDF, JPG or PNG · Max 10 MB',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.grey400,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+              _SubmitBar(
+                isUploading: uploadState.isUploading,
+                onSubmit: _submit,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FormCard extends StatelessWidget {
+  const _FormCard({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      body: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Scrollable form ────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppDimensions.space20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Class ─────────────────────────────────────────
-                  _FieldLabel('Class'),
-                  const SizedBox(height: AppDimensions.space8),
-                  standardsAsync.when(
-                    loading: () => AppLoading.card(),
-                    error: (_, __) => _InlineError('Could not load classes'),
-                    data: (standards) => _DropdownField<String>(
-                      hint: 'Select class',
-                      value: _selectedStandardId,
-                      items: standards
-                          .map((s) => DropdownMenuItem(
-                                value: s.id,
-                                child: Text(s.name,
-                                    style: AppTypography.bodyMedium
-                                        .copyWith(color: AppColors.grey800)),
-                              ))
-                          .toList(),
-                      onChanged: (id) =>
-                          setState(() => _selectedStandardId = id),
-                    ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: AppColors.navyDeep.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(9),
                   ),
-
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // ── Section (optional) ─────────────────────────────
-                  _FieldLabel('Section (optional)'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _TextInputField(
-                    controller: _sectionController,
-                    hint: 'e.g. A, B, C  —  leave blank for all sections',
-                    maxLength: 10,
-                    textCapitalization: TextCapitalization.characters,
+                  child: Icon(icon, size: 15, color: AppColors.navyDeep),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navyDeep,
+                    fontSize: 13,
                   ),
-
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // ── Academic Year (read-only) ──────────────────────
-                  _FieldLabel('Academic Year'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _ReadOnlyField(
-                    value: activeYear?.name ?? '—',
-                    icon: Icons.date_range_outlined,
-                  ),
-
-                  const SizedBox(height: AppDimensions.space20),
-
-                  // ── File picker ────────────────────────────────────
-                  _FieldLabel('Timetable File'),
-                  const SizedBox(height: AppDimensions.space8),
-                  _pickedFile == null
-                      ? _FileTapTarget(onTap: _pickFile)
-                      : _FileAttached(
-                          fileName: _pickedFile!.name,
-                          fileSizeBytes: _pickedFile!.size,
-                          bytesForPreview: _pickedBytes,
-                          onRemove: _clearFile,
-                        ),
-                  const SizedBox(height: AppDimensions.space4),
-                  Text(
-                    'PDF, JPG or PNG · Max 10 MB',
-                    style: AppTypography.caption
-                        .copyWith(color: AppColors.grey400),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-
-          // ── Sticky submit ──────────────────────────────────────────
-          Container(
-            color: AppColors.white,
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.space20,
-              AppDimensions.space12,
-              AppDimensions.space20,
-              AppDimensions.space24,
-            ),
-            child: AppButton.primary(
-              label: 'Upload Timetable',
-              onTap: uploadState.isUploading ? null : _submit,
-              isLoading: uploadState.isUploading,
+          Container(height: 1, color: AppColors.surface100),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
             ),
           ),
         ],
@@ -236,21 +322,25 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen> {
   }
 }
 
-// ── Private sub-widgets ───────────────────────────────────────────────────────
-
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.text);
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: AppTypography.labelLarge.copyWith(color: AppColors.grey600),
-      );
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.labelMedium.copyWith(
+        color: AppColors.grey600,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+      ),
+    );
+  }
 }
 
-class _DropdownField<T> extends StatelessWidget {
-  const _DropdownField({
+class _StyledDropdown<T> extends StatelessWidget {
+  const _StyledDropdown({
     required this.hint,
     required this.value,
     required this.items,
@@ -265,22 +355,26 @@ class _DropdownField<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: AppColors.surface50,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.surface200),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: value != null
+              ? AppColors.navyMedium.withValues(alpha: 0.5)
+              : AppColors.surface200,
+          width: value != null ? 1.5 : 1,
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
           hint: Text(hint,
-              style:
-                  AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
           style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.grey400),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppColors.grey400),
           onChanged: onChanged,
           items: items,
         ),
@@ -289,69 +383,32 @@ class _DropdownField<T> extends StatelessWidget {
   }
 }
 
-class _TextInputField extends StatelessWidget {
-  const _TextInputField({
-    required this.controller,
-    required this.hint,
-    this.maxLength,
-    this.textCapitalization = TextCapitalization.none,
-  });
-
+class _SectionInput extends StatelessWidget {
+  const _SectionInput({required this.controller, required this.hint});
   final TextEditingController controller;
   final String hint;
-  final int? maxLength;
-  final TextCapitalization textCapitalization;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.surface50,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.surface200),
       ),
       child: TextField(
         controller: controller,
-        textCapitalization: textCapitalization,
-        maxLength: maxLength,
+        textCapitalization: TextCapitalization.characters,
+        maxLength: 10,
+        style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
           hintStyle:
-              AppTypography.bodyMedium.copyWith(color: AppColors.grey400),
+              AppTypography.bodyMedium.copyWith(color: AppColors.grey400, fontSize: 13),
           counterText: '',
         ),
-        style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
-      ),
-    );
-  }
-}
-
-class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({required this.value, required this.icon});
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
-      decoration: BoxDecoration(
-        color: AppColors.surface100,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.surface200),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.grey400),
-          const SizedBox(width: AppDimensions.space12),
-          Text(value,
-              style:
-                  AppTypography.bodyMedium.copyWith(color: AppColors.grey600)),
-        ],
       ),
     );
   }
@@ -366,22 +423,36 @@ class _FileTapTarget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80,
+        height: 90,
         decoration: BoxDecoration(
-          color: AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          border: Border.all(color: AppColors.navyDeep.withOpacity(0.20)),
+          color: AppColors.navyDeep.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.navyDeep.withValues(alpha: 0.18),
+            style: BorderStyle.solid,
+          ),
         ),
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.attach_file_rounded,
-                size: 20, color: AppColors.navyMedium),
-            const SizedBox(width: AppDimensions.space8),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.navyDeep.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.attach_file_rounded,
+                  size: 18, color: AppColors.navyMedium),
+            ),
+            const SizedBox(height: 8),
             Text(
               'Tap to attach file',
-              style: AppTypography.titleSmall
-                  .copyWith(color: AppColors.navyMedium),
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.navyMedium,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -397,6 +468,7 @@ class _FileAttached extends StatelessWidget {
     required this.bytesForPreview,
     required this.onRemove,
   });
+
   final String fileName;
   final int fileSizeBytes;
   final Uint8List? bytesForPreview;
@@ -420,53 +492,72 @@ class _FileAttached extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.all(AppDimensions.space12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.infoLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.infoBlue.withOpacity(0.30)),
+        color: AppColors.infoBlue.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.infoBlue.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.insert_drive_file_outlined,
-                  size: 18, color: AppColors.infoBlue),
-              const SizedBox(width: AppDimensions.space12),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.infoBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.insert_drive_file_outlined,
+                    size: 18, color: AppColors.infoBlue),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       fileName,
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: AppColors.infoBlue),
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _formatBytes(fileSizeBytes),
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey600),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.grey500,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded,
-                    size: 18, color: AppColors.grey400),
-                onPressed: onRemove,
-                tooltip: 'Remove file',
+              GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      size: 14, color: AppColors.grey500),
+                ),
               ),
             ],
           ),
           if (_isImagePreviewable && bytesForPreview != null) ...[
-            const SizedBox(height: AppDimensions.space8),
+            const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              borderRadius: BorderRadius.circular(10),
               child: Image.memory(
                 bytesForPreview!,
                 height: 140,
@@ -488,21 +579,48 @@ class _InlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.errorLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.errorRed.withOpacity(0.30)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, size: 16, color: AppColors.errorRed),
-          const SizedBox(width: AppDimensions.space8),
-          Text(message,
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
+          const Icon(Icons.error_outline_rounded,
+              size: 15, color: AppColors.errorRed),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.errorRed,
+                fontSize: 12,
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SubmitBar extends StatelessWidget {
+  const _SubmitBar({required this.isUploading, required this.onSubmit});
+  final bool isUploading;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      color: AppColors.white,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
+      child: AppButton.primary(
+        label: 'Upload Timetable',
+        onTap: isUploading ? null : onSubmit,
+        isLoading: isUploading,
+        icon: Icons.upload_file_outlined,
       ),
     );
   }

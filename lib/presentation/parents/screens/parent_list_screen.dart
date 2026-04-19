@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../data/models/parent/parent_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/parent_provider.dart';
@@ -21,12 +21,23 @@ class ParentListScreen extends ConsumerStatefulWidget {
   ConsumerState<ParentListScreen> createState() => _ParentListScreenState();
 }
 
-class _ParentListScreenState extends ConsumerState<ParentListScreen> {
+class _ParentListScreenState extends ConsumerState<ParentListScreen>
+    with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
+
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(parentNotifierProvider.notifier).load(refresh: true);
     });
@@ -36,6 +47,7 @@ class _ParentListScreenState extends ConsumerState<ParentListScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
@@ -60,85 +72,124 @@ class _ParentListScreenState extends ConsumerState<ParentListScreen> {
       appBar: AppAppBar(
         title: 'Parents',
         showBack: true,
-      ),
-      floatingActionButton: _canCreate
-          ? FloatingActionButton(
-              onPressed: () async {
-                final result = await context.push(RouteNames.createParent);
-                if (result == true && mounted) {
-                  ref.read(parentNotifierProvider.notifier).load(refresh: true);
-                }
-              },
-              tooltip: 'Add Parent',
-              child: const Icon(Icons.person_add_outlined),
-            )
-          : null,
-      body: asyncState.when(
-        loading: () => AppLoading.listView(),
-        error: (e, _) => AppErrorState(
-          message: e.toString(),
-          onRetry: () =>
-              ref.read(parentNotifierProvider.notifier).load(refresh: true),
-        ),
-        data: (parentState) {
-          if (parentState.isLoading) return AppLoading.listView();
-
-          if (parentState.error != null && parentState.items.isEmpty) {
-            return AppErrorState(
-              message: parentState.error,
-              onRetry: () =>
-                  ref.read(parentNotifierProvider.notifier).load(refresh: true),
-            );
-          }
-
-          if (parentState.items.isEmpty) {
-            return AppEmptyState(
-              title: 'No parents found',
-              subtitle: 'Add parent accounts to link them with students.',
-              icon: Icons.family_restroom_outlined,
-              actionLabel: _canCreate ? 'Add Parent' : null,
-              onAction: _canCreate
-                  ? () => context.push(RouteNames.createParent)
-                  : null,
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(parentNotifierProvider.notifier).load(refresh: true),
-            child: ListView.separated(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(
-                vertical: AppDimensions.pageVertical,
-              ),
-              itemCount: parentState.items.length +
-                  (parentState.isLoadingMore ? 1 : 0),
-              separatorBuilder: (_, __) => const Divider(
-                height: 1,
-                thickness: 1,
-                color: AppColors.surface100,
-                indent: 68,
-              ),
-              itemBuilder: (context, index) {
-                if (index == parentState.items.length) {
-                  return AppLoading.paginating();
-                }
-                final parent = parentState.items[index];
-                return Container(
-                  color: AppColors.white,
-                  child: ParentTile(
-                    parent: parent,
-                    isLast: index == parentState.items.length - 1,
-                    onTap: () => context.push(
-                      RouteNames.parentDetailPath(parent.id),
-                      extra: parent,
-                    ),
+        actions: [
+          if (_canCreate)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () async {
+                  final result = await context.push(RouteNames.createParent);
+                  if (result == true && mounted) {
+                    ref
+                        .read(parentNotifierProvider.notifier)
+                        .load(refresh: true);
+                  }
+                },
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                );
-              },
+                  child: const Icon(
+                    Icons.person_add_outlined,
+                    color: AppColors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
             ),
-          );
-        },
+        ],
+      ),
+      body: FadeTransition(
+        opacity: _fade,
+        child: asyncState.when(
+          loading: () => _buildShimmer(),
+          error: (e, _) => AppErrorState(
+            message: e.toString(),
+            onRetry: () =>
+                ref.read(parentNotifierProvider.notifier).load(refresh: true),
+          ),
+          data: (parentState) {
+            if (parentState.isLoading) return _buildShimmer();
+
+            if (parentState.error != null && parentState.items.isEmpty) {
+              return AppErrorState(
+                message: parentState.error,
+                onRetry: () => ref
+                    .read(parentNotifierProvider.notifier)
+                    .load(refresh: true),
+              );
+            }
+
+            if (parentState.items.isEmpty) {
+              return AppEmptyState(
+                title: 'No parents found',
+                subtitle: 'Add parent accounts to link them with students.',
+                icon: Icons.family_restroom_outlined,
+                actionLabel: _canCreate ? 'Add Parent' : null,
+                onAction: _canCreate
+                    ? () => context.push(RouteNames.createParent)
+                    : null,
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(parentNotifierProvider.notifier).load(refresh: true),
+              color: AppColors.navyDeep,
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                itemCount: parentState.items.length +
+                    (parentState.isLoadingMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == parentState.items.length) {
+                    return AppLoading.paginating();
+                  }
+                  final parent = parentState.items[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.navyDeep.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ParentTile(
+                        parent: parent,
+                        isLast: index == parentState.items.length - 1,
+                        onTap: () => context.push(
+                          RouteNames.parentDetailPath(parent.id),
+                          extra: parent,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      itemCount: 7,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: AppLoading.card(height: 72),
       ),
     );
   }

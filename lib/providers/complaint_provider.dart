@@ -11,6 +11,8 @@ class ComplaintListState {
     this.isSubmitting = false,
     this.error,
     this.statusFilter,
+    this.categoryFilter,
+    this.complainantTypeFilter,
   });
 
   final List<ComplaintModel> items;
@@ -19,6 +21,8 @@ class ComplaintListState {
   final bool isSubmitting;
   final String? error;
   final ComplaintStatus? statusFilter;
+  final ComplaintCategory? categoryFilter;
+  final ComplainantType? complainantTypeFilter;
 
   ComplaintListState copyWith({
     List<ComplaintModel>? items,
@@ -27,8 +31,12 @@ class ComplaintListState {
     bool? isSubmitting,
     String? error,
     ComplaintStatus? statusFilter,
+    ComplaintCategory? categoryFilter,
+    ComplainantType? complainantTypeFilter,
     bool clearError = false,
     bool clearStatusFilter = false,
+    bool clearCategoryFilter = false,
+    bool clearComplainantTypeFilter = false,
   }) {
     return ComplaintListState(
       items: items ?? this.items,
@@ -38,6 +46,11 @@ class ComplaintListState {
       error: clearError ? null : (error ?? this.error),
       statusFilter:
           clearStatusFilter ? null : (statusFilter ?? this.statusFilter),
+      categoryFilter:
+          clearCategoryFilter ? null : (categoryFilter ?? this.categoryFilter),
+      complainantTypeFilter: clearComplainantTypeFilter
+          ? null
+          : (complainantTypeFilter ?? this.complainantTypeFilter),
     );
   }
 }
@@ -50,22 +63,33 @@ class ComplaintNotifier extends AsyncNotifier<ComplaintListState> {
 
   Future<void> load({
     ComplaintStatus? statusFilter,
+    ComplaintCategory? categoryFilter,
+    ComplainantType? complainantTypeFilter,
     bool refresh = false,
   }) async {
     final current = state.valueOrNull ?? const ComplaintListState();
     final effectiveStatus = statusFilter ?? current.statusFilter;
+    final effectiveCategory = categoryFilter ?? current.categoryFilter;
+    final effectiveComplainantType =
+        complainantTypeFilter ?? current.complainantTypeFilter;
 
     state = AsyncData(
       current.copyWith(
         isLoading: true,
         statusFilter: effectiveStatus,
+        categoryFilter: effectiveCategory,
+        complainantTypeFilter: effectiveComplainantType,
         clearError: true,
       ),
     );
 
     try {
       final repo = ref.read(complaintRepositoryProvider);
-      final result = await repo.list(status: effectiveStatus);
+      final result = await repo.list(
+        status: effectiveStatus,
+        category: effectiveCategory,
+        complainantType: effectiveComplainantType,
+      );
 
       state = AsyncData(
         (state.valueOrNull ?? const ComplaintListState()).copyWith(
@@ -92,6 +116,28 @@ class ComplaintNotifier extends AsyncNotifier<ComplaintListState> {
       current.copyWith(
         statusFilter: status,
         clearStatusFilter: status == null,
+      ),
+    );
+    await load();
+  }
+
+  Future<void> setCategoryFilter(ComplaintCategory? category) async {
+    final current = state.valueOrNull ?? const ComplaintListState();
+    state = AsyncData(
+      current.copyWith(
+        categoryFilter: category,
+        clearCategoryFilter: category == null,
+      ),
+    );
+    await load();
+  }
+
+  Future<void> setComplainantTypeFilter(ComplainantType? type) async {
+    final current = state.valueOrNull ?? const ComplaintListState();
+    state = AsyncData(
+      current.copyWith(
+        complainantTypeFilter: type,
+        clearComplainantTypeFilter: type == null,
       ),
     );
     await load();

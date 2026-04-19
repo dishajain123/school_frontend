@@ -5,22 +5,43 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
-import '../../../core/theme/app_typography.dart';
-import '../../../providers/auth_provider.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/greeting_header.dart';
+import '../widgets/needs_attention_section.dart';
 import '../widgets/quick_action_grid.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/upcoming_card.dart';
 
 class TeacherDashboard extends ConsumerWidget {
   const TeacherDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
+    final statsAsync = ref.watch(teacherDashboardStatsProvider);
+    final stats = statsAsync.valueOrNull;
+    final statsLoading = statsAsync.isLoading && stats == null;
 
-    final quickActions = [
+    final pendingLeaves = stats?.pendingLeaves ?? 0;
+    final overdueAssignments = stats?.overdueAssignments ?? 0;
+
+    final attentionItems = [
+      AttentionItem(
+        label: 'Leave Request${pendingLeaves == 1 ? '' : 's'} Pending',
+        icon: Icons.beach_access_outlined,
+        color: AppColors.warningAmber,
+        count: pendingLeaves,
+        onTap: () => context.go(RouteNames.leaveList),
+      ),
+      AttentionItem(
+        label: 'Overdue Assignment${overdueAssignments == 1 ? '' : 's'}',
+        icon: Icons.assignment_late_outlined,
+        color: AppColors.errorRed,
+        count: overdueAssignments,
+        onTap: () => context.go(RouteNames.assignments),
+      ),
+    ];
+
+    final primaryActions = [
       QuickActionItem(
         icon: Icons.fact_check_outlined,
         label: 'Attendance',
@@ -45,6 +66,9 @@ class TeacherDashboard extends ConsumerWidget {
         color: AppColors.warningAmber,
         onTap: () => context.go(RouteNames.createDiary),
       ),
+    ];
+
+    final secondaryActions = [
       QuickActionItem(
         icon: Icons.beach_access_outlined,
         label: 'Leave',
@@ -69,68 +93,125 @@ class TeacherDashboard extends ConsumerWidget {
         color: AppColors.subjectChem,
         onTap: () => context.go(RouteNames.announcements),
       ),
+      QuickActionItem(
+        icon: Icons.photo_library_outlined,
+        label: 'Gallery',
+        color: AppColors.subjectPhysics,
+        onTap: () => context.go(RouteNames.galleryAlbums),
+      ),
     ];
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
       body: RefreshIndicator(
-        onRefresh: () async {},
+        onRefresh: () async {
+          ref.invalidate(teacherDashboardStatsProvider);
+          await ref.read(teacherDashboardStatsProvider.future);
+        },
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: GreetingHeader(
                 subtitle: 'Have a great teaching day!',
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.pageHorizontal,
+                AppDimensions.space16,
+                AppDimensions.pageHorizontal,
+                100,
+              ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  const SizedBox(height: AppDimensions.space8),
-                  AppSectionHeader(title: 'Quick Actions'),
-                  const SizedBox(height: AppDimensions.space12),
-                  QuickActionGrid(actions: quickActions),
-                  const SizedBox(height: AppDimensions.space24),
-                  AppSectionHeader(
-                    title: 'This Week',
-                    actionLabel: 'See all',
-                    onAction: () => context.go(RouteNames.assignments),
+                  _StatsGrid(
+                    stats: stats,
+                    isLoading: statsLoading,
                   ),
                   const SizedBox(height: AppDimensions.space12),
-                  UpcomingCard(
-                    title: 'Upcoming Deadlines',
-                    items: const [],
-                    onSeeAll: () => context.go(RouteNames.assignments),
+                  NeedsAttentionSection(items: attentionItems),
+                  const SizedBox(height: AppDimensions.space16),
+                  const AppSectionHeader(title: 'Quick Actions'),
+                  const SizedBox(height: AppDimensions.space12),
+                  QuickActionGrid(
+                    actions: [...primaryActions, ...secondaryActions],
+                    primaryCount: 4,
                   ),
-                  const SizedBox(height: AppDimensions.space24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Classes Today',
-                          value: '--',
-                          icon: Icons.class_outlined,
-                          iconColor: AppColors.navyMedium,
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.space12),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Pending Grading',
-                          value: '--',
-                          icon: Icons.grading_outlined,
-                          iconColor: AppColors.warningAmber,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.space40),
                 ]),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({
+    required this.stats,
+    required this.isLoading,
+  });
+  final dynamic stats;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                label: 'My Classes',
+                value: (stats?.myClasses ?? 0).toString(),
+                icon: Icons.class_outlined,
+                iconColor: AppColors.navyMedium,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.attendance),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: StatCard(
+                label: 'Attendance',
+                value:
+                    '${(stats?.teacherAttendancePercentage ?? 0).toStringAsFixed(1)}%',
+                icon: Icons.bar_chart_outlined,
+                iconColor: AppColors.infoBlue,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.attendance),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.space12),
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                label: 'Leave Pending',
+                value: (stats?.pendingLeaves ?? 0).toString(),
+                icon: Icons.beach_access_outlined,
+                iconColor: AppColors.warningAmber,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.leaveList),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: StatCard(
+                label: 'Complaints',
+                value: (stats?.openComplaints ?? 0).toString(),
+                icon: Icons.feedback_outlined,
+                iconColor: AppColors.errorRed,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.complaints),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

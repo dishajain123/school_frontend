@@ -11,10 +11,9 @@ import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/greeting_header.dart';
+import '../widgets/needs_attention_section.dart';
 import '../widgets/quick_action_grid.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/upcoming_card.dart';
-import '../widgets/fee_due_banner.dart';
 
 class StudentDashboard extends ConsumerWidget {
   const StudentDashboard({super.key});
@@ -22,8 +21,45 @@ class StudentDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meAsync = ref.watch(myStudentProfileProvider);
+    final statsAsync = ref.watch(studentDashboardStatsProvider);
+    final stats = statsAsync.valueOrNull;
+    final hasStats = stats != null;
+    final statsLoading =
+        statsAsync.isLoading || (statsAsync.hasError && !hasStats);
 
-    final quickActions = [
+    final attendance = hasStats ? stats.attendancePercentage : 0;
+    final overdueAssignments = hasStats ? stats.overdueAssignments : 0;
+    final openComplaints = hasStats ? stats.openComplaints : 0;
+
+    final attentionItems = [
+      if (hasStats && overdueAssignments > 0)
+        AttentionItem(
+          label:
+              '$overdueAssignments Overdue Assignment${overdueAssignments == 1 ? '' : 's'}',
+          icon: Icons.assignment_late_outlined,
+          color: AppColors.warningAmber,
+          count: overdueAssignments,
+          onTap: () => context.go(RouteNames.assignments),
+        ),
+      if (hasStats && attendance > 0 && attendance < 75)
+        AttentionItem(
+          label: 'Low Attendance (${attendance.toStringAsFixed(1)}%)',
+          icon: Icons.warning_amber_outlined,
+          color: AppColors.errorRed,
+          onTap: () => context.go(RouteNames.attendance),
+        ),
+      if (hasStats && openComplaints > 0)
+        AttentionItem(
+          label:
+              '$openComplaints Open Complaint${openComplaints == 1 ? '' : 's'}',
+          icon: Icons.feedback_outlined,
+          color: AppColors.errorRed,
+          count: openComplaints,
+          onTap: () => context.go(RouteNames.complaints),
+        ),
+    ];
+
+    final primaryActions = [
       QuickActionItem(
         icon: Icons.fact_check_outlined,
         label: 'Attendance',
@@ -48,6 +84,9 @@ class StudentDashboard extends ConsumerWidget {
         color: AppColors.warningAmber,
         onTap: () => context.go(RouteNames.diary),
       ),
+    ];
+
+    final secondaryActions = [
       QuickActionItem(
         icon: Icons.quiz_outlined,
         label: 'Exams',
@@ -72,6 +111,12 @@ class StudentDashboard extends ConsumerWidget {
         color: AppColors.subjectChem,
         onTap: () => context.go(RouteNames.documents),
       ),
+      QuickActionItem(
+        icon: Icons.photo_library_outlined,
+        label: 'Gallery',
+        color: AppColors.subjectPhysics,
+        onTap: () => context.go(RouteNames.galleryAlbums),
+      ),
     ];
 
     return Scaffold(
@@ -80,66 +125,40 @@ class StudentDashboard extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(myStudentProfileProvider);
           ref.invalidate(classTeachersProvider);
+          ref.invalidate(studentDashboardStatsProvider);
+          await ref.read(studentDashboardStatsProvider.future);
         },
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: GreetingHeader(
-                subtitle: 'Keep up the great work!',
-              ),
+            const SliverToBoxAdapter(
+              child: GreetingHeader(subtitle: 'Keep up the great work!'),
             ),
             SliverPadding(
-              padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.pageHorizontal,
+                AppDimensions.space20,
+                AppDimensions.pageHorizontal,
+                100,
+              ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  const SizedBox(height: AppDimensions.space8),
-                  FeeDueBanner(
-                    amountDue: 0,
-                    onTap: () => context.go(RouteNames.feeDashboard),
+                  _StudentStatsGrid(
+                    stats: stats,
+                    isLoading: statsLoading,
                   ),
+                  if (attentionItems.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.space12),
+                    NeedsAttentionSection(items: attentionItems),
+                  ],
                   const SizedBox(height: AppDimensions.space16),
                   _StudentClassTeachersCard(meAsync: meAsync),
-                  const SizedBox(height: AppDimensions.space16),
-                  AppSectionHeader(title: 'Quick Actions'),
+                  const SizedBox(height: AppDimensions.space20),
+                  const AppSectionHeader(title: 'Quick Actions'),
                   const SizedBox(height: AppDimensions.space12),
-                  QuickActionGrid(actions: quickActions),
-                  const SizedBox(height: AppDimensions.space24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Attendance',
-                          value: '--%',
-                          icon: Icons.fact_check_outlined,
-                          iconColor: AppColors.successGreen,
-                          onTap: () => context.go(RouteNames.attendance),
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.space12),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Assignments',
-                          value: '--',
-                          icon: Icons.assignment_outlined,
-                          iconColor: AppColors.infoBlue,
-                          onTap: () => context.go(RouteNames.assignments),
-                        ),
-                      ),
-                    ],
+                  QuickActionGrid(
+                    actions: [...primaryActions, ...secondaryActions],
+                    primaryCount: 4,
                   ),
-                  const SizedBox(height: AppDimensions.space24),
-                  AppSectionHeader(
-                    title: 'Upcoming',
-                    actionLabel: 'See all',
-                    onAction: () => context.go(RouteNames.assignments),
-                  ),
-                  const SizedBox(height: AppDimensions.space12),
-                  UpcomingCard(
-                    title: 'Upcoming Assignments',
-                    items: const [],
-                    onSeeAll: () => context.go(RouteNames.assignments),
-                  ),
-                  const SizedBox(height: AppDimensions.space40),
                 ]),
               ),
             ),
@@ -150,23 +169,91 @@ class StudentDashboard extends ConsumerWidget {
   }
 }
 
+class _StudentStatsGrid extends StatelessWidget {
+  const _StudentStatsGrid({
+    required this.stats,
+    required this.isLoading,
+  });
+  final dynamic stats;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                label: 'Attendance',
+                value:
+                    '${(stats?.attendancePercentage ?? 0).toStringAsFixed(1)}%',
+                icon: Icons.fact_check_outlined,
+                iconColor: AppColors.successGreen,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.attendance),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: StatCard(
+                label: 'Active Tasks',
+                value: (stats?.activeAssignments ?? 0).toString(),
+                icon: Icons.assignment_outlined,
+                iconColor: AppColors.infoBlue,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.assignments),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.space12),
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                label: 'Overdue Tasks',
+                value: (stats?.overdueAssignments ?? 0).toString(),
+                icon: Icons.assignment_late_outlined,
+                iconColor: AppColors.warningAmber,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.assignments),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.space12),
+            Expanded(
+              child: StatCard(
+                label: 'Upcoming Exams',
+                value: (stats?.upcomingExams ?? 0).toString(),
+                icon: Icons.quiz_outlined,
+                iconColor: AppColors.subjectPhysics,
+                isLoading: isLoading,
+                onTap: () => context.go(RouteNames.examSchedules),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _StudentClassTeachersCard extends ConsumerWidget {
   const _StudentClassTeachersCard({required this.meAsync});
-
   final AsyncValue<StudentModel> meAsync;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return meAsync.when(
-      loading: () => _ClassTeachersCardShell(
+      loading: () => _ClassTeachersShell(
         child: Text(
           'Loading class details...',
-          style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
         ),
       ),
-      error: (e, _) => _ClassTeachersCardShell(
+      error: (e, _) => _ClassTeachersShell(
         child: Text(
-          'Could not load class details: $e',
+          'Could not load class details.',
           style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
         ),
       ),
@@ -176,10 +263,10 @@ class _StudentClassTeachersCard extends ConsumerWidget {
         final yearId = me.academicYearId;
 
         if (standardId == null || standardId.isEmpty) {
-          return _ClassTeachersCardShell(
+          return _ClassTeachersShell(
             child: Text(
               'Class not assigned yet.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
             ),
           );
         }
@@ -188,11 +275,11 @@ class _StudentClassTeachersCard extends ConsumerWidget {
         final classLabel = hasSection ? 'Section $section' : 'Section not set';
 
         if (!hasSection) {
-          return _ClassTeachersCardShell(
+          return _ClassTeachersShell(
             sectionLabel: classLabel,
             child: Text(
               'Teachers will appear once section is assigned.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
             ),
           );
         }
@@ -203,18 +290,15 @@ class _StudentClassTeachersCard extends ConsumerWidget {
           academicYearId: yearId,
         )));
 
-        return _ClassTeachersCardShell(
+        return _ClassTeachersShell(
           sectionLabel: classLabel,
           child: teachersAsync.when(
-            loading: () => Text(
-              'Loading assigned teachers...',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
-            ),
-            error: (e, _) => Text(
-              'Could not load teachers: $e',
-              style:
-                  AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
-            ),
+            loading: () => Text('Loading teachers...',
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.grey500)),
+            error: (e, _) => Text('Could not load teachers.',
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.errorRed)),
             data: (rows) => _TeachersList(rows: rows),
           ),
         );
@@ -223,12 +307,8 @@ class _StudentClassTeachersCard extends ConsumerWidget {
   }
 }
 
-class _ClassTeachersCardShell extends StatelessWidget {
-  const _ClassTeachersCardShell({
-    required this.child,
-    this.sectionLabel,
-  });
-
+class _ClassTeachersShell extends StatelessWidget {
+  const _ClassTeachersShell({required this.child, this.sectionLabel});
   final String? sectionLabel;
   final Widget child;
 
@@ -236,30 +316,51 @@ class _ClassTeachersCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppDimensions.space12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.surface200),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        border: Border.all(color: AppColors.surface100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Class Teachers',
-            style: AppTypography.titleSmall.copyWith(
-              color: AppColors.navyDeep,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.navyDeep.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.co_present_outlined,
+                    size: 16, color: AppColors.navyDeep),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Class Teachers',
+                      style: AppTypography.titleSmall.copyWith(
+                          color: AppColors.navyDeep,
+                          fontWeight: FontWeight.w700)),
+                  if (sectionLabel != null)
+                    Text(sectionLabel!,
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.grey500)),
+                ],
+              ),
+            ],
           ),
-          if (sectionLabel != null) ...[
-            const SizedBox(height: AppDimensions.space4),
-            Text(
-              sectionLabel!,
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
-            ),
-          ],
-          const SizedBox(height: AppDimensions.space8),
+          const SizedBox(height: 12),
           child,
         ],
       ),
@@ -269,16 +370,13 @@ class _ClassTeachersCardShell extends StatelessWidget {
 
 class _TeachersList extends StatelessWidget {
   const _TeachersList({required this.rows});
-
   final List<TeacherClassSubjectModel> rows;
 
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return Text(
-        'No teacher assignments found for this class/section.',
-        style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
-      );
+      return Text('No teacher assignments found.',
+          style: AppTypography.bodySmall.copyWith(color: AppColors.grey500));
     }
 
     final byTeacher = <String, List<TeacherClassSubjectModel>>{};
@@ -300,18 +398,33 @@ class _TeachersList extends StatelessWidget {
           ..sort();
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: AppDimensions.space8),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.person_outline,
-                  size: 18, color: AppColors.navyMedium),
-              const SizedBox(width: AppDimensions.space8),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: AppColors.surface100,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_outline,
+                    size: 14, color: AppColors.navyMedium),
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '$teacherCode: ${subjects.join(', ')}',
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.grey800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(teacherCode,
+                        style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.grey800,
+                            fontWeight: FontWeight.w600)),
+                    Text(subjects.join(', '),
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.grey500)),
+                  ],
                 ),
               ),
             ],

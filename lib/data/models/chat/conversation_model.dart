@@ -52,6 +52,7 @@ class ConversationModel {
     required this.createdAt,
     required this.updatedAt,
     this.name,
+    this.displayNameOverride,
     this.standardId,
     this.createdBy,
     this.academicYearId,
@@ -60,6 +61,7 @@ class ConversationModel {
   final String id;
   final ConversationType type;
   final String? name;
+  final String? displayNameOverride;
   final String? standardId;
   final String? createdBy;
   final String? academicYearId;
@@ -72,6 +74,7 @@ class ConversationModel {
       id: json['id'] as String,
       type: ConversationTypeX.fromString(json['type'] as String?),
       name: json['name'] as String?,
+      displayNameOverride: json['display_name'] as String?,
       standardId: json['standard_id'] as String?,
       createdBy: json['created_by'] as String?,
       academicYearId: json['academic_year_id'] as String?,
@@ -83,6 +86,9 @@ class ConversationModel {
 
   /// Derive a sensible display name from available fields.
   String get displayName {
+    if (displayNameOverride != null && displayNameOverride!.isNotEmpty) {
+      return displayNameOverride!;
+    }
     if (name != null && name!.isNotEmpty) return name!;
     return type.label;
   }
@@ -102,6 +108,7 @@ class ConversationModel {
 
   ConversationModel copyWith({
     String? name,
+    String? displayNameOverride,
     String? standardId,
     String? academicYearId,
   }) {
@@ -109,6 +116,7 @@ class ConversationModel {
       id: id,
       type: type,
       name: name ?? this.name,
+      displayNameOverride: displayNameOverride ?? this.displayNameOverride,
       standardId: standardId ?? this.standardId,
       createdBy: createdBy,
       academicYearId: academicYearId ?? this.academicYearId,
@@ -120,8 +128,7 @@ class ConversationModel {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ConversationModel && id == other.id;
+      identical(this, other) || other is ConversationModel && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

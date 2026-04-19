@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/api_constants.dart';
@@ -32,6 +33,34 @@ class DocumentRepository {
     return DocumentModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<DocumentModel> uploadDocument({
+    required String studentId,
+    required DocumentType documentType,
+    required PlatformFile file,
+  }) async {
+    if ((file.bytes == null || file.bytes!.isEmpty) &&
+        (file.path == null || file.path!.isEmpty)) {
+      throw const FormatException('Selected file is empty or unavailable');
+    }
+    final multipartFile = file.bytes != null
+        ? MultipartFile.fromBytes(
+            file.bytes!,
+            filename: file.name,
+          )
+        : await MultipartFile.fromFile(
+            file.path!,
+            filename: file.name,
+          );
+
+    final data = FormData.fromMap({
+      'student_id': studentId,
+      'document_type': documentType.backendValue,
+      'file': multipartFile,
+    });
+    final response = await _dio.post(ApiConstants.documentUpload, data: data);
+    return DocumentModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   // ── GET /documents?student_id={id} ─────────────────────────────────────────
   // Permission: document:generate
   // Backend enforces RBAC — STUDENT sees only own, PARENT sees only child's
@@ -41,8 +70,7 @@ class DocumentRepository {
       ApiConstants.documents,
       queryParameters: {'student_id': studentId},
     );
-    return DocumentListResponse.fromJson(
-        response.data as Map<String, dynamic>);
+    return DocumentListResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
   // ── GET /documents/{document_id}/download ───────────────────────────────────
@@ -56,6 +84,17 @@ class DocumentRepository {
     );
     return DocumentDownloadResponse.fromJson(
         response.data as Map<String, dynamic>);
+  }
+
+  Future<DocumentModel> verifyDocument({
+    required String documentId,
+    required bool approve,
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.documentVerify(documentId),
+      data: {'approve': approve},
+    );
+    return DocumentModel.fromJson(response.data as Map<String, dynamic>);
   }
 }
 

@@ -22,16 +22,24 @@ class NotificationInboxScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationInboxScreenState
-    extends ConsumerState<NotificationInboxScreen> {
+    extends ConsumerState<NotificationInboxScreen>
+    with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(notificationNotifierProvider.notifier)
-          .loadInbox(refresh: true);
+      ref.read(notificationNotifierProvider.notifier).loadInbox(refresh: true);
     });
     _scrollController.addListener(_onScroll);
   }
@@ -39,6 +47,7 @@ class _NotificationInboxScreenState
   @override
   void dispose() {
     _scrollController.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
@@ -59,88 +68,111 @@ class _NotificationInboxScreenState
         title: 'Notifications',
         showBack: true,
         actions: [
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(notificationNotifierProvider.notifier)
-                  .markAllRead();
-            },
-            child: Text(
-              'Mark all read',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.goldPrimary,
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton(
+              onPressed: () =>
+                  ref.read(notificationNotifierProvider.notifier).markAllRead(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.goldPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                      color: AppColors.goldPrimary.withValues(alpha: 0.4)),
+                ),
+                backgroundColor: AppColors.goldPrimary.withValues(alpha: 0.1),
+              ),
+              child: Text(
+                'Mark all read',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.goldPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
               ),
             ),
           ),
         ],
       ),
       body: asyncState.when(
-        loading: () => AppLoading.listView(),
+        loading: () => _buildShimmer(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
           onRetry: () => ref
               .read(notificationNotifierProvider.notifier)
               .loadInbox(refresh: true),
         ),
-        data: (notifState) => Column(
-          children: [
-            NotificationFilterBar(
-              selectedType: notifState.typeFilter,
-              selectedRead: notifState.isReadFilter,
-              onFilterChanged: (type, isRead) {
-                ref
-                    .read(notificationNotifierProvider.notifier)
-                    .setFilter(
-                      typeFilter: type,
-                      isReadFilter: isRead,
-                      clearType: type == null,
-                      clearRead: isRead == null,
-                    );
-              },
-            ),
-            Expanded(
-              child: notifState.isLoading
-                  ? AppLoading.listView()
-                  : notifState.error != null && notifState.items.isEmpty
-                      ? AppErrorState(
-                          message: notifState.error,
-                          onRetry: () => ref
-                              .read(notificationNotifierProvider.notifier)
-                              .loadInbox(refresh: true),
-                        )
-                      : notifState.items.isEmpty
-                          ? const AppEmptyState(
-                              title: 'No notifications',
-                              subtitle:
-                                  'You\'re all caught up! Notifications will appear here.',
-                              icon: Icons.notifications_none_outlined,
-                            )
-                          : RefreshIndicator(
-                              onRefresh: () => ref
-                                  .read(notificationNotifierProvider.notifier)
-                                  .loadInbox(refresh: true),
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: AppDimensions.space8),
-                                itemCount: notifState.items.length +
-                                    (notifState.isLoadingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == notifState.items.length) {
-                                    return AppLoading.paginating();
-                                  }
-                                  final notification =
-                                      notifState.items[index];
-                                  return _buildWithDateHeader(
-                                    notifState.items,
-                                    index,
-                                    notification,
-                                  );
-                                },
+        data: (notifState) => FadeTransition(
+          opacity: _fade,
+          child: Column(
+            children: [
+              NotificationFilterBar(
+                selectedType: notifState.typeFilter,
+                selectedRead: notifState.isReadFilter,
+                onFilterChanged: (type, isRead) {
+                  ref.read(notificationNotifierProvider.notifier).setFilter(
+                        typeFilter: type,
+                        isReadFilter: isRead,
+                        clearType: type == null,
+                        clearRead: isRead == null,
+                      );
+                },
+              ),
+              if (notifState.items.isNotEmpty)
+                _UnreadBadgeRow(
+                  unreadCount: notifState.items
+                      .where((n) => !n.isRead)
+                      .length,
+                ),
+              Container(height: 1, color: AppColors.surface100),
+              Expanded(
+                child: notifState.isLoading
+                    ? _buildShimmer()
+                    : notifState.error != null && notifState.items.isEmpty
+                        ? AppErrorState(
+                            message: notifState.error,
+                            onRetry: () => ref
+                                .read(notificationNotifierProvider.notifier)
+                                .loadInbox(refresh: true),
+                          )
+                        : notifState.items.isEmpty
+                            ? const AppEmptyState(
+                                title: 'All caught up!',
+                                subtitle:
+                                    "You're all caught up! Notifications will appear here.",
+                                icon: Icons.notifications_none_outlined,
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () => ref
+                                    .read(notificationNotifierProvider.notifier)
+                                    .loadInbox(refresh: true),
+                                color: AppColors.navyDeep,
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.only(
+                                      top: 8, bottom: 40),
+                                  itemCount: notifState.items.length +
+                                      (notifState.isLoadingMore ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index == notifState.items.length) {
+                                      return AppLoading.paginating();
+                                    }
+                                    final notification =
+                                        notifState.items[index];
+                                    return _buildWithDateHeader(
+                                      notifState.items,
+                                      index,
+                                      notification,
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -170,33 +202,32 @@ class _NotificationInboxScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showHeader)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.space16,
-              AppDimensions.space16,
-              AppDimensions.space16,
-              AppDimensions.space8,
-            ),
-            child: Text(
-              headerLabel,
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.grey600,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        if (showHeader) _DateHeaderLabel(label: headerLabel),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: NotificationTile(
+            notification: notification,
+            onTap: () {
+              if (!notification.isRead) {
+                ref
+                    .read(notificationNotifierProvider.notifier)
+                    .markRead([notification.id]);
+              }
+            },
           ),
-        NotificationTile(
-          notification: notification,
-          onTap: () {
-            if (!notification.isRead) {
-              ref
-                  .read(notificationNotifierProvider.notifier)
-                  .markRead([notification.id]);
-            }
-          },
         ),
       ],
+    );
+  }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: 7,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: AppLoading.card(height: 80),
+      ),
     );
   }
 
@@ -209,5 +240,84 @@ class _NotificationInboxScreenState
     if (date == today) return 'Today';
     if (date == yesterday) return 'Yesterday';
     return DateFormatter.formatDate(dt);
+  }
+}
+
+class _DateHeaderLabel extends StatelessWidget {
+  const _DateHeaderLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.grey500,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: AppColors.surface200,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnreadBadgeRow extends StatelessWidget {
+  const _UnreadBadgeRow({required this.unreadCount});
+  final int unreadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (unreadCount == 0) return const SizedBox.shrink();
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      child: Row(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.errorRed.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: AppColors.errorRed,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '$unreadCount unread',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.errorRed,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

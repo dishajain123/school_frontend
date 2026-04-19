@@ -3,58 +3,40 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 
-/// Shimmer skeleton loaders for various content shapes.
-///
-/// Always use these instead of full-screen spinners to show loading state.
-///
-/// Usage:
-/// ```dart
-/// AsyncValue<List<Item>> items = ref.watch(itemsProvider);
-/// items.when(
-///   loading: () => AppLoading.listView(),
-///   error: (e, _) => AppErrorState(message: e.toString(), onRetry: ...),
-///   data: (list) => ListView(children: [...]),
-/// );
-/// ```
 class AppLoading extends StatelessWidget {
-  const AppLoading._({
-    super.key,
-    required this.child,
-  });
+  const AppLoading._({super.key, required this.child});
 
-  /// Shimmer wrapper — use named constructors instead.
   static Widget _shimmer({required Widget child}) {
     return Shimmer.fromColors(
-      baseColor: AppColors.surface100,
+      baseColor: const Color(0xFFEEF0F3),
       highlightColor: AppColors.white,
-      period: const Duration(milliseconds: 1500),
+      period: const Duration(milliseconds: 1400),
       child: child,
     );
   }
 
-  // ── Named constructors ─────────────────────────────────────────────────────
-
-  /// A single shimmer tile matching the shape of [AppListTile].
   static Widget listTile({bool withAvatar = true}) {
-    return _shimmer(
-      child: _ShimmerListTile(withAvatar: withAvatar),
-    );
+    return _shimmer(child: _ShimmerListTile(withAvatar: withAvatar));
   }
 
-  /// Multiple stacked shimmer tiles — pass [count] to control how many.
-  static Widget listView({int count = 6, bool withAvatar = true}) {
+  static Widget listView({
+    int count = 6,
+    bool withAvatar = true,
+    double? width,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.pageHorizontal,
         vertical: AppDimensions.pageVertical,
       ),
-      child: Column(
-        children: List.generate(
-          count,
-          (i) => Padding(
-            padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-            child: _shimmer(
-              child: _ShimmerListTile(withAvatar: withAvatar),
+      child: SizedBox(
+        width: width,
+        child: Column(
+          children: List.generate(
+            count,
+            (i) => Padding(
+              padding: const EdgeInsets.only(bottom: AppDimensions.space12),
+              child: _shimmer(child: _ShimmerListTile(withAvatar: withAvatar)),
             ),
           ),
         ),
@@ -62,12 +44,10 @@ class AppLoading extends StatelessWidget {
     );
   }
 
-  /// A shimmer block matching the shape of a card.
   static Widget card({double? height}) {
     return _shimmer(child: _ShimmerCard(height: height));
   }
 
-  /// Two-column grid of shimmer cards.
   static Widget grid({int count = 4}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -88,8 +68,7 @@ class AppLoading extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         ),
@@ -97,27 +76,36 @@ class AppLoading extends StatelessWidget {
     );
   }
 
-  /// Centered adaptive spinner for full-page initial loads.
   static Widget fullPage() {
-    return const Center(
-      child: CircularProgressIndicator.adaptive(
-        valueColor: AlwaysStoppedAnimation<Color>(AppColors.navyMedium),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator.adaptive(
+              strokeWidth: 2.5,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.navyMedium),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Slim shimmer bar — for bottom-of-list "loading more" indicators.
   static Widget paginating() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppDimensions.space16),
       child: Center(
         child: SizedBox(
-          width: 24,
-          height: 24,
+          width: 20,
+          height: 20,
           child: CircularProgressIndicator.adaptive(
             strokeWidth: 2,
             valueColor: AlwaysStoppedAnimation<Color>(
-              AppColors.navyMedium.withValues(alpha: 0.7),
+              AppColors.navyMedium.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -125,12 +113,10 @@ class AppLoading extends StatelessWidget {
     );
   }
 
-  /// Shimmer for a stat card (small rectangular block).
   static Widget statCard() {
-    return _shimmer(child: const _ShimmerCard(height: 90));
+    return _shimmer(child: const _ShimmerCard(height: 96));
   }
 
-  /// Dashboard shimmer (greeting + quick actions + cards).
   static Widget dashboard() {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -140,22 +126,28 @@ class AppLoading extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _shimmer(child: const _ShimmerCard(height: 100)),
-          const SizedBox(height: AppDimensions.space16),
-          _shimmer(child: const _ShimmerCard(height: 56)),
+          _shimmer(child: const _ShimmerCard(height: 110)),
           const SizedBox(height: AppDimensions.space16),
           Row(
             children: [
-              Expanded(child: _shimmer(child: const _ShimmerCard(height: 80))),
+              Expanded(
+                  child: _shimmer(child: const _ShimmerCard(height: 90))),
               const SizedBox(width: AppDimensions.gridGap2col),
-              Expanded(child: _shimmer(child: const _ShimmerCard(height: 80))),
+              Expanded(
+                  child: _shimmer(child: const _ShimmerCard(height: 90))),
+              const SizedBox(width: AppDimensions.gridGap2col),
+              Expanded(
+                  child: _shimmer(child: const _ShimmerCard(height: 90))),
             ],
           ),
+          const SizedBox(height: AppDimensions.space16),
+          _shimmer(child: const _ShimmerCard(height: 56)),
           const SizedBox(height: AppDimensions.space16),
           ...List.generate(
             3,
             (i) => Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.space8),
+              padding:
+                  const EdgeInsets.only(bottom: AppDimensions.space12),
               child: _shimmer(child: const _ShimmerListTile()),
             ),
           ),
@@ -170,58 +162,50 @@ class AppLoading extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-// ── Internal shimmer shape widgets ─────────────────────────────────────────
-
 class _ShimmerListTile extends StatelessWidget {
   const _ShimmerListTile({this.withAvatar = true});
-
   final bool withAvatar;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space16,
-        vertical: AppDimensions.space12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           if (withAvatar) ...[
             Container(
-              width: AppDimensions.avatarMd,
-              height: AppDimensions.avatarMd,
+              width: 44,
+              height: 44,
               decoration: const BoxDecoration(
-                color: AppColors.surface200,
+                color: Color(0xFFEEF0F3),
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: AppDimensions.space12),
+            const SizedBox(width: 12),
           ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 14,
+                  height: 13,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: AppColors.surface200,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusSmall),
+                    color: const Color(0xFFEEF0F3),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
-                const SizedBox(height: AppDimensions.space8),
+                const SizedBox(height: 8),
                 Container(
-                  height: 12,
-                  width: 160,
+                  height: 11,
+                  width: 140,
                   decoration: BoxDecoration(
-                    color: AppColors.surface200,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusSmall),
+                    color: const Color(0xFFEEF0F3),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
               ],
@@ -235,7 +219,6 @@ class _ShimmerListTile extends StatelessWidget {
 
 class _ShimmerCard extends StatelessWidget {
   const _ShimmerCard({this.height = 120});
-
   final double? height;
 
   @override
@@ -245,7 +228,7 @@ class _ShimmerCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        borderRadius: BorderRadius.circular(14),
       ),
     );
   }

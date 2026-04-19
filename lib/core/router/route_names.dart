@@ -62,6 +62,7 @@ class RouteNames {
   static const String createExamSeries = '/exam-schedule/create';
 
   static const String results = '/results';
+  static const String principalResultsDistribution = '/results/distribution';
   static const String enterResults = '/results/enter';
   static const String reportCard = '/results/report-card';
   static const String principalReportDetails = '/reports/details';

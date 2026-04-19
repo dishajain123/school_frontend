@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Bold section label row with an optional "See all" / action link.
-///
-/// Used inside scrollable screens to visually separate content sections:
-/// ```dart
-/// AppSectionHeader(
-///   title: 'Recent Announcements',
-///   actionLabel: 'See all',
-///   onAction: () => context.push(RouteNames.announcements),
-/// )
-/// ```
 class AppSectionHeader extends StatelessWidget {
   const AppSectionHeader({
     super.key,
@@ -30,11 +21,7 @@ class AppSectionHeader extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final EdgeInsetsGeometry? padding;
-
-  /// When true, adds a gold left-border accent strip to the title.
   final bool showAccent;
-
-  /// Completely custom trailing widget (overrides [actionLabel]).
   final Widget? trailing;
 
   @override
@@ -45,14 +32,19 @@ class AppSectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: AppTypography.headlineSmall,
+          style: AppTypography.headlineSmall.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            letterSpacing: -0.2,
+            color: AppColors.grey800,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: AppDimensions.space2),
+          const SizedBox(height: 2),
           Text(
             subtitle!,
-            style: AppTypography.bodySmall,
+            style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
           ),
         ],
       ],
@@ -67,8 +59,7 @@ class AppSectionHeader extends StatelessWidget {
               width: 3,
               decoration: BoxDecoration(
                 color: AppColors.goldPrimary,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusFull),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
             const SizedBox(width: AppDimensions.space8),
@@ -91,23 +82,31 @@ class AppSectionHeader extends StatelessWidget {
               onTap: onAction,
               child: Padding(
                 padding: const EdgeInsets.only(left: AppDimensions.space8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      actionLabel!,
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.navyMedium,
-                        fontWeight: FontWeight.w600,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.navyDeep.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        actionLabel!,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.navyMedium,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppDimensions.space2),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: AppDimensions.iconXS - 2,
-                      color: AppColors.navyMedium,
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 10,
+                        color: AppColors.navyMedium,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

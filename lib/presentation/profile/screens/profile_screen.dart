@@ -74,7 +74,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(title: 'Profile'),
+      appBar: const AppAppBar(title: 'Profile', showBack: true),
       body: userAsync.when(
         loading: () => AppLoading.listView(count: 5),
         error: (e, _) => Center(

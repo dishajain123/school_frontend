@@ -22,8 +22,7 @@ class AssignmentListScreen extends ConsumerStatefulWidget {
   const AssignmentListScreen({super.key});
 
   @override
-  ConsumerState<AssignmentListScreen> createState() =>
-      _AssignmentListScreenState();
+  ConsumerState<AssignmentListScreen> createState() => _AssignmentListScreenState();
 }
 
 class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
@@ -31,8 +30,6 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   final _scrollCtrl = ScrollController();
   late TabController _tabController;
   Timer? _autoRefreshTimer;
-
-  // Active filter: null = all, true = active, false = inactive, 'overdue' = overdue
   String _activeFilter = 'all';
 
   @override
@@ -45,9 +42,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
       const Duration(minutes: 1),
       (_) => ref.read(assignmentsProvider.notifier).refresh(),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyTabFilter(0);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _applyTabFilter(0));
   }
 
   @override
@@ -67,8 +62,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 200) {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
       ref.read(assignmentsProvider.notifier).loadMore();
     }
   }
@@ -89,8 +83,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     final currentUser = ref.watch(currentUserProvider);
     final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
     final canGrade = currentUser?.hasPermission('submission:grade') ?? false;
-    final canViewSubmissions =
-        canGrade || currentUser?.role == UserRole.teacher;
+    final canViewSubmissions = canGrade || currentUser?.role == UserRole.teacher;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -99,27 +92,22 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           controller: _tabController,
           onTap: _applyTabFilter,
           labelColor: AppColors.white,
-          unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
+          unselectedLabelColor: AppColors.white.withValues(alpha: 0.55),
           indicatorColor: AppColors.goldPrimary,
-          indicatorWeight: 2,
-          labelStyle: AppTypography.labelLarge,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent,
+          labelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w600),
           unselectedLabelStyle: AppTypography.labelMedium,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Active'),
-            Tab(text: 'Overdue'),
-          ],
+          tabs: const [Tab(text: 'All'), Tab(text: 'Active'), Tab(text: 'Overdue')],
         ),
       ),
       floatingActionButton: canCreate
-          ? FloatingActionButton(
-              onPressed: () async {
+          ? _PremiumFab(
+              onTap: () async {
                 await context.push(RouteNames.createAssignment);
                 if (!mounted) return;
                 await ref.read(assignmentsProvider.notifier).refresh();
               },
-              backgroundColor: AppColors.navyDeep,
-              child: const Icon(Icons.add, color: AppColors.white),
             )
           : null,
       body: assignmentsState.when(
@@ -130,12 +118,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
         ),
         data: (state) {
           final filtered = switch (_activeFilter) {
-            'active' => state.items
-                .where((a) => a.isActive && !a.isOverdue)
-                .toList(growable: false),
-            'overdue' => state.items
-                .where((a) => a.isActive && a.isOverdue)
-                .toList(growable: false),
+            'active' => state.items.where((a) => a.isActive && !a.isOverdue).toList(),
+            'overdue' => state.items.where((a) => a.isActive && a.isOverdue).toList(),
             _ => state.items,
           };
 
@@ -165,28 +149,24 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
             child: ListView.builder(
               controller: _scrollCtrl,
               physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 8, bottom: 100),
               itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == filtered.length) {
                   return const Padding(
-                    padding: EdgeInsets.all(AppDimensions.space16),
+                    padding: EdgeInsets.all(16),
                     child: Center(
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.navyDeep),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navyDeep),
                     ),
                   );
                 }
                 final assignment = filtered[index];
                 return AssignmentCard(
                   assignment: assignment,
-                  onTap: () => context.push(
-                    RouteNames.assignmentDetailPath(assignment.id),
-                  ),
+                  onTap: () => context.push(RouteNames.assignmentDetailPath(assignment.id)),
                   showSubmissionAction: canViewSubmissions,
                   onViewSubmissions: canViewSubmissions
-                      ? () => context.push(
-                            RouteNames.submissionListPath(assignment.id),
-                          )
+                      ? () => context.push(RouteNames.submissionListPath(assignment.id))
                       : null,
                 );
               },
@@ -199,11 +179,69 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
 
   Widget _buildShimmer() {
     return ListView.builder(
+      padding: const EdgeInsets.only(top: 8),
       itemCount: 6,
       itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space16, vertical: AppDimensions.space6),
-        child: AppLoading.card(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: AppLoading.card(height: 120),
+      ),
+    );
+  }
+}
+
+class _PremiumFab extends StatefulWidget {
+  const _PremiumFab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_PremiumFab> createState() => _PremiumFabState();
+}
+
+class _PremiumFabState extends State<_PremiumFab>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E3A5F), Color(0xFF0F2340)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navyDeep.withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.add_rounded, color: AppColors.white, size: 24),
+        ),
       ),
     );
   }

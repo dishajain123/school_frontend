@@ -2,20 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/assignment/assignment_model.dart';
 
-class AssignmentCard extends StatelessWidget {
+class AssignmentCard extends StatefulWidget {
   final AssignmentModel assignment;
   final String? subjectName;
   final String? standardName;
   final VoidCallback? onTap;
   final VoidCallback? onViewSubmissions;
   final bool showSubmissionAction;
-
-  /// Optional: the student's submission status for this card
-  final _SubmissionStatus? submissionStatus;
+  final SubmissionStatus? submissionStatus;
 
   const AssignmentCard({
     super.key,
@@ -29,29 +26,49 @@ class AssignmentCard extends StatelessWidget {
   });
 
   @override
+  State<AssignmentCard> createState() => _AssignmentCardState();
+}
+
+class _AssignmentCardState extends State<AssignmentCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 110));
+    _scale = Tween<double>(begin: 1.0, end: 0.985)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final subjectColor = _subjectColor(subjectName);
+    final subjectColor = _subjectColor(widget.subjectName);
     final statusInfo = _resolveStatus();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space6),
-      child: Material(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        elevation: 0,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.forward(),
+        onTapUp: (_) { _ctrl.reverse(); widget.onTap?.call(); },
+        onTapCancel: () => _ctrl.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-              border: Border.all(color: AppColors.surface200),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.navyDeep.withOpacity(0.04),
-                  blurRadius: 8,
+                  color: AppColors.navyDeep.withValues(alpha: 0.06),
+                  blurRadius: 12,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -60,144 +77,136 @@ class AssignmentCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Subject color stripe
                   Container(
                     width: 4,
                     decoration: BoxDecoration(
                       color: subjectColor,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(AppDimensions.radiusMedium),
-                        bottomLeft: Radius.circular(AppDimensions.radiusMedium),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
                       ),
                     ),
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.all(AppDimensions.space12),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Top row: title + status chip
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: Text(
-                                  assignment.title,
+                                  widget.assignment.title,
                                   style: AppTypography.titleMedium.copyWith(
                                     color: AppColors.grey800,
                                     fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: AppDimensions.space8),
+                              const SizedBox(width: 8),
                               _StatusChip(info: statusInfo),
                             ],
                           ),
-
-                          const SizedBox(height: AppDimensions.space6),
-
-                          // Subject + standard row
+                          const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.book_outlined,
-                                  size: 13, color: AppColors.grey400),
-                              const SizedBox(width: 4),
-                              Text(
-                                subjectName ?? '—',
-                                style: AppTypography.bodySmall
-                                    .copyWith(color: AppColors.grey600),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: subjectColor,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                              if (standardName != null) ...[
-                                const SizedBox(width: AppDimensions.space8),
-                                Container(
-                                  width: 3,
-                                  height: 3,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.grey400,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: AppDimensions.space8),
-                                Text(
-                                  standardName!,
-                                  style: AppTypography.bodySmall
-                                      .copyWith(color: AppColors.grey600),
-                                ),
+                              const SizedBox(width: 6),
+                              Text(
+                                widget.subjectName ?? '—',
+                                style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.grey500, fontSize: 12),
+                              ),
+                              if (widget.standardName != null) ...[
+                                const SizedBox(width: 6),
+                                Text('·', style: AppTypography.caption.copyWith(color: AppColors.grey400)),
+                                const SizedBox(width: 6),
+                                Text(widget.standardName!,
+                                    style: AppTypography.bodySmall.copyWith(
+                                        color: AppColors.grey500, fontSize: 12)),
                               ],
                             ],
                           ),
-
-                          const SizedBox(height: AppDimensions.space12),
-
-                          // Due date row
+                          const SizedBox(height: 10),
                           Row(
                             children: [
                               Icon(
-                                Icons.calendar_today_outlined,
-                                size: 13,
-                                color: assignment.isOverdue
+                                Icons.schedule_rounded,
+                                size: 12,
+                                color: widget.assignment.isOverdue
                                     ? AppColors.errorRed
                                     : AppColors.grey400,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 5),
                               Text(
-                                'Due ${DateFormatter.formatDate(assignment.dueDate)}',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: assignment.isOverdue
+                                'Due ${DateFormatter.formatDate(widget.assignment.dueDate)}',
+                                style: AppTypography.caption.copyWith(
+                                  color: widget.assignment.isOverdue
                                       ? AppColors.errorRed
-                                      : AppColors.grey600,
-                                  fontWeight: assignment.isOverdue
-                                      ? FontWeight.w500
+                                      : AppColors.grey500,
+                                  fontWeight: widget.assignment.isOverdue
+                                      ? FontWeight.w600
                                       : FontWeight.w400,
                                 ),
                               ),
-                              if (assignment.isDueToday) ...[
-                                const SizedBox(width: AppDimensions.space6),
+                              if (widget.assignment.isDueToday) ...[
+                                const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: AppColors.warningLight,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Text(
-                                    'TODAY',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: AppColors.warningAmber,
-                                      fontSize: 10,
-                                    ),
-                                  ),
+                                  child: Text('TODAY',
+                                      style: AppTypography.labelSmall.copyWith(
+                                          color: AppColors.warningAmber,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700)),
                                 ),
                               ],
                               const Spacer(),
-                              if (assignment.fileKey != null)
-                                Icon(Icons.attach_file,
-                                    size: 14, color: AppColors.grey400),
+                              if (widget.assignment.fileKey != null)
+                                const Icon(
+                                  Icons.attach_file_rounded,
+                                  size: 13,
+                                  color: AppColors.grey400,
+                                ),
                             ],
                           ),
-                          if (showSubmissionAction &&
-                              onViewSubmissions != null) ...[
-                            const SizedBox(height: AppDimensions.space12),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton.icon(
-                                onPressed: onViewSubmissions,
-                                icon: const Icon(Icons.fact_check_outlined,
-                                    size: 16),
-                                label: const Text('View Submissions'),
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size(0, 34),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  side: const BorderSide(
-                                      color: AppColors.navyLight),
-                                  foregroundColor: AppColors.navyDeep,
-                                  textStyle: AppTypography.labelMedium,
+                          if (widget.showSubmissionAction && widget.onViewSubmissions != null) ...[
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: widget.onViewSubmissions,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.navyDeep.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.fact_check_outlined,
+                                        size: 13, color: AppColors.navyMedium),
+                                    const SizedBox(width: 5),
+                                    Text('View Submissions',
+                                        style: AppTypography.labelSmall.copyWith(
+                                            color: AppColors.navyMedium,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11)),
+                                  ],
                                 ),
                               ),
                             ),
@@ -216,15 +225,23 @@ class AssignmentCard extends StatelessWidget {
   }
 
   _StatusInfo _resolveStatus() {
-    if (submissionStatus != null) {
-      switch (submissionStatus!) {
-        case _SubmissionStatus.graded:
-          return _StatusInfo('Graded', AppColors.successGreen,
-              AppColors.successLight, Icons.check_circle_outline);
-        case _SubmissionStatus.submitted:
-          return _StatusInfo('Submitted', AppColors.infoBlue,
-              AppColors.infoLight, Icons.upload_outlined);
-        case _SubmissionStatus.pending:
+    if (widget.submissionStatus != null) {
+      switch (widget.submissionStatus!) {
+        case SubmissionStatus.graded:
+          return const _StatusInfo(
+            'Graded',
+            AppColors.successGreen,
+            AppColors.successLight,
+            Icons.check_circle_outline,
+          );
+        case SubmissionStatus.submitted:
+          return const _StatusInfo(
+            'Submitted',
+            AppColors.infoBlue,
+            AppColors.infoLight,
+            Icons.upload_outlined,
+          );
+        case SubmissionStatus.pending:
           return _resolveDefaultStatus();
       }
     }
@@ -232,48 +249,57 @@ class AssignmentCard extends StatelessWidget {
   }
 
   _StatusInfo _resolveDefaultStatus() {
-    if (!assignment.isActive) {
-      return _StatusInfo('Closed', AppColors.grey400, AppColors.surface100,
-          Icons.lock_outline);
+    if (!widget.assignment.isActive) {
+      return const _StatusInfo(
+        'Closed',
+        AppColors.grey400,
+        AppColors.surface100,
+        Icons.lock_outline,
+      );
     }
-    if (assignment.isOverdue) {
-      return _StatusInfo('Overdue', AppColors.errorRed, AppColors.errorLight,
-          Icons.warning_amber_outlined);
+    if (widget.assignment.isOverdue) {
+      return const _StatusInfo(
+        'Overdue',
+        AppColors.errorRed,
+        AppColors.errorLight,
+        Icons.warning_amber_outlined,
+      );
     }
-    return _StatusInfo(
-        'Active', AppColors.successGreen, AppColors.successLight, null);
+    return const _StatusInfo(
+      'Active',
+      AppColors.successGreen,
+      AppColors.successLight,
+      null,
+    );
   }
 
   static Color _subjectColor(String? subject) {
     if (subject == null) return AppColors.subjectDefault;
     final lower = subject.toLowerCase();
     if (lower.contains('math')) return AppColors.subjectMath;
-    if (lower.contains('science') || lower.contains('bio'))
-      return AppColors.subjectScience;
+    if (lower.contains('science') || lower.contains('bio')) return AppColors.subjectScience;
     if (lower.contains('english')) return AppColors.subjectEnglish;
     if (lower.contains('hindi')) return AppColors.subjectHindi;
-    if (lower.contains('history') || lower.contains('social'))
-      return AppColors.subjectHistory;
+    if (lower.contains('history') || lower.contains('social')) return AppColors.subjectHistory;
     if (lower.contains('physics')) return AppColors.subjectPhysics;
     if (lower.contains('chem')) return AppColors.subjectChem;
     return AppColors.subjectDefault;
   }
 }
 
-enum _SubmissionStatus { graded, submitted, pending }
+enum SubmissionStatus { graded, submitted, pending }
 
 class _StatusInfo {
   final String label;
   final Color color;
   final Color bg;
   final IconData? icon;
-
   const _StatusInfo(this.label, this.color, this.bg, this.icon);
 }
 
 class _StatusChip extends StatelessWidget {
-  final _StatusInfo info;
   const _StatusChip({required this.info});
+  final _StatusInfo info;
 
   @override
   Widget build(BuildContext context) {
@@ -287,29 +313,14 @@ class _StatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (info.icon != null) ...[
-            Icon(info.icon, size: 11, color: info.color),
+            Icon(info.icon, size: 10, color: info.color),
             const SizedBox(width: 3),
           ],
-          Text(
-            info.label,
-            style: AppTypography.labelMedium.copyWith(
-              color: info.color,
-              fontSize: 11,
-            ),
-          ),
+          Text(info.label,
+              style: AppTypography.labelSmall.copyWith(
+                  color: info.color, fontWeight: FontWeight.w700, fontSize: 10)),
         ],
       ),
     );
   }
-}
-
-extension _AppColorsAssignment on AppColors {
-  static const Color subjectMath = Color(0xFF6366F1);
-  static const Color subjectScience = Color(0xFF10B981);
-  static const Color subjectEnglish = Color(0xFF3B82F6);
-  static const Color subjectHindi = Color(0xFFEC4899);
-  static const Color subjectHistory = Color(0xFFF97316);
-  static const Color subjectPhysics = Color(0xFF8B5CF6);
-  static const Color subjectChem = Color(0xFF14B8A6);
-  static const Color subjectDefault = Color(0xFF64748B);
 }

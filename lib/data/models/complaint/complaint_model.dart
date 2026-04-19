@@ -224,6 +224,58 @@ extension FeedbackTypeX on FeedbackType {
   }
 }
 
+enum ComplainantType {
+  student,
+  parent,
+  teacher,
+}
+
+extension ComplainantTypeX on ComplainantType {
+  String get backendValue {
+    switch (this) {
+      case ComplainantType.student:
+        return 'STUDENT';
+      case ComplainantType.parent:
+        return 'PARENT';
+      case ComplainantType.teacher:
+        return 'TEACHER';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case ComplainantType.student:
+        return 'Students';
+      case ComplainantType.parent:
+        return 'Parents';
+      case ComplainantType.teacher:
+        return 'Teachers';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case ComplainantType.student:
+        return Icons.school_outlined;
+      case ComplainantType.parent:
+        return Icons.family_restroom_outlined;
+      case ComplainantType.teacher:
+        return Icons.co_present_outlined;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case ComplainantType.student:
+        return AppColors.subjectMath;
+      case ComplainantType.parent:
+        return AppColors.successGreen;
+      case ComplainantType.teacher:
+        return AppColors.infoBlue;
+    }
+  }
+}
+
 class ComplaintModel {
   const ComplaintModel({
     required this.id,
@@ -234,6 +286,8 @@ class ComplaintModel {
     required this.isAnonymous,
     required this.createdAt,
     this.submittedBy,
+    this.submittedByName,
+    this.submittedByRole,
     this.attachmentKey,
     this.attachmentUrl,
     this.resolvedBy,
@@ -244,6 +298,8 @@ class ComplaintModel {
   final String id;
   final String schoolId;
   final String? submittedBy;
+  final String? submittedByName;
+  final String? submittedByRole;
   final ComplaintCategory category;
   final String description;
   final String? attachmentKey;
@@ -262,6 +318,8 @@ class ComplaintModel {
       id: json['id'] as String,
       schoolId: json['school_id'] as String,
       submittedBy: json['submitted_by'] as String?,
+      submittedByName: json['submitted_by_name'] as String?,
+      submittedByRole: json['submitted_by_role'] as String?,
       category: ComplaintCategoryX.fromString(json['category'] as String?),
       description: json['description'] as String? ?? '',
       attachmentKey: json['attachment_key'] as String?,

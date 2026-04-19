@@ -13,40 +13,72 @@ class LoginScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Listen for auth error to show snackbar (GoRouter handles navigation on success)
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next.status == AuthStatus.error && next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.error!),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    color: AppColors.white, size: 16),
+                const SizedBox(width: 8),
+                Expanded(child: Text(next.error!)),
+              ],
+            ),
             backgroundColor: AppColors.errorRed,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
-        // Clear the error so it doesn't persist
         ref.read(authNotifierProvider.notifier).clearError();
       }
     });
 
     return Scaffold(
-      backgroundColor: AppColors.surface50,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
+      backgroundColor: AppColors.navyDeep,
+      body: Stack(
+        children: [
+          Positioned(
+            top: -60,
+            right: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.white.withValues(alpha: 0.03),
+              ),
+            ),
+          ),
+          Column(
             children: [
               const _LoginHeader(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimensions.pageHorizontal,
-                  AppDimensions.space24,
-                  AppDimensions.pageHorizontal,
-                  AppDimensions.space32,
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface50,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppDimensions.pageHorizontal,
+                      AppDimensions.space32,
+                      AppDimensions.pageHorizontal,
+                      AppDimensions.space32,
+                    ),
+                    child: const LoginForm(),
+                  ),
                 ),
-                child: const LoginForm(),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -57,42 +89,56 @@ class _LoginHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.pageHorizontal,
-        AppDimensions.space48,
-        AppDimensions.pageHorizontal,
-        AppDimensions.space32,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.navyDeep, AppColors.navyMedium],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(AppDimensions.radiusXL),
-          bottomRight: Radius.circular(AppDimensions.radiusXL),
-        ),
-      ),
+    final top = MediaQuery.of(context).padding.top;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimensions.pageHorizontal, top + 32, AppDimensions.pageHorizontal, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SchoolLogo(size: 56, borderRadius: 14, imagePadding: 7),
-          const SizedBox(height: AppDimensions.space24),
+          Row(
+            children: [
+              const SchoolLogo(size: 44, borderRadius: 12, imagePadding: 6),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'EduNest',
+                    style: AppTypography.titleLargeOnDark.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    'Smart School Platform',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.55),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
           Text(
             'Welcome back',
             style: AppTypography.headlineLarge.copyWith(
               color: AppColors.white,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              fontSize: 28,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: AppDimensions.space8),
+          const SizedBox(height: 6),
           Text(
-            'Sign in to your school account',
+            'Sign in to continue to your campus',
             style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.white.withValues(alpha: 0.7),
+              color: AppColors.white.withValues(alpha: 0.6),
+              fontSize: 14,
             ),
           ),
         ],

@@ -2,15 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// A row of 6 individual digit boxes for OTP entry.
-///
-/// - Auto-advances focus after each digit.
-/// - Backspace moves focus to the previous box.
-/// - Fires [onCompleted] when all 6 digits are entered.
-/// - Fires [onChanged] on every keystroke.
 class OtpInput extends StatefulWidget {
   const OtpInput({
     super.key,
@@ -34,8 +27,8 @@ class _OtpInputState extends State<OtpInput> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-        widget.length, (_) => TextEditingController());
+    _controllers =
+        List.generate(widget.length, (_) => TextEditingController());
     _focusNodes = List.generate(widget.length, (_) => FocusNode());
 
     for (final node in _focusNodes) {
@@ -54,25 +47,19 @@ class _OtpInputState extends State<OtpInput> {
     super.dispose();
   }
 
-  String get _currentOtp =>
-      _controllers.map((c) => c.text).join();
+  String get _currentOtp => _controllers.map((c) => c.text).join();
 
   void _onDigitEntered(int index, String value) {
     if (value.isEmpty) {
-      // Handle deletion — move to previous box.
-      if (index > 0) {
-        _focusNodes[index - 1].requestFocus();
-      }
+      if (index > 0) _focusNodes[index - 1].requestFocus();
       widget.onChanged(_currentOtp);
       return;
     }
 
-    // Take the last character in case of paste.
     final digit = value[value.length - 1];
     _controllers[index].text = digit;
-    _controllers[index].selection = TextSelection.collapsed(
-      offset: 1,
-    );
+    _controllers[index].selection =
+        const TextSelection.collapsed(offset: 1);
 
     widget.onChanged(_currentOtp);
 
@@ -80,7 +67,6 @@ class _OtpInputState extends State<OtpInput> {
       _focusNodes[index + 1].requestFocus();
     } else {
       _focusNodes[index].unfocus();
-      // All filled.
       if (_currentOtp.length == widget.length) {
         widget.onCompleted(_currentOtp);
       }
@@ -105,29 +91,32 @@ class _OtpInputState extends State<OtpInput> {
         final isFilled = _controllers[i].text.isNotEmpty;
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 48,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          width: 46,
           height: 56,
           decoration: BoxDecoration(
-            color: isFocused ? AppColors.white : AppColors.surface50,
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusSmall),
+            color: isFocused
+                ? AppColors.white
+                : isFilled
+                    ? AppColors.navyDeep.withValues(alpha: 0.04)
+                    : AppColors.white,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isFocused
                   ? AppColors.navyMedium
                   : isFilled
-                      ? AppColors.navyLight
+                      ? AppColors.navyDeep.withValues(alpha: 0.3)
                       : AppColors.surface200,
-              width: isFocused
-                  ? AppDimensions.borderThick
-                  : AppDimensions.borderMedium,
+              width: isFocused ? 2 : 1.5,
             ),
             boxShadow: isFocused
                 ? [
                     BoxShadow(
-                      color: AppColors.navyMedium.withValues(alpha: 0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color:
+                          AppColors.navyMedium.withValues(alpha: 0.15),
+                      blurRadius: 0,
+                      spreadRadius: 3,
                     ),
                   ]
                 : null,
@@ -146,9 +135,11 @@ class _OtpInputState extends State<OtpInput> {
               ],
               style: AppTypography.headlineMedium.copyWith(
                 color: AppColors.navyDeep,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
               ),
               cursorColor: AppColors.navyMedium,
+              cursorWidth: 1.5,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,

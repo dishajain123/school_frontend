@@ -4,7 +4,7 @@ import "package:go_router/go_router.dart";
 
 import "../../../core/router/route_names.dart";
 import "../../../core/theme/app_colors.dart";
-import "../../../core/theme/app_dimensions.dart";
+import "../../../core/theme/app_typography.dart";
 import "../../../providers/gallery_provider.dart";
 import "../../common/widgets/app_app_bar.dart";
 import "../../common/widgets/app_empty_state.dart";
@@ -20,13 +20,28 @@ class AlbumListScreen extends ConsumerStatefulWidget {
   ConsumerState<AlbumListScreen> createState() => _AlbumListScreenState();
 }
 
-class _AlbumListScreenState extends ConsumerState<AlbumListScreen> {
+class _AlbumListScreenState extends ConsumerState<AlbumListScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fabCtrl;
+
   @override
   void initState() {
     super.initState();
+    _fabCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _fabCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(galleryAlbumListNotifierProvider.notifier).load();
     });
+  }
+
+  @override
+  void dispose() {
+    _fabCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -35,29 +50,38 @@ class _AlbumListScreenState extends ConsumerState<AlbumListScreen> {
     final canManage = ref.watch(galleryCanManageProvider);
 
     return AppScaffold(
-      appBar: const AppAppBar(
+      appBar: AppAppBar(
         title: "School Gallery",
         showBack: true,
+        actions: [
+          if (canManage)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () => context.push(RouteNames.createAlbum),
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: AppColors.white, size: 20),
+                ),
+              ),
+            ),
+        ],
       ),
-      floatingActionButton: canManage
-          ? FloatingActionButton(
-              onPressed: () => context.push(RouteNames.createAlbum),
-              tooltip: "Create Album",
-              backgroundColor: AppColors.goldPrimary,
-              child: const Icon(Icons.add_rounded),
-            )
-          : null,
       body: albumsAsync.when(
-        loading: () => AppLoading.grid(count: 6),
+        loading: () => _buildShimmer(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
           onRetry: () =>
               ref.read(galleryAlbumListNotifierProvider.notifier).load(),
         ),
         data: (state) {
-          if (state.isLoading && state.items.isEmpty) {
-            return AppLoading.grid(count: 6);
-          }
+          if (state.isLoading && state.items.isEmpty) return _buildShimmer();
 
           if (state.items.isEmpty) {
             return RefreshIndicator(
@@ -94,39 +118,73 @@ class _AlbumListScreenState extends ConsumerState<AlbumListScreen> {
                   .read(galleryAlbumListNotifierProvider.notifier)
                   .refresh();
             },
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimensions.space16,
-                AppDimensions.space16,
-                AppDimensions.space16,
-                AppDimensions.pageBottomScroll,
-              ),
+            child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: AppDimensions.gridGap2col,
-                mainAxisSpacing: AppDimensions.gridGap2col,
-                childAspectRatio: 1,
-              ),
-              itemCount: state.items.length,
-              itemBuilder: (context, index) {
-                final album = state.items[index];
-                final photoState = ref.watch(albumPhotoListProvider(album.id));
-                final count = photoState.total;
-                return AlbumCard(
-                  album: album,
-                  photoCount: count,
-                  onTap: () {
-                    context.push(
-                      RouteNames.albumDetailPath(album.id),
-                      extra: album,
-                    );
-                  },
-                );
-              },
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          "${state.items.length} Albums",
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.grey500,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  sliver: SliverGrid.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: state.items.length,
+                    itemBuilder: (context, index) {
+                      final album = state.items[index];
+                      final photoState =
+                          ref.watch(albumPhotoListProvider(album.id));
+                      return AlbumCard(
+                        album: album,
+                        photoCount: photoState.total,
+                        onTap: () => context.push(
+                          RouteNames.albumDetailPath(album.id),
+                          extra: album,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) => ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: AppLoading.card(height: double.infinity),
       ),
     );
   }

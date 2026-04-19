@@ -5,7 +5,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/academic_year/academic_year_model.dart';
 
-class YearTile extends StatelessWidget {
+class YearTile extends StatefulWidget {
   const YearTile({
     super.key,
     required this.year,
@@ -20,135 +20,175 @@ class YearTile extends StatelessWidget {
   final VoidCallback onEdit;
 
   @override
+  State<YearTile> createState() => _YearTileState();
+}
+
+class _YearTileState extends State<YearTile>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 110));
+    _scale = Tween<double>(begin: 1.0, end: 0.985)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(
-          color: year.isActive
-              ? AppColors.goldPrimary.withValues(alpha: 0.5)
-              : AppColors.surface200,
-          width: year.isActive
-              ? AppDimensions.borderThick
-              : AppDimensions.borderThin,
-        ),
-        boxShadow: year.isActive
-            ? [
-                BoxShadow(
-                  color: AppColors.goldPrimary.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                )
-              ]
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.space16),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: year.isActive
-                    ? AppColors.goldLight
-                    : AppColors.surface100,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusSmall),
-              ),
-              child: Icon(
-                Icons.calendar_today_rounded,
-                color: year.isActive
-                    ? AppColors.goldDark
-                    : AppColors.grey400,
-                size: AppDimensions.iconSM,
-              ),
+    final isActive = widget.year.isActive;
+
+    return ScaleTransition(
+      scale: _scale,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? AppColors.goldPrimary.withValues(alpha: 0.5)
+                : AppColors.surface100,
+            width: isActive ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isActive
+                  ? AppColors.goldPrimary.withValues(alpha: 0.12)
+                  : AppColors.navyDeep.withValues(alpha: 0.06),
+              blurRadius: isActive ? 16 : 8,
+              offset: const Offset(0, 2),
             ),
-
-            const SizedBox(width: AppDimensions.space12),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        year.name,
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (year.isActive) ...[
-                        const SizedBox(width: AppDimensions.space8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.space8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.goldLight,
-                            borderRadius: BorderRadius.circular(
-                                AppDimensions.radiusFull),
-                            border: Border.all(
-                              color: AppColors.goldPrimary
-                                  .withValues(alpha: 0.5),
-                            ),
-                          ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _YearAvatar(isActive: isActive),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
                           child: Text(
-                            'Active',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.goldDark,
+                            widget.year.name,
+                            style: AppTypography.titleSmall.copyWith(
                               fontWeight: FontWeight.w700,
+                              color: AppColors.grey800,
+                              fontSize: 14,
                             ),
+                          ),
+                        ),
+                        if (isActive)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.goldLight,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppColors.goldPrimary
+                                    .withValues(alpha: 0.45),
+                              ),
+                            ),
+                            child: Text(
+                              'Active',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.goldDark,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 12, color: AppColors.grey400),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${DateFormatter.formatDate(widget.year.startDate)} – ${DateFormatter.formatDate(widget.year.endDate)}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.grey500,
+                            fontSize: 11,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.space4),
-                  Text(
-                    '${DateFormatter.formatDate(year.startDate)} – ${DateFormatter.formatDate(year.endDate)}',
-                    style: AppTypography.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-
-            // Actions
-            if (canManage)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!year.isActive)
-                    _ActionButton(
-                      icon: Icons.check_circle_outline_rounded,
-                      color: AppColors.successGreen,
-                      tooltip: 'Set Active',
-                      onTap: onActivate,
                     ),
-                  const SizedBox(width: AppDimensions.space4),
-                  _ActionButton(
-                    icon: Icons.edit_outlined,
-                    color: AppColors.navyMedium,
-                    tooltip: 'Edit',
-                    onTap: onEdit,
-                  ),
-                ],
+                  ],
+                ),
               ),
-          ],
+              if (widget.canManage) ...[
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isActive)
+                      _IconAction(
+                        icon: Icons.check_circle_outline_rounded,
+                        color: AppColors.successGreen,
+                        tooltip: 'Set Active',
+                        onTap: widget.onActivate,
+                      ),
+                    if (!isActive) const SizedBox(width: 6),
+                    _IconAction(
+                      icon: Icons.edit_outlined,
+                      color: AppColors.navyMedium,
+                      tooltip: 'Edit',
+                      onTap: widget.onEdit,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
+class _YearAvatar extends StatelessWidget {
+  const _YearAvatar({required this.isActive});
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: isActive
+            ? AppColors.goldPrimary.withValues(alpha: 0.12)
+            : AppColors.surface100,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Icon(
+        Icons.calendar_today_rounded,
+        color: isActive ? AppColors.goldDark : AppColors.grey400,
+        size: 20,
+      ),
+    );
+  }
+}
+
+class _IconAction extends StatelessWidget {
+  const _IconAction({
     required this.icon,
     required this.color,
     required this.tooltip,
@@ -164,20 +204,16 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius:
-            BorderRadius.circular(AppDimensions.radiusSmall),
         child: Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.08),
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusSmall),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon,
-              size: AppDimensions.iconSM, color: color),
+          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );

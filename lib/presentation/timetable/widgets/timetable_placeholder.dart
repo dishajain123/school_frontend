@@ -8,61 +8,58 @@ import '../../../core/theme/app_typography.dart';
 import '../../common/widgets/app_button.dart';
 
 class TimetablePlaceholder extends ConsumerWidget {
-  const TimetablePlaceholder({
-    super.key,
-    required this.canUpload,
-  });
-
-  /// When true (PRINCIPAL), shows an "Upload Timetable" action button.
+  const TimetablePlaceholder({super.key, required this.canUpload});
   final bool canUpload;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.space32),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon container
             Container(
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: AppColors.surface100,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusXL),
+                color: AppColors.navyDeep.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: AppColors.navyDeep.withValues(alpha: 0.1)),
               ),
               child: const Icon(
                 Icons.calendar_view_week_outlined,
-                size: 44,
-                color: AppColors.grey400,
+                size: 40,
+                color: AppColors.navyMedium,
               ),
             ),
-
-            const SizedBox(height: AppDimensions.space24),
-
+            const SizedBox(height: 24),
             Text(
               'No timetable uploaded',
-              style: AppTypography.headlineSmall,
+              style: AppTypography.headlineSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
               textAlign: TextAlign.center,
             ),
-
-            const SizedBox(height: AppDimensions.space8),
-
+            const SizedBox(height: 8),
             Text(
               canUpload
-                  ? 'Upload a PDF or image timetable\nfor this class below.'
+                  ? 'Upload a PDF or image timetable for this class.'
                   : 'The timetable hasn\'t been uploaded yet.\nCheck back later.',
-              style: AppTypography.bodyMedium,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.grey500,
+                height: 1.55,
+              ),
               textAlign: TextAlign.center,
             ),
-
             if (canUpload) ...[
-              const SizedBox(height: AppDimensions.space24),
+              const SizedBox(height: 28),
               AppButton.primary(
                 label: 'Upload Timetable',
                 onTap: () => context.push('/timetable/upload'),
+                icon: Icons.upload_file_outlined,
               ),
             ],
           ],

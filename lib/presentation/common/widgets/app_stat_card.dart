@@ -4,13 +4,6 @@ import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Compact metric display tile used in dashboards.
-///
-/// Features:
-/// - Animated count-up for numeric values
-/// - Optional trend indicator (up/down arrow + change value)
-/// - Icon in a colored container
-/// - Tap to navigate to the relevant detail screen
 class AppStatCard extends StatefulWidget {
   const AppStatCard({
     super.key,
@@ -30,11 +23,7 @@ class AppStatCard extends StatefulWidget {
   final String value;
   final IconData? icon;
   final Color? iconColor;
-
-  /// Optional trend string like "+5%" or "↑ 3".
   final String? trend;
-
-  /// True if trend is positive (green), false if negative (red).
   final bool trendPositive;
   final VoidCallback? onTap;
   final bool isLoading;
@@ -55,7 +44,7 @@ class _AppStatCardState extends State<AppStatCard>
     super.initState();
     _scaleController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 110),
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
@@ -92,18 +81,23 @@ class _AppStatCardState extends State<AppStatCard>
           padding: const EdgeInsets.all(AppDimensions.space16),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            boxShadow: AppDecorations.shadow1,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navyDeep.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
             border: Border.all(
-              color: AppColors.surface200,
-              width: AppDimensions.borderThin,
+              color: AppColors.surface100,
+              width: 1,
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon + trend row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -130,31 +124,33 @@ class _AppStatCardState extends State<AppStatCard>
                 ],
               ),
               const SizedBox(height: AppDimensions.space12),
-              // Value
               Text(
                 widget.value,
                 style: AppTypography.headlineMedium.copyWith(
                   color: AppColors.navyDeep,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppDimensions.space4),
-              // Label
               Text(
                 widget.label,
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.grey600,
+                  color: AppColors.grey500,
+                  fontSize: 12,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               if (widget.subtitle != null) ...[
-                const SizedBox(height: AppDimensions.space2),
+                const SizedBox(height: 2),
                 Text(
                   widget.subtitle!,
-                  style: AppTypography.caption,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.grey400,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -168,27 +164,22 @@ class _AppStatCardState extends State<AppStatCard>
 }
 
 class _TrendBadge extends StatelessWidget {
-  const _TrendBadge({
-    required this.trend,
-    required this.isPositive,
-  });
-
+  const _TrendBadge({required this.trend, required this.isPositive});
   final String trend;
   final bool isPositive;
 
   @override
   Widget build(BuildContext context) {
-    final color = isPositive ? AppColors.successGreen : AppColors.errorRed;
-    final bg = isPositive ? AppColors.successLight : AppColors.errorLight;
+    final color =
+        isPositive ? AppColors.successGreen : AppColors.errorRed;
+    final bg =
+        isPositive ? AppColors.successLight : AppColors.errorLight;
     final icon = isPositive
         ? Icons.trending_up_rounded
         : Icons.trending_down_rounded;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space8,
-        vertical: AppDimensions.space4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
@@ -196,13 +187,14 @@ class _TrendBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: AppDimensions.iconXS, color: color),
+          Icon(icon, size: 11, color: color),
           const SizedBox(width: 2),
           Text(
             trend,
             style: AppTypography.labelSmall.copyWith(
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
             ),
           ),
         ],

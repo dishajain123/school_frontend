@@ -9,11 +9,18 @@ class ComplaintRepository {
   const ComplaintRepository(this._dio);
   final Dio _dio;
 
-  Future<ComplaintListResponse> list({ComplaintStatus? status}) async {
+  Future<ComplaintListResponse> list({
+    ComplaintStatus? status,
+    ComplaintCategory? category,
+    ComplainantType? complainantType,
+  }) async {
     final response = await _dio.get(
       ApiConstants.complaints,
       queryParameters: {
         if (status != null) 'status': status.backendValue,
+        if (category != null) 'category': category.backendValue,
+        if (complainantType != null)
+          'submitted_by_role': complainantType.backendValue,
       },
     );
     return ComplaintListResponse.fromJson(

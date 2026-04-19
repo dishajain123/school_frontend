@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/router/route_names.dart';
 
-/// Configuration model for a single bottom navigation tab.
 class ShellTabItem {
   const ShellTabItem({
     required this.icon,
@@ -13,12 +12,9 @@ class ShellTabItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
-
-  /// The root route this tab navigates to.
   final String rootPath;
 }
 
-/// Defines which navigation tabs are shown per role.
 abstract final class RoleShellConfig {
   static const List<ShellTabItem> superadminTabs = [
     ShellTabItem(
@@ -67,6 +63,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.principalReportDetails,
     ),
     ShellTabItem(
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chat',
+      rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -100,6 +102,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.attendance,
     ),
     ShellTabItem(
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chat',
+      rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -121,16 +129,16 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.attendance,
     ),
     ShellTabItem(
-      icon: Icons.assignment_outlined,
-      activeIcon: Icons.assignment,
-      label: 'Assignments',
-      rootPath: RouteNames.assignments,
-    ),
-    ShellTabItem(
       icon: Icons.menu_book_outlined,
       activeIcon: Icons.menu_book,
       label: 'Diary',
       rootPath: RouteNames.diary,
+    ),
+    ShellTabItem(
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chat',
+      rootPath: RouteNames.conversations,
     ),
     ShellTabItem(
       icon: Icons.person_outline,
@@ -166,6 +174,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.diary,
     ),
     ShellTabItem(
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chat',
+      rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -199,6 +213,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.feeDashboard,
     ),
     ShellTabItem(
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chat',
+      rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -206,7 +226,6 @@ abstract final class RoleShellConfig {
     ),
   ];
 
-  /// Returns the tab config for the given role string.
   static List<ShellTabItem> tabsForRole(String role) {
     switch (role.toUpperCase()) {
       case 'SUPERADMIN':
@@ -226,7 +245,6 @@ abstract final class RoleShellConfig {
     }
   }
 
-  /// Returns the index for a given route path in the tab list.
   static int indexForPath(List<ShellTabItem> tabs, String location) {
     for (int i = 0; i < tabs.length; i++) {
       if (location.startsWith(tabs[i].rootPath)) return i;

@@ -46,7 +46,7 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(
         AppDimensions.appBarHeight +
             (bottom?.preferredSize.height ?? 0) +
-            (subtitle != null ? 18 : 0),
+            (subtitle != null ? 20 : 0),
       );
 
   @override
@@ -63,7 +63,11 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
           children: [
             Text(
               title!,
-              style: AppTypography.titleLargeOnDark.copyWith(fontSize: 18),
+              style: AppTypography.titleLargeOnDark.copyWith(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
             if (subtitle != null) ...[
@@ -71,7 +75,9 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
               Text(
                 subtitle!,
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.white.withValues(alpha: 0.7),
+                  color: AppColors.white.withValues(alpha: 0.65),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -82,19 +88,8 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final effectiveActions = <Widget>[
       ...actions,
       if (showNotificationBell)
-        IconButton(
-          tooltip: 'Notifications',
-          icon: AppBadge(
-            count: unreadCount,
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: AppColors.white,
-              size: AppDimensions.iconMD,
-            ),
-          ),
-          onPressed: () => context.push(RouteNames.notifications),
-        ),
-      const SizedBox(width: AppDimensions.space4),
+        _NotificationButton(unreadCount: unreadCount),
+      const SizedBox(width: 4),
     ];
 
     return AppBar(
@@ -108,13 +103,7 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
         statusBarColor: Colors.transparent,
       ),
       leading: showBack
-          ? IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppColors.white,
-                size: AppDimensions.iconMD,
-              ),
-              tooltip: 'Back',
+          ? _BackButton(
               onPressed: onBackPressed ??
                   () {
                     if (context.canPop()) {
@@ -133,7 +122,68 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
       title: effectiveTitle,
       actions: effectiveActions,
       bottom: bottom,
-      toolbarHeight: AppDimensions.appBarHeight + (subtitle != null ? 18 : 0),
+      toolbarHeight: AppDimensions.appBarHeight + (subtitle != null ? 20 : 0),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: IconButton(
+        icon: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.white,
+            size: 16,
+          ),
+        ),
+        tooltip: 'Back',
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _NotificationButton extends StatelessWidget {
+  const _NotificationButton({required this.unreadCount});
+  final int unreadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: IconButton(
+        tooltip: 'Notifications',
+        icon: AppBadge(
+          count: unreadCount,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: AppColors.white,
+              size: 18,
+            ),
+          ),
+        ),
+        onPressed: () => context.push(RouteNames.notifications),
+      ),
     );
   }
 }

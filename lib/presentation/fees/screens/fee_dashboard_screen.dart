@@ -16,6 +16,7 @@ import '../../../providers/parent_provider.dart';
 import '../../../providers/student_provider.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
+import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/fee_ledger_card.dart';
@@ -24,7 +25,6 @@ import '../widgets/fee_summary_bar.dart';
 class FeeDashboardScreen extends ConsumerWidget {
   const FeeDashboardScreen({super.key, this.studentId});
 
-  /// Explicit studentId for admin roles navigating from a student profile.
   final String? studentId;
 
   @override
@@ -32,7 +32,6 @@ class FeeDashboardScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
 
-    // ── Resolve studentId based on role ──────────────────────────────────────
     switch (user.role) {
       case UserRole.parent:
         return _ParentFeeDashboard(explicitStudentId: studentId);
@@ -43,12 +42,10 @@ class FeeDashboardScreen extends ConsumerWidget {
             user.role == UserRole.trustee ||
             user.role == UserRole.superadmin;
 
-        // Principal/Trustee/Superadmin should see full fee analytics in-place.
         if (isLeadership && (studentId == null || studentId!.isEmpty)) {
           return const _PrincipalFeeAnalyticsDashboard();
         }
 
-        // Other admin/teacher roles can still open student-specific fee view.
         final id = studentId ??
             GoRouterState.of(context).uri.queryParameters['student_id'];
         if (id == null || id.isEmpty) {
@@ -61,11 +58,11 @@ class FeeDashboardScreen extends ConsumerWidget {
   Widget _buildSelectStudentState(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppBar(title: const Text('Fee Management')),
+      appBar: const AppAppBar(title: 'Fee Management', showBack: true),
       body: AppEmptyState(
         icon: Icons.account_balance_wallet_outlined,
         title: 'No Student Selected',
-        subtitle: 'Please access fee details from a student\'s profile page.',
+        subtitle: 'Access fee details from a student\'s profile page.',
         actionLabel: 'Go to Students',
         onAction: () => context.go(RouteNames.students),
       ),
@@ -87,7 +84,7 @@ class _ParentFeeDashboard extends ConsumerWidget {
     if (childId == null || childId.isEmpty) {
       return Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: AppBar(title: const Text('Fee Management')),
+        appBar: const AppAppBar(title: 'Fee Management', showBack: true),
         body: AppEmptyState(
           icon: Icons.family_restroom_outlined,
           title: 'No Child Selected',
@@ -121,12 +118,12 @@ class _StudentFeeDashboard extends ConsumerWidget {
     return myIdAsync.when(
       loading: () => Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: AppBar(title: const Text('Fee Management')),
+        appBar: const AppAppBar(title: 'Fee Management', showBack: true),
         body: AppLoading.fullPage(),
       ),
       error: (e, _) => Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: AppBar(title: const Text('Fee Management')),
+        appBar: const AppAppBar(title: 'Fee Management', showBack: true),
         body: AppErrorState(
           message: 'Could not load your student profile.',
           onRetry: () => ref.invalidate(myStudentIdProvider),
@@ -136,12 +133,12 @@ class _StudentFeeDashboard extends ConsumerWidget {
         if (id == null) {
           return Scaffold(
             backgroundColor: AppColors.surface50,
-            appBar: AppBar(title: const Text('Fee Management')),
+            appBar: const AppAppBar(title: 'Fee Management', showBack: true),
             body: const AppEmptyState(
               icon: Icons.school_outlined,
               title: 'Profile Not Found',
-              subtitle: 'Your student profile could not be located. '
-                  'Please contact your school administrator.',
+              subtitle:
+                  'Your student profile could not be located. Please contact your administrator.',
             ),
           );
         }
@@ -150,6 +147,8 @@ class _StudentFeeDashboard extends ConsumerWidget {
     );
   }
 }
+
+// ── Principal analytics dashboard ────────────────────────────────────────────
 
 class _PrincipalFeeAnalyticsDashboard extends ConsumerStatefulWidget {
   const _PrincipalFeeAnalyticsDashboard();
@@ -189,8 +188,10 @@ class _PrincipalFeeAnalyticsDashboardState
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppBar(
-        title: const Text('Fee Management'),
+      appBar: AppAppBar(
+        title: 'Fee Management',
+        showBack: true,
+        showNotificationBell: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -201,73 +202,86 @@ class _PrincipalFeeAnalyticsDashboardState
       ),
       body: Column(
         children: [
+          // Filter bar
           Container(
             color: AppColors.white,
-            padding: const EdgeInsets.all(AppDimensions.space16),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.space16,
+              AppDimensions.space12,
+              AppDimensions.space16,
+              AppDimensions.space16,
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                standardsAsync.when(
-                  data: (standards) => DropdownButtonFormField<String?>(
-                    initialValue: _standardId,
-                    decoration: _decor('Class'),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Classes'),
-                      ),
-                      ...standards.map(
-                        (s) => DropdownMenuItem<String?>(
-                          value: s.id,
-                          child: Text(s.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _standardId = v;
-                      _section = null;
-                      _studentId = null;
-                    }),
+                Text(
+                  'Filter by',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.grey500,
+                    letterSpacing: 0.5,
                   ),
-                  loading: () => AppLoading.listTile(),
-                  error: (e, _) => AppErrorState(message: e.toString()),
                 ),
-                const SizedBox(height: AppDimensions.space12),
-                sectionsAsync.when(
-                  data: (sections) => DropdownButtonFormField<String?>(
-                    initialValue: _section,
-                    decoration: _decor('Section'),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Sections'),
-                      ),
-                      ...sections.map(
-                        (s) => DropdownMenuItem<String?>(
-                          value: s,
-                          child: Text('Section $s'),
+                const SizedBox(height: AppDimensions.space8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: standardsAsync.when(
+                        data: (standards) => _FilterDropdown<String?>(
+                          hint: 'Class',
+                          value: _standardId,
+                          items: [
+                            const DropdownMenuItem(
+                                value: null, child: Text('All Classes')),
+                            ...standards.map(
+                              (s) => DropdownMenuItem(
+                                  value: s.id, child: Text(s.name)),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() {
+                            _standardId = v;
+                            _section = null;
+                            _studentId = null;
+                          }),
                         ),
+                        loading: () => AppLoading.listTile(),
+                        error: (e, _) => AppErrorState(message: e.toString()),
                       ),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _section = v;
-                      _studentId = null;
-                    }),
-                  ),
-                  loading: () => AppLoading.listTile(),
-                  error: (e, _) => AppErrorState(message: e.toString()),
+                    ),
+                    const SizedBox(width: AppDimensions.space8),
+                    Expanded(
+                      child: sectionsAsync.when(
+                        data: (sections) => _FilterDropdown<String?>(
+                          hint: 'Section',
+                          value: _section,
+                          items: [
+                            const DropdownMenuItem(
+                                value: null, child: Text('All')),
+                            ...sections.map(
+                              (s) => DropdownMenuItem(
+                                  value: s, child: Text('Sec $s')),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() {
+                            _section = v;
+                            _studentId = null;
+                          }),
+                        ),
+                        loading: () => AppLoading.listTile(),
+                        error: (e, _) => AppErrorState(message: e.toString()),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppDimensions.space12),
+                const SizedBox(height: AppDimensions.space8),
                 studentsAsync.when(
-                  data: (students) => DropdownButtonFormField<String?>(
-                    initialValue: _studentId,
-                    decoration: _decor('Student'),
+                  data: (students) => _FilterDropdown<String?>(
+                    hint: 'Student',
+                    value: _studentId,
                     items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Students'),
-                      ),
+                      const DropdownMenuItem(
+                          value: null, child: Text('All Students')),
                       ...students.map(
-                        (s) => DropdownMenuItem<String?>(
+                        (s) => DropdownMenuItem(
                           value: s.id,
                           child: Text(
                               '${s.admissionNumber} (${s.section ?? '-'})'),
@@ -282,6 +296,7 @@ class _PrincipalFeeAnalyticsDashboardState
               ],
             ),
           ),
+          // Content
           Expanded(
             child: analyticsAsync.when(
               loading: () => AppLoading.fullPage(),
@@ -301,46 +316,56 @@ class _PrincipalFeeAnalyticsDashboardState
                 return ListView(
                   padding: const EdgeInsets.all(AppDimensions.space16),
                   children: [
-                    Wrap(
-                      spacing: AppDimensions.space12,
-                      runSpacing: AppDimensions.space12,
+                    // KPI metric grid
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: AppDimensions.space12,
+                      mainAxisSpacing: AppDimensions.space12,
+                      childAspectRatio: 2.1,
                       children: [
                         _MetricCard(
                           title: 'Total Billed',
                           value: _currency(summary['total_billed_amount']),
+                          icon: Icons.receipt_long_rounded,
+                          accent: AppColors.navyMedium,
                         ),
                         _MetricCard(
                           title: 'Total Paid',
                           value: _currency(summary['total_paid_amount']),
+                          icon: Icons.check_circle_outline_rounded,
+                          accent: AppColors.successGreen,
                         ),
                         _MetricCard(
                           title: 'Outstanding',
                           value: _currency(summary['total_outstanding_amount']),
+                          icon: Icons.pending_outlined,
+                          accent: AppColors.warningAmber,
                         ),
                         _MetricCard(
                           title: 'Collection',
                           value:
                               '${(summary['collection_percentage'] ?? 0).toString()}%',
+                          icon: Icons.pie_chart_outline_rounded,
+                          accent: AppColors.infoBlue,
                         ),
                         _MetricCard(
                           title: 'Students',
                           value: '${summary['total_students'] ?? 0}',
+                          icon: Icons.people_outline_rounded,
+                          accent: AppColors.navyLight,
                         ),
                         _MetricCard(
-                          title: 'Ledgers',
-                          value: '${summary['total_ledgers'] ?? 0}',
-                        ),
-                        _MetricCard(
-                          title: 'Overdue Ledgers',
+                          title: 'Overdue',
                           value: '${summary['overdue_ledgers'] ?? 0}',
-                        ),
-                        _MetricCard(
-                          title: 'Late Payments',
-                          value: '${summary['late_payments_count'] ?? 0}',
+                          icon: Icons.warning_amber_rounded,
+                          accent: AppColors.errorRed,
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppDimensions.space20),
+
+                    const SizedBox(height: AppDimensions.space24),
                     const AppSectionHeader(title: 'Category Breakdown'),
                     const SizedBox(height: AppDimensions.space8),
                     _AnalyticsTable(
@@ -352,17 +377,16 @@ class _PrincipalFeeAnalyticsDashboardState
                         'Ledgers'
                       ],
                       rows: byCategory
-                          .map(
-                            (r) => [
-                              (r['fee_category'] ?? '-').toString(),
-                              _currency(r['billed_amount']),
-                              _currency(r['paid_amount']),
-                              _currency(r['outstanding_amount']),
-                              '${r['ledgers'] ?? 0}',
-                            ],
-                          )
+                          .map((r) => [
+                                (r['fee_category'] ?? '-').toString(),
+                                _currency(r['billed_amount']),
+                                _currency(r['paid_amount']),
+                                _currency(r['outstanding_amount']),
+                                '${r['ledgers'] ?? 0}',
+                              ])
                           .toList(),
                     ),
+
                     const SizedBox(height: AppDimensions.space16),
                     const AppSectionHeader(title: 'Status Breakdown'),
                     const SizedBox(height: AppDimensions.space8),
@@ -375,35 +399,33 @@ class _PrincipalFeeAnalyticsDashboardState
                         'Outstanding'
                       ],
                       rows: byStatus
-                          .map(
-                            (r) => [
-                              (r['status'] ?? '-').toString(),
-                              '${r['ledgers'] ?? 0}',
-                              _currency(r['billed_amount']),
-                              _currency(r['paid_amount']),
-                              _currency(r['outstanding_amount']),
-                            ],
-                          )
+                          .map((r) => [
+                                (r['status'] ?? '-').toString(),
+                                '${r['ledgers'] ?? 0}',
+                                _currency(r['billed_amount']),
+                                _currency(r['paid_amount']),
+                                _currency(r['outstanding_amount']),
+                              ])
                           .toList(),
                     ),
+
                     const SizedBox(height: AppDimensions.space16),
-                    const AppSectionHeader(title: 'Payment Mode Breakdown'),
+                    const AppSectionHeader(title: 'Payment Mode'),
                     const SizedBox(height: AppDimensions.space8),
                     _AnalyticsTable(
                       headers: const ['Mode', 'Amount', 'Transactions'],
                       rows: byPaymentMode
-                          .map(
-                            (r) => [
-                              (r['payment_mode'] ?? '-').toString(),
-                              _currency(r['amount']),
-                              '${r['transactions'] ?? 0}',
-                            ],
-                          )
+                          .map((r) => [
+                                (r['payment_mode'] ?? '-').toString(),
+                                _currency(r['amount']),
+                                '${r['transactions'] ?? 0}',
+                              ])
                           .toList(),
                     ),
+
                     const SizedBox(height: AppDimensions.space16),
                     AppSectionHeader(
-                      title: 'Student-wise Analysis (${byStudent.length})',
+                      title: 'Student Analysis (${byStudent.length})',
                     ),
                     const SizedBox(height: AppDimensions.space8),
                     _AnalyticsTable(
@@ -416,25 +438,23 @@ class _PrincipalFeeAnalyticsDashboardState
                         'Outstanding',
                         'Paid/Partial/Pending',
                         'Overdue',
-                        'Latest Payment'
+                        'Latest Payment',
                       ],
                       rows: byStudent
-                          .map(
-                            (r) => [
-                              (r['admission_number'] ?? '-').toString(),
-                              (r['standard_id'] ?? '-').toString(),
-                              (r['section'] ?? '-').toString(),
-                              _currency(r['billed_amount']),
-                              _currency(r['paid_amount']),
-                              _currency(r['outstanding_amount']),
-                              '${r['paid_ledgers'] ?? 0}/${r['partial_ledgers'] ?? 0}/${r['pending_ledgers'] ?? 0}',
-                              '${r['overdue_ledgers'] ?? 0}',
-                              (r['latest_payment_date'] ?? '-').toString(),
-                            ],
-                          )
+                          .map((r) => [
+                                (r['admission_number'] ?? '-').toString(),
+                                (r['standard_id'] ?? '-').toString(),
+                                (r['section'] ?? '-').toString(),
+                                _currency(r['billed_amount']),
+                                _currency(r['paid_amount']),
+                                _currency(r['outstanding_amount']),
+                                '${r['paid_ledgers'] ?? 0}/${r['partial_ledgers'] ?? 0}/${r['pending_ledgers'] ?? 0}',
+                                '${r['overdue_ledgers'] ?? 0}',
+                                (r['latest_payment_date'] ?? '-').toString(),
+                              ])
                           .toList(),
                     ),
-                    const SizedBox(height: AppDimensions.space32),
+                    const SizedBox(height: AppDimensions.space40),
                   ],
                 );
               },
@@ -444,24 +464,54 @@ class _PrincipalFeeAnalyticsDashboardState
       ),
     );
   }
+}
 
-  InputDecoration _decor(String hint) => InputDecoration(
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String hint;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<T>(
+      initialValue: value,
+      decoration: InputDecoration(
         hintText: hint,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.space12,
-          vertical: AppDimensions.space12,
+          vertical: 10,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          borderSide: const BorderSide(color: AppColors.surface200),
         ),
-      );
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          borderSide: const BorderSide(color: AppColors.surface200),
+        ),
+        filled: true,
+        fillColor: AppColors.surface50,
+        isDense: true,
+      ),
+      items: items,
+      onChanged: onChanged,
+      style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+      icon: const Icon(Icons.keyboard_arrow_down_rounded,
+          size: 18, color: AppColors.grey400),
+    );
+  }
 }
 
 class _AnalyticsTable extends StatelessWidget {
-  const _AnalyticsTable({
-    required this.headers,
-    required this.rows,
-  });
+  const _AnalyticsTable({required this.headers, required this.rows});
 
   final List<String> headers;
   final List<List<String>> rows;
@@ -471,8 +521,8 @@ class _AnalyticsTable extends StatelessWidget {
     if (rows.isEmpty) {
       return const AppEmptyState(
         icon: Icons.table_chart_outlined,
-        title: 'No data found',
-        subtitle: 'Try changing filters.',
+        title: 'No data',
+        subtitle: 'Try adjusting filters.',
       );
     }
     return Container(
@@ -480,16 +530,31 @@ class _AnalyticsTable extends StatelessWidget {
         color: AppColors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         border: Border.all(color: AppColors.surface200),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B1F3A).withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
+          headingRowColor: WidgetStateProperty.all(AppColors.surface50),
+          dataRowMinHeight: 44,
+          dataRowMaxHeight: 52,
+          headingRowHeight: 40,
+          dividerThickness: 1,
+          columnSpacing: AppDimensions.space16,
           columns: headers
               .map((h) => DataColumn(
                     label: Text(
                       h,
-                      style: AppTypography.labelMedium
-                          .copyWith(color: AppColors.navyDeep),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ))
               .toList(),
@@ -497,8 +562,9 @@ class _AnalyticsTable extends StatelessWidget {
               .map(
                 (row) => DataRow(
                   cells: row
-                      .map((c) =>
-                          DataCell(Text(c, style: AppTypography.bodySmall)))
+                      .map((c) => DataCell(
+                            Text(c, style: AppTypography.bodySmall),
+                          ))
                       .toList(),
                 ),
               )
@@ -513,39 +579,71 @@ class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.title,
     required this.value,
+    required this.icon,
+    required this.accent,
   });
 
   final String title;
   final String value;
+  final IconData icon;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 170,
-      child: Container(
-        padding: const EdgeInsets.all(AppDimensions.space12),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          border: Border.all(color: AppColors.surface200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.space12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B1F3A).withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
             ),
-            const SizedBox(height: AppDimensions.space4),
-            Text(
-              value,
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.navyDeep,
-              ),
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: AppDimensions.space8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: AppColors.navyDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -574,8 +672,10 @@ class _FeeDashboardBody extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppBar(
-        title: const Text('Fee Management'),
+      appBar: AppAppBar(
+        title: 'Fee Management',
+        showBack: true,
+        showNotificationBell: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -612,11 +712,14 @@ class _FeeDashboardBody extends ConsumerWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.pageHorizontal,
+        AppDimensions.space16,
+        AppDimensions.pageHorizontal,
+        AppDimensions.space40,
+      ),
       children: [
-        const SizedBox(height: AppDimensions.space8),
-
-        // ── Summary bar ────────────────────────────────────────────────────
+        // Summary hero
         FeeSummaryBar(
           totalAmount: result.grandTotal,
           paidAmount: result.grandPaid,
@@ -625,48 +728,69 @@ class _FeeDashboardBody extends ConsumerWidget {
 
         const SizedBox(height: AppDimensions.space24),
 
-        // ── Ledger list header ─────────────────────────────────────────────
-        AppSectionHeader(
-          title: 'Fee Entries (${result.total})',
+        // Section header
+        Row(
+          children: [
+            Text(
+              'Fee Entries',
+              style: AppTypography.titleLarge.copyWith(
+                color: AppColors.navyDeep,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.space8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.space8,
+                vertical: AppDimensions.space2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.navyDeep.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+              child: Text(
+                '${result.total}',
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.navyDeep,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
 
         const SizedBox(height: AppDimensions.space12),
 
-        // ── Ledger cards ───────────────────────────────────────────────────
         ...result.items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final ledger = entry.value;
           return Padding(
             padding: const EdgeInsets.only(bottom: AppDimensions.space12),
             child: FeeLedgerCard(
-              ledger: ledger,
-              sequenceNumber: index + 1,
+              ledger: entry.value,
+              sequenceNumber: entry.key + 1,
               onViewHistory: () => context.push(
                 RouteNames.paymentHistory,
                 extra: {
-                  'ledgerId': ledger.id,
-                  'totalAmount': ledger.totalAmount,
-                  'paidAmount': ledger.paidAmount,
-                  'outstandingAmount': ledger.outstandingAmount,
-                  'status': ledger.status.label,
+                  'ledgerId': entry.value.id,
+                  'totalAmount': entry.value.totalAmount,
+                  'paidAmount': entry.value.paidAmount,
+                  'outstandingAmount': entry.value.outstandingAmount,
+                  'status': entry.value.status.label,
                 },
               ),
-              onPayNow: _canRecord && ledger.hasOutstanding
+              onPayNow: _canRecord && entry.value.hasOutstanding
                   ? () => context.push(
                         RouteNames.recordPayment,
                         extra: {
                           'studentId': studentId,
-                          'ledgerId': ledger.id,
-                          'outstandingAmount': ledger.outstandingAmount,
-                          'totalAmount': ledger.totalAmount,
+                          'ledgerId': entry.value.id,
+                          'outstandingAmount': entry.value.outstandingAmount,
+                          'totalAmount': entry.value.totalAmount,
                         },
                       )
                   : null,
             ),
           );
         }),
-
-        const SizedBox(height: AppDimensions.space40),
       ],
     );
   }
@@ -675,12 +799,12 @@ class _FeeDashboardBody extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
       children: [
-        const SizedBox(height: AppDimensions.space8),
+        const SizedBox(height: AppDimensions.space16),
         Container(
-          height: 140,
+          height: 200,
           decoration: BoxDecoration(
             color: AppColors.surface100,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
           ),
         ),
         const SizedBox(height: AppDimensions.space24),

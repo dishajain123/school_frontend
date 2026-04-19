@@ -6,11 +6,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../data/models/timetable/timetable_model.dart';
 import '../../common/widgets/app_button.dart';
 
-/// Renders the timetable file inline in the view screen.
-///
-/// PDF  → _PdfViewer   (flutter_pdfview / syncfusion integration point)
-/// Image → _ImageViewer (InteractiveViewer with pinch-zoom)
-/// Other → _UnsupportedViewer (open-externally fallback)
 class TimetableViewer extends StatelessWidget {
   const TimetableViewer({super.key, required this.timetable});
   final TimetableModel timetable;
@@ -18,13 +13,13 @@ class TimetableViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = timetable.fileUrl!;
-    if (timetable.isPdf) return _PdfViewer(url: url, fileName: timetable.fileName);
+    if (timetable.isPdf) {
+      return _PdfViewer(url: url, fileName: timetable.fileName);
+    }
     if (timetable.isImage) return _ImageViewer(url: url);
     return _UnsupportedViewer(url: url, fileName: timetable.fileName);
   }
 }
-
-// ── PDF viewer ────────────────────────────────────────────────────────────────
 
 class _PdfViewer extends StatelessWidget {
   const _PdfViewer({required this.url, required this.fileName});
@@ -33,51 +28,73 @@ class _PdfViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace _PdfIconPreview with:
-    //   flutter_pdfview → PDFView(filePath: localPath) after downloading
-    //   syncfusion      → SfPdfViewer.network(url)
     return Column(
       children: [
-        Expanded(child: _PdfIconPreview(fileName: fileName)),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: AppColors.errorRed.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                          color: AppColors.errorRed.withValues(alpha: 0.2)),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_outlined,
+                        size: 44, color: AppColors.errorRed),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    fileName,
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.grey800,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'PDF Document',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.grey500,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Tap "Open PDF" below to view',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.grey400,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         _BottomActionBar(url: url, primaryLabel: 'Open PDF'),
       ],
     );
   }
 }
-
-class _PdfIconPreview extends StatelessWidget {
-  const _PdfIconPreview({required this.fileName});
-  final String fileName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.errorLight,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-            ),
-            child: const Icon(Icons.picture_as_pdf_outlined,
-                size: 40, color: AppColors.errorRed),
-          ),
-          const SizedBox(height: AppDimensions.space16),
-          Text(fileName,
-              style: AppTypography.titleMedium, textAlign: TextAlign.center),
-          const SizedBox(height: AppDimensions.space8),
-          Text('Tap "Open PDF" to view',
-              style: AppTypography.bodySmall, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Image viewer ──────────────────────────────────────────────────────────────
 
 class _ImageViewer extends StatelessWidget {
   const _ImageViewer({required this.url});
@@ -98,37 +115,67 @@ class _ImageViewer extends StatelessWidget {
                 loadingBuilder: (ctx, child, progress) {
                   if (progress == null) return child;
                   return Center(
-                    child: CircularProgressIndicator(
-                      value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
-                          : null,
-                      color: AppColors.navyDeep,
-                      strokeWidth: 2,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                                  progress.expectedTotalBytes!
+                              : null,
+                          color: AppColors.navyDeep,
+                          strokeWidth: 2,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Loading timetable...',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.grey400,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image_outlined,
-                      size: 56, color: AppColors.grey400),
+                errorBuilder: (_, __, ___) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.broken_image_outlined,
+                          size: 48, color: AppColors.grey400),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Could not load image',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.grey400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppDimensions.space6),
-          child: Text('Pinch to zoom',
-              style: AppTypography.caption
-                  .copyWith(color: AppColors.grey400)),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.pinch_outlined, size: 14, color: AppColors.grey400),
+              const SizedBox(width: 5),
+              Text(
+                'Pinch to zoom',
+                style: AppTypography.caption.copyWith(color: AppColors.grey400),
+              ),
+            ],
+          ),
         ),
         _BottomActionBar(url: url, primaryLabel: 'Download Image'),
       ],
     );
   }
 }
-
-// ── Unsupported format fallback ───────────────────────────────────────────────
 
 class _UnsupportedViewer extends StatelessWidget {
   const _UnsupportedViewer({required this.url, required this.fileName});
@@ -138,77 +185,94 @@ class _UnsupportedViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.insert_drive_file_outlined,
-            size: 56, color: AppColors.grey400),
-        const SizedBox(height: AppDimensions.space16),
-        Text(fileName,
-            style: AppTypography.titleMedium, textAlign: TextAlign.center),
-        const SizedBox(height: AppDimensions.space8),
-        Text('Preview not available for this file type.',
-            style: AppTypography.bodySmall, textAlign: TextAlign.center),
-        const SizedBox(height: AppDimensions.space32),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.insert_drive_file_outlined,
+                        size: 40, color: AppColors.grey400),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    fileName,
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Preview not available for this file type.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.grey400,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         _BottomActionBar(url: url, primaryLabel: 'Open File'),
       ],
     );
   }
 }
 
-// ── Bottom action bar — Download / Share ──────────────────────────────────────
-
 class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar({
-    required this.url,
-    required this.primaryLabel,
-  });
+  const _BottomActionBar({required this.url, required this.primaryLabel});
   final String url;
   final String primaryLabel;
 
   void _launch(BuildContext context) {
-    // TODO: integrate url_launcher: launchUrl(Uri.parse(url))
-    // or share_plus: Share.shareUri(Uri.parse(url))
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Opening: $primaryLabel'),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
     return Container(
       color: AppColors.white,
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.space20,
-        AppDimensions.space8,
-        AppDimensions.space20,
-        AppDimensions.space20,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottom),
       child: Row(
         children: [
           Expanded(
             child: AppButton.secondary(
               label: primaryLabel,
               onTap: () => _launch(context),
+              icon: Icons.open_in_new_rounded,
             ),
           ),
-          const SizedBox(width: AppDimensions.space12),
-          // Share icon button
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.surface200),
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.share_outlined,
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => _launch(context),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.surface100,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: AppColors.surface200),
+              ),
+              child: const Icon(Icons.share_outlined,
                   size: 20, color: AppColors.navyDeep),
-              tooltip: 'Share',
-              onPressed: () => _launch(context),
             ),
           ),
         ],

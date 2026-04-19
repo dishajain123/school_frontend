@@ -7,10 +7,8 @@ import '../../../core/theme/app_colors.dart';
 enum DocumentType {
   idCard,
   bonafide,
-  leavingCertificate,
+  leavingCert,
   reportCard,
-  transferCertificate,
-  characterCertificate,
 }
 
 extension DocumentTypeX on DocumentType {
@@ -20,14 +18,10 @@ extension DocumentTypeX on DocumentType {
         return DocumentType.idCard;
       case 'BONAFIDE':
         return DocumentType.bonafide;
-      case 'LEAVING_CERTIFICATE':
-        return DocumentType.leavingCertificate;
+      case 'LEAVING_CERT':
+        return DocumentType.leavingCert;
       case 'REPORT_CARD':
         return DocumentType.reportCard;
-      case 'TRANSFER_CERTIFICATE':
-        return DocumentType.transferCertificate;
-      case 'CHARACTER_CERTIFICATE':
-        return DocumentType.characterCertificate;
       default:
         return DocumentType.bonafide;
     }
@@ -39,14 +33,10 @@ extension DocumentTypeX on DocumentType {
         return 'ID_CARD';
       case DocumentType.bonafide:
         return 'BONAFIDE';
-      case DocumentType.leavingCertificate:
-        return 'LEAVING_CERTIFICATE';
+      case DocumentType.leavingCert:
+        return 'LEAVING_CERT';
       case DocumentType.reportCard:
         return 'REPORT_CARD';
-      case DocumentType.transferCertificate:
-        return 'TRANSFER_CERTIFICATE';
-      case DocumentType.characterCertificate:
-        return 'CHARACTER_CERTIFICATE';
     }
   }
 
@@ -56,14 +46,10 @@ extension DocumentTypeX on DocumentType {
         return 'ID Card';
       case DocumentType.bonafide:
         return 'Bonafide Certificate';
-      case DocumentType.leavingCertificate:
+      case DocumentType.leavingCert:
         return 'Leaving Certificate';
       case DocumentType.reportCard:
         return 'Report Card';
-      case DocumentType.transferCertificate:
-        return 'Transfer Certificate';
-      case DocumentType.characterCertificate:
-        return 'Character Certificate';
     }
   }
 
@@ -73,14 +59,10 @@ extension DocumentTypeX on DocumentType {
         return 'Official student identity card';
       case DocumentType.bonafide:
         return 'Certificate confirming enrollment status';
-      case DocumentType.leavingCertificate:
+      case DocumentType.leavingCert:
         return 'Required for school transfers';
       case DocumentType.reportCard:
         return 'Academic performance summary report';
-      case DocumentType.transferCertificate:
-        return 'For admission to another institution';
-      case DocumentType.characterCertificate:
-        return 'Certificate of good conduct and character';
     }
   }
 
@@ -90,14 +72,10 @@ extension DocumentTypeX on DocumentType {
         return Icons.badge_outlined;
       case DocumentType.bonafide:
         return Icons.verified_outlined;
-      case DocumentType.leavingCertificate:
+      case DocumentType.leavingCert:
         return Icons.logout_rounded;
       case DocumentType.reportCard:
         return Icons.bar_chart_outlined;
-      case DocumentType.transferCertificate:
-        return Icons.swap_horiz_rounded;
-      case DocumentType.characterCertificate:
-        return Icons.star_outline_rounded;
     }
   }
 
@@ -107,14 +85,10 @@ extension DocumentTypeX on DocumentType {
         return AppColors.navyMedium;
       case DocumentType.bonafide:
         return AppColors.infoBlue;
-      case DocumentType.leavingCertificate:
+      case DocumentType.leavingCert:
         return AppColors.warningAmber;
       case DocumentType.reportCard:
         return AppColors.subjectMath;
-      case DocumentType.transferCertificate:
-        return AppColors.subjectHistory;
-      case DocumentType.characterCertificate:
-        return AppColors.successGreen;
     }
   }
 }
@@ -253,8 +227,7 @@ class DocumentModel {
     return DocumentModel(
       id: json['id'] as String,
       studentId: json['student_id'] as String,
-      documentType:
-          DocumentTypeX.fromString(json['document_type'] as String?),
+      documentType: DocumentTypeX.fromString(json['document_type'] as String?),
       fileKey: json['file_key'] as String?,
       status: DocumentStatusX.fromString(json['status'] as String?),
       requestedAt: DateTime.parse(json['requested_at'] as String),

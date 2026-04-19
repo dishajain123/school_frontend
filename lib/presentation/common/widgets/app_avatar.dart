@@ -2,14 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
+import '../../../core/theme/app_typography.dart';
 
-/// User photo display with initials fallback.
-///
-/// Sizes:
-/// - `AppAvatar.sm` — 32px, compact lists
-/// - `AppAvatar.md` — 40px, standard list tile (default)
-/// - `AppAvatar.lg` — 56px, detail header
-/// - `AppAvatar.xl` — 80px, profile screen (adds white ring)
 class AppAvatar extends StatelessWidget {
   const AppAvatar({
     super.key,
@@ -82,15 +76,17 @@ class AppAvatar extends StatelessWidget {
   final String? imageUrl;
   final String name;
   final double size;
-
-  /// Adds a 2px white border ring (used for profile size).
   final bool showRing;
   final Color? ringColor;
   final Color? backgroundColor;
   final VoidCallback? onTap;
 
   String get _initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((s) => s.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
@@ -147,6 +143,13 @@ class AppAvatar extends StatelessWidget {
             color: ringColor ?? AppColors.white,
             width: 2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: avatar,
       );
@@ -155,7 +158,11 @@ class AppAvatar extends StatelessWidget {
     if (onTap != null) {
       avatar = GestureDetector(
         onTap: onTap,
-        child: avatar,
+        child: AnimatedScale(
+          scale: 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: avatar,
+        ),
       );
     }
 
@@ -185,17 +192,25 @@ class _InitialsAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: bgColor,
+        gradient: LinearGradient(
+          colors: [
+            bgColor,
+            Color.lerp(bgColor, Colors.black, 0.15) ?? bgColor,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
           initials,
-          style: TextStyle(
+          style: AppTypography.labelMedium.copyWith(
             color: AppColors.white,
             fontSize: fontSize,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             height: 1,
+            letterSpacing: 0.5,
           ),
         ),
       ),

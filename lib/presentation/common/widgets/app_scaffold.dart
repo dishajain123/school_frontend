@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// A consistent page wrapper for all screens.
-/// Handles [SafeArea], optional padding, gradient background,
-/// FAB, and bottom navigation boilerplate so every screen stays clean.
 class AppScaffold extends StatelessWidget {
   const AppScaffold({
     super.key,
@@ -26,11 +23,7 @@ class AppScaffold extends StatelessWidget {
   final FloatingActionButtonLocation? floatingActionButtonLocation;
   final Widget? bottomNavigationBar;
   final Color? backgroundColor;
-
-  /// Optional padding applied inside the SafeArea wrapper.
   final EdgeInsetsGeometry? padding;
-
-  /// When set, wraps the scaffold body in a gradient container.
   final Gradient? backgroundGradient;
   final bool resizeToAvoidBottomInset;
   final bool extendBodyBehindAppBar;
@@ -55,7 +48,9 @@ class AppScaffold extends StatelessWidget {
       backgroundColor: backgroundColor ?? AppColors.surface50,
       appBar: appBar,
       body: content,
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: floatingActionButton != null
+          ? _PremiumFab(child: floatingActionButton!)
+          : null,
       floatingActionButtonLocation:
           floatingActionButtonLocation ?? FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: bottomNavigationBar,
@@ -63,5 +58,39 @@ class AppScaffold extends StatelessWidget {
       extendBodyBehindAppBar: extendBodyBehindAppBar,
       extendBody: extendBody,
     );
+  }
+}
+
+class _PremiumFab extends StatefulWidget {
+  const _PremiumFab({required this.child});
+  final Widget child;
+
+  @override
+  State<_PremiumFab> createState() => _PremiumFabState();
+}
+
+class _PremiumFabState extends State<_PremiumFab>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(scale: _scale, child: widget.child);
   }
 }

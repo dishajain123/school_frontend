@@ -4,18 +4,6 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import 'app_button.dart';
 
-/// Design-system dialog variants.
-///
-/// Usage:
-/// ```dart
-/// final confirmed = await AppDialog.confirm(
-///   context,
-///   title: 'Delete Student',
-///   message: 'This action cannot be undone.',
-///   confirmLabel: 'Delete',
-/// );
-/// if (confirmed == true) _deleteStudent();
-/// ```
 class AppDialog extends StatelessWidget {
   const AppDialog._({
     super.key,
@@ -42,9 +30,6 @@ class AppDialog extends StatelessWidget {
   final Color? iconColor;
   final Widget? content;
 
-  // ── Static show helpers ───────────────────────────────────────────────────
-
-  /// Shows a confirmation dialog. Returns true if confirmed, false/null if cancelled.
   static Future<bool?> confirm(
     BuildContext context, {
     required String title,
@@ -55,7 +40,7 @@ class AppDialog extends StatelessWidget {
   }) {
     return showDialog<bool>(
       context: context,
-      barrierColor: AppColors.black.withValues(alpha: 0.5),
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => AppDialog._(
         title: title,
         message: message,
@@ -67,7 +52,6 @@ class AppDialog extends StatelessWidget {
     );
   }
 
-  /// Shows an info dialog (single OK button).
   static Future<void> info(
     BuildContext context, {
     required String title,
@@ -78,7 +62,7 @@ class AppDialog extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
-      barrierColor: AppColors.black.withValues(alpha: 0.5),
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => AppDialog._(
         title: title,
         message: message,
@@ -90,7 +74,6 @@ class AppDialog extends StatelessWidget {
     );
   }
 
-  /// Shows a destructive confirmation dialog with a red confirm button.
   static Future<bool?> destructive(
     BuildContext context, {
     required String title,
@@ -101,7 +84,7 @@ class AppDialog extends StatelessWidget {
   }) {
     return showDialog<bool>(
       context: context,
-      barrierColor: AppColors.black.withValues(alpha: 0.5),
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => AppDialog._(
         title: title,
         message: message,
@@ -114,7 +97,6 @@ class AppDialog extends StatelessWidget {
     );
   }
 
-  /// Shows a custom content dialog.
   static Future<T?> custom<T>(
     BuildContext context, {
     required String title,
@@ -126,7 +108,7 @@ class AppDialog extends StatelessWidget {
   }) {
     return showDialog<T>(
       context: context,
-      barrierColor: AppColors.black.withValues(alpha: 0.5),
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => AppDialog._(
         title: title,
         message: '',
@@ -145,16 +127,17 @@ class AppDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: AppColors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        borderRadius: BorderRadius.circular(20),
       ),
       elevation: 0,
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.space24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon (optional)
             if (icon != null) ...[
               Container(
                 width: 48,
@@ -162,27 +145,24 @@ class AppDialog extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: (iconColor ?? AppColors.navyDeep)
                       .withValues(alpha: 0.1),
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radiusSmall),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
                   color: iconColor ?? AppColors.navyDeep,
-                  size: AppDimensions.iconMD,
+                  size: 22,
                 ),
               ),
               const SizedBox(height: AppDimensions.space16),
             ],
-
-            // Title
             Text(
               title,
               style: AppTypography.headlineSmall.copyWith(
                 color: AppColors.navyDeep,
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
               ),
             ),
-
-            // Message or custom content
             if (variant == _DialogVariant.custom && content != null) ...[
               const SizedBox(height: AppDimensions.space12),
               content!,
@@ -190,13 +170,13 @@ class AppDialog extends StatelessWidget {
               const SizedBox(height: AppDimensions.space8),
               Text(
                 message,
-                style: AppTypography.bodyMedium,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.grey600,
+                  height: 1.5,
+                ),
               ),
             ],
-
             const SizedBox(height: AppDimensions.space24),
-
-            // Actions
             _buildActions(context),
           ],
         ),

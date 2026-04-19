@@ -1,3 +1,5 @@
+// presentation/documents/screens/request_document_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,9 +12,6 @@ import '../../../data/models/document/document_model.dart';
 import '../../../providers/document_provider.dart';
 import '../widgets/document_type_card.dart';
 
-/// Standalone full-screen document request screen.
-/// Used when navigating via RouteNames.requestDocument.
-/// The studentId MUST be passed via route extras.
 class RequestDocumentScreen extends ConsumerStatefulWidget {
   const RequestDocumentScreen({super.key, required this.studentId});
 
@@ -24,8 +23,31 @@ class RequestDocumentScreen extends ConsumerStatefulWidget {
 }
 
 class _RequestDocumentScreenState
-    extends ConsumerState<RequestDocumentScreen> {
+    extends ConsumerState<RequestDocumentScreen>
+    with SingleTickerProviderStateMixin {
   DocumentType? _selected;
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,59 +67,48 @@ class _RequestDocumentScreenState
         ),
         title: Text('Request Document', style: AppTypography.titleLargeOnDark),
       ),
-      body: Column(
-        children: [
-          // ── Scrollable content ─────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppDimensions.space8),
-
-                  // Header
-                  Text(
-                    'Select Document Type',
-                    style: AppTypography.headlineSmall,
-                  ),
-                  const SizedBox(height: AppDimensions.space4),
-                  Text(
-                    'The document will be generated in the background. '
-                    'You\'ll see it update automatically when ready.',
-                    style: AppTypography.bodySmall,
-                  ),
-
-                  const SizedBox(height: AppDimensions.space24),
-
-                  // Document type cards
-                  ...DocumentType.values.map(
-                    (type) => Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: AppDimensions.space12),
-                      child: DocumentTypeCard(
-                        type: type,
-                        isSelected: _selected == type,
-                        onTap: () => setState(() => _selected = type),
+      body: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: AppDimensions.space8),
+                      _HeaderCard(),
+                      const SizedBox(height: AppDimensions.space20),
+                      _TypesLabel(),
+                      const SizedBox(height: AppDimensions.space12),
+                      ...DocumentType.values.map(
+                        (type) => Padding(
+                          padding: const EdgeInsets.only(
+                              bottom: AppDimensions.space12),
+                          child: DocumentTypeCard(
+                            type: type,
+                            isSelected: _selected == type,
+                            onTap: () => setState(() => _selected = type),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 100),
+                    ],
                   ),
-
-                  // Extra space for the sticky bottom bar
-                  const SizedBox(height: 100),
-                ],
+                ),
               ),
-            ),
+              _BottomActionBar(
+                selected: _selected,
+                isLoading: state.isRequesting,
+                bottomPadding: viewPadding.bottom,
+                onSubmit: () => _submit(context),
+              ),
+            ],
           ),
-
-          // ── Sticky bottom action bar ──────────────────────────────────
-          _BottomActionBar(
-            selected: _selected,
-            isLoading: state.isRequesting,
-            bottomPadding: viewPadding.bottom,
-            onSubmit: () => _submit(context),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -112,8 +123,20 @@ class _RequestDocumentScreenState
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${_selected!.label} requested! It will be ready shortly.',
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_outline_rounded,
+                  color: AppColors.white, size: 18),
+              const SizedBox(width: AppDimensions.space8),
+              Expanded(
+                child: Text(
+                  '${_selected!.label} requested! It will be ready shortly.',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
           backgroundColor: AppColors.successGreen,
           behavior: SnackBarBehavior.floating,
@@ -121,6 +144,7 @@ class _RequestDocumentScreenState
             borderRadius:
                 BorderRadius.circular(AppDimensions.radiusMedium),
           ),
+          duration: const Duration(seconds: 4),
         ),
       );
       context.pop();
@@ -138,6 +162,86 @@ class _RequestDocumentScreenState
         ),
       );
     }
+  }
+}
+
+class _HeaderCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.space16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.navyDeep, AppColors.navyMedium],
+        ),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        boxShadow: AppDecorations.shadow2,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            ),
+            child: const Icon(Icons.description_outlined,
+                color: AppColors.white, size: 22),
+          ),
+          const SizedBox(width: AppDimensions.space12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'New Document Request',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.space4),
+                Text(
+                  'Generated in background · auto-updates when ready',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.65),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypesLabel extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+            color: AppColors.goldPrimary,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          ),
+        ),
+        const SizedBox(width: AppDimensions.space8),
+        Text(
+          'Select Document Type',
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.grey600,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -172,7 +276,6 @@ class _BottomActionBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Selected type preview
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
@@ -189,6 +292,10 @@ class _BottomActionBar extends StatelessWidget {
                       color: selected!.color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(
                           AppDimensions.radiusSmall),
+                      border: Border.all(
+                        color: selected!.color.withValues(alpha: 0.2),
+                        width: AppDimensions.borderThin,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -200,21 +307,31 @@ class _BottomActionBar extends StatelessWidget {
                             'Requesting: ${selected!.label}',
                             style: AppTypography.labelMedium.copyWith(
                               color: selected!.color,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                        Icon(Icons.check_circle_rounded,
+                            color: selected!.color, size: 16),
                       ],
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
-
-          // Submit button
           SizedBox(
             width: double.infinity,
             height: AppDimensions.buttonHeight,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.navyDeep,
+                foregroundColor: AppColors.white,
+                disabledBackgroundColor:
+                    AppColors.navyDeep.withValues(alpha: 0.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusMedium),
+                ),
+              ),
               onPressed: selected == null || isLoading ? null : onSubmit,
               child: isLoading
                   ? const SizedBox(
@@ -226,7 +343,15 @@ class _BottomActionBar extends StatelessWidget {
                             AlwaysStoppedAnimation<Color>(AppColors.white),
                       ),
                     )
-                  : const Text('Request Document'),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.send_rounded, size: 18),
+                        const SizedBox(width: AppDimensions.space8),
+                        Text('Request Document',
+                            style: AppTypography.buttonPrimary),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -234,4 +359,3 @@ class _BottomActionBar extends StatelessWidget {
     );
   }
 }
-

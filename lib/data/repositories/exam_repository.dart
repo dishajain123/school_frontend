@@ -62,16 +62,34 @@ class ExamRepository {
   // ── GET /exam-schedule?standard_id=...&series_id=... ─────────────────────
   Future<ExamScheduleTable> getSchedule({
     required String standardId,
-    required String seriesId,
+    String? seriesId,
   }) async {
     final response = await _dio.get(
       _base,
       queryParameters: {
         'standard_id': standardId,
-        'series_id': seriesId,
+        if (seriesId != null && seriesId.isNotEmpty) 'series_id': seriesId,
       },
     );
     return ExamScheduleTable.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<ExamSeriesModel>> listSeries({
+    required String standardId,
+    String? academicYearId,
+  }) async {
+    final response = await _dio.get(
+      '$_base/series',
+      queryParameters: {
+        'standard_id': standardId,
+        if (academicYearId != null && academicYearId.isNotEmpty)
+          'academic_year_id': academicYearId,
+      },
+    );
+    final data = response.data as List<dynamic>? ?? const [];
+    return data
+        .map((e) => ExamSeriesModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 

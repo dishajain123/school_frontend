@@ -33,7 +33,7 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
   @override
   void initState() {
     super.initState();
-    _principalTabController = TabController(length: 2, vsync: this);
+    _principalTabController = TabController(length: 4, vsync: this);
     _teacherTabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
   }
@@ -46,7 +46,10 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
   }
 
   void _initLoad() {
-    ref.read(leaveNotifierProvider.notifier).load();
+    ref.read(leaveNotifierProvider.notifier).load(
+          statusFilter: null,
+          refresh: true,
+        );
   }
 
   @override
@@ -74,8 +77,10 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
             ? TabBar(
                 controller: _principalTabController,
                 tabs: const [
+                  Tab(text: 'All'),
                   Tab(text: 'Pending'),
-                  Tab(text: 'All Requests'),
+                  Tab(text: 'Approved'),
+                  Tab(text: 'Rejected'),
                 ],
               )
             : TabBar(
@@ -99,13 +104,21 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
       body: isPrincipal
           ? TabBarView(
               controller: _principalTabController,
-              children: [
+              children: const [
+                _LeaveListView(
+                  statusFilter: null,
+                  isPrincipal: true,
+                ),
                 _LeaveListView(
                   statusFilter: LeaveStatus.pending,
                   isPrincipal: true,
                 ),
-                const _LeaveListView(
-                  statusFilter: null,
+                _LeaveListView(
+                  statusFilter: LeaveStatus.approved,
+                  isPrincipal: true,
+                ),
+                _LeaveListView(
+                  statusFilter: LeaveStatus.rejected,
                   isPrincipal: true,
                 ),
               ],
@@ -163,11 +176,6 @@ class _LeaveListViewState extends ConsumerState<_LeaveListView> {
   void initState() {
     super.initState();
     _activeFilter = widget.statusFilter;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(leaveNotifierProvider.notifier)
-          .load(statusFilter: _activeFilter);
-    });
   }
 
   @override
@@ -180,23 +188,25 @@ class _LeaveListViewState extends ConsumerState<_LeaveListView> {
         message: e.toString(),
         onRetry: () => ref
             .read(leaveNotifierProvider.notifier)
-            .load(statusFilter: _activeFilter),
+            .load(statusFilter: null, refresh: true),
       ),
       data: (leaveState) {
         if (leaveState.isLoading && leaveState.items.isEmpty) {
           return AppLoading.listView(count: 5, withAvatar: false);
         }
 
+        final effectiveFilter =
+            widget.showFilterChips ? _activeFilter : widget.statusFilter;
         final items = leaveState.items.where((l) {
-          if (widget.statusFilter == null) return true;
-          return l.status == widget.statusFilter;
+          if (effectiveFilter == null) return true;
+          return l.status == effectiveFilter;
         }).toList();
 
         return RefreshIndicator(
           color: AppColors.navyDeep,
           onRefresh: () => ref
               .read(leaveNotifierProvider.notifier)
-              .load(statusFilter: _activeFilter, refresh: true),
+              .load(statusFilter: null, refresh: true),
           child: CustomScrollView(
             slivers: [
               // Filter chips (teacher view only)
@@ -206,9 +216,6 @@ class _LeaveListViewState extends ConsumerState<_LeaveListView> {
                     selected: _activeFilter,
                     onSelected: (status) {
                       setState(() => _activeFilter = status);
-                      ref
-                          .read(leaveNotifierProvider.notifier)
-                          .setStatusFilter(status);
                     },
                   ),
                 ),

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/masters/standard_model.dart';
 import '../../../data/models/masters/subject_model.dart';
@@ -24,14 +23,26 @@ class TeacherListScreen extends ConsumerStatefulWidget {
   ConsumerState<TeacherListScreen> createState() => _TeacherListScreenState();
 }
 
-class _TeacherListScreenState extends ConsumerState<TeacherListScreen> {
+class _TeacherListScreenState extends ConsumerState<TeacherListScreen>
+    with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   StandardModel? _selectedStandard;
-  String? _selectedSubjectName;
+  SubjectModel? _selectedSubject;
+  bool _filtersExpanded = false;
+
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(teacherNotifierProvider.notifier).load(refresh: true);
       ref.read(standardsNotifierProvider.notifier).refresh();
@@ -42,6 +53,7 @@ class _TeacherListScreenState extends ConsumerState<TeacherListScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
@@ -56,18 +68,22 @@ class _TeacherListScreenState extends ConsumerState<TeacherListScreen> {
     ref.read(teacherNotifierProvider.notifier).setFilter(
           TeacherFilters(
             standardId: _selectedStandard?.id,
-            subjectName: _selectedSubjectName,
+            subjectId: _selectedSubject?.id,
+            subjectName: _selectedSubject?.name,
           ),
         );
   }
 
   void _onStandardChanged(StandardModel? standard) {
-    setState(() => _selectedStandard = standard);
+    setState(() {
+      _selectedStandard = standard;
+      _selectedSubject = null;
+    });
     _applyFilters();
   }
 
-  void _onSubjectChanged(String? subjectName) {
-    setState(() => _selectedSubjectName = subjectName);
+  void _onSubjectChanged(SubjectModel? subject) {
+    setState(() => _selectedSubject = subject);
     _applyFilters();
   }
 
@@ -76,238 +92,365 @@ class _TeacherListScreenState extends ConsumerState<TeacherListScreen> {
     return user?.hasPermission('user:manage') ?? false;
   }
 
+  bool get _hasActiveFilters =>
+      _selectedStandard != null || _selectedSubject != null;
+
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(teacherNotifierProvider);
     final standardsAsync = ref.watch(standardsNotifierProvider);
     final standards = standardsAsync.valueOrNull ?? const <StandardModel>[];
-    final subjectsAsync = ref.watch(subjectsProvider(null));
+    final subjectsAsync = ref.watch(subjectsProvider(_selectedStandard?.id));
     final subjects = subjectsAsync.valueOrNull ?? const <SubjectModel>[];
-    final uniqueSubjectNames = <String>[];
-    final seen = <String>{};
-    for (final subject in subjects) {
-      final name = subject.name.trim();
-      if (name.isEmpty) continue;
-      final key = name.toLowerCase();
-      if (seen.add(key)) uniqueSubjectNames.add(name);
-    }
-    uniqueSubjectNames
-        .sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final sortedSubjects = [...subjects]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: const AppAppBar(
+      appBar: AppAppBar(
         title: 'Teachers',
         showBack: true,
-      ),
-      floatingActionButton: _canCreate
-          ? FloatingActionButton(
-              onPressed: () => context.push(RouteNames.createTeacher),
-              tooltip: 'Add Teacher',
-              child: const Icon(Icons.person_add_outlined),
-            )
-          : null,
-      body: Column(
-        children: [
-          if (standards.isNotEmpty)
-            Container(
-              color: AppColors.white,
-              padding: const EdgeInsets.fromLTRB(
-                AppDimensions.space16,
-                AppDimensions.space12,
-                AppDimensions.space16,
-                AppDimensions.space8,
-              ),
-              child: Column(
-                children: [
-                  DropdownButtonFormField<String?>(
-                    initialValue: _selectedStandard?.id,
-                    isExpanded: true,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusMedium),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.navyDeep,
-                    ),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.navyDeep,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: _dropdownDecoration('Filter by Class'),
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text(
-                          'All Classes',
-                          style: AppTypography.bodyMedium
-                              .copyWith(color: AppColors.grey800),
-                        ),
-                      ),
-                      ...standards.map(
-                        (s) => DropdownMenuItem<String?>(
-                          value: s.id,
-                          child: Text(s.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (standardId) {
-                      final selected =
-                          standards.cast<StandardModel?>().firstWhere(
-                                (s) => s?.id == standardId,
-                                orElse: () => null,
-                              );
-                      _onStandardChanged(selected);
-                    },
-                  ),
-                  const SizedBox(height: AppDimensions.space8),
-                  DropdownButtonFormField<String?>(
-                    initialValue: _selectedSubjectName,
-                    isExpanded: true,
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusMedium),
-                    icon: subjectsAsync.isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.navyDeep,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.navyDeep,
-                          ),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.navyDeep,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: _dropdownDecoration('Filter by Subject')
-                        .copyWith(fillColor: AppColors.surface50),
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text(
-                          'All Subjects',
-                          style: AppTypography.bodyMedium
-                              .copyWith(color: AppColors.grey800),
-                        ),
-                      ),
-                      ...uniqueSubjectNames.map(
-                        (subjName) => DropdownMenuItem<String?>(
-                          value: subjName,
-                          child: Text(subjName),
-                        ),
-                      ),
-                    ],
-                    onChanged: _onSubjectChanged,
-                  ),
-                ],
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              onPressed: () =>
+                  setState(() => _filtersExpanded = !_filtersExpanded),
+              icon: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _hasActiveFilters
+                      ? AppColors.goldPrimary.withValues(alpha: 0.25)
+                      : AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _filtersExpanded ? Icons.tune : Icons.tune_outlined,
+                  color: _hasActiveFilters
+                      ? AppColors.goldPrimary
+                      : AppColors.white,
+                  size: 18,
+                ),
               ),
             ),
-          Expanded(
-            child: asyncState.when(
-              loading: () => AppLoading.listView(),
-              error: (e, _) => AppErrorState(
-                message: e.toString(),
-                onRetry: () => ref
-                    .read(teacherNotifierProvider.notifier)
-                    .load(refresh: true),
-              ),
-              data: (teacherState) {
-                if (teacherState.isLoading) {
-                  return AppLoading.listView();
-                }
-
-                if (teacherState.error != null && teacherState.items.isEmpty) {
-                  return AppErrorState(
-                    message: teacherState.error,
-                    onRetry: () => ref
+          ),
+          if (_canCreate)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () async {
+                  final result = await context.push(RouteNames.createTeacher);
+                  if (result == true && mounted) {
+                    ref
                         .read(teacherNotifierProvider.notifier)
-                        .load(refresh: true),
-                  );
-                }
-
-                if (teacherState.items.isEmpty) {
-                  return AppEmptyState(
-                    title: 'No teachers found',
-                    subtitle:
-                        'Try changing class/subject filters or add a teacher.',
-                    icon: Icons.co_present_outlined,
-                    actionLabel: _canCreate ? 'Add Teacher' : null,
-                    onAction: _canCreate
-                        ? () => context.push(RouteNames.createTeacher)
-                        : null,
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => ref
+                        .load(refresh: true);
+                  }
+                },
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.person_add_outlined,
+                      color: AppColors.white, size: 18),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: FadeTransition(
+        opacity: _fade,
+        child: Column(
+          children: [
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: _FilterPanel(
+                standards: standards,
+                subjects: sortedSubjects,
+                selectedStandard: _selectedStandard,
+                selectedSubject: _selectedSubject,
+                subjectsLoading: subjectsAsync.isLoading,
+                onStandardChanged: _onStandardChanged,
+                onSubjectChanged: _onSubjectChanged,
+              ),
+              crossFadeState: _filtersExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 220),
+            ),
+            if (_filtersExpanded)
+              Container(height: 1, color: AppColors.surface100),
+            Expanded(
+              child: asyncState.when(
+                loading: () => _buildShimmer(),
+                error: (e, _) => AppErrorState(
+                  message: e.toString(),
+                  onRetry: () => ref
                       .read(teacherNotifierProvider.notifier)
                       .load(refresh: true),
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppDimensions.pageVertical,
-                    ),
-                    itemCount: teacherState.items.length +
-                        (teacherState.isLoadingMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: AppColors.surface100,
-                      indent: 68,
-                    ),
-                    itemBuilder: (context, index) {
-                      if (index == teacherState.items.length) {
-                        return AppLoading.paginating();
-                      }
-                      final teacher = teacherState.items[index];
-                      return Container(
-                        color: AppColors.white,
-                        child: TeacherTile(
-                          teacher: teacher,
-                          isLast: index == teacherState.items.length - 1,
-                          onTap: () => context.push(
-                            RouteNames.teacherDetailPath(teacher.id),
-                            extra: teacher,
+                ),
+                data: (teacherState) {
+                  if (teacherState.isLoading) return _buildShimmer();
+
+                  if (teacherState.error != null &&
+                      teacherState.items.isEmpty) {
+                    return AppErrorState(
+                      message: teacherState.error,
+                      onRetry: () => ref
+                          .read(teacherNotifierProvider.notifier)
+                          .load(refresh: true),
+                    );
+                  }
+
+                  if (teacherState.items.isEmpty) {
+                    return AppEmptyState(
+                      title: 'No teachers found',
+                      subtitle: _hasActiveFilters
+                          ? 'Try changing class or subject filters.'
+                          : 'Add your first teacher to get started.',
+                      icon: Icons.co_present_outlined,
+                      actionLabel: _canCreate ? 'Add Teacher' : null,
+                      onAction: _canCreate
+                          ? () => context.push(RouteNames.createTeacher)
+                          : null,
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(teacherNotifierProvider.notifier)
+                        .load(refresh: true),
+                    color: AppColors.navyDeep,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                      itemCount: teacherState.items.length +
+                          (teacherState.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == teacherState.items.length) {
+                          return AppLoading.paginating();
+                        }
+                        final teacher = teacherState.items[index];
+                        final isLast = index == teacherState.items.length - 1;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.navyDeep
+                                      .withValues(alpha: 0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TeacherTile(
+                              teacher: teacher,
+                              isLast: isLast,
+                              onTap: () => context.push(
+                                RouteNames.teacherDetailPath(teacher.id),
+                                extra: teacher,
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      itemCount: 7,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: AppLoading.card(height: 72),
+      ),
+    );
+  }
+}
+
+class _FilterPanel extends StatelessWidget {
+  const _FilterPanel({
+    required this.standards,
+    required this.subjects,
+    required this.selectedStandard,
+    required this.selectedSubject,
+    required this.subjectsLoading,
+    required this.onStandardChanged,
+    required this.onSubjectChanged,
+  });
+
+  final List<StandardModel> standards;
+  final List<SubjectModel> subjects;
+  final StandardModel? selectedStandard;
+  final SubjectModel? selectedSubject;
+  final bool subjectsLoading;
+  final ValueChanged<StandardModel?> onStandardChanged;
+  final ValueChanged<SubjectModel?> onSubjectChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DropdownField<String?>(
+            label: 'Class',
+            hint: 'All Classes',
+            value: selectedStandard?.id,
+            prefixIcon: Icons.school_outlined,
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All Classes'),
+              ),
+              ...standards.map((s) => DropdownMenuItem<String?>(
+                    value: s.id,
+                    child: Text(s.name),
+                  )),
+            ],
+            onChanged: (standardId) {
+              final selected = standards.cast<StandardModel?>().firstWhere(
+                    (s) => s?.id == standardId,
+                    orElse: () => null,
+                  );
+              onStandardChanged(selected);
+            },
+          ),
+          const SizedBox(height: 12),
+          _DropdownField<String?>(
+            label: 'Subject',
+            hint: 'All Subjects',
+            value: selectedSubject?.id,
+            prefixIcon: Icons.menu_book_outlined,
+            isLoading: subjectsLoading,
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All Subjects'),
+              ),
+              ...subjects.map((subject) => DropdownMenuItem<String?>(
+                    value: subject.id,
+                    child: Text(subject.name),
+                  )),
+            ],
+            onChanged: (subjectId) {
+              final selected = subjects.cast<SubjectModel?>().firstWhere(
+                    (s) => s?.id == subjectId,
+                    orElse: () => null,
+                  );
+              onSubjectChanged(selected);
+            },
           ),
         ],
       ),
     );
   }
+}
 
-  InputDecoration _dropdownDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: AppTypography.labelMedium.copyWith(
-        color: AppColors.grey600,
-      ),
-      filled: true,
-      fillColor: AppColors.surface50,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space12,
-        vertical: AppDimensions.space12,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        borderSide: const BorderSide(color: AppColors.surface200),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        borderSide: const BorderSide(
-          color: AppColors.navyDeep,
-          width: 1.4,
+class _DropdownField<T> extends StatelessWidget {
+  const _DropdownField({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.prefixIcon,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final String hint;
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final IconData prefixIcon;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.grey600,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
         ),
-      ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.surface200, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Icon(prefixIcon, size: 16, color: AppColors.grey400),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: isLoading
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.navyMedium),
+                              ),
+                              const SizedBox(width: 8),
+                              Text('Loading...',
+                                  style: AppTypography.bodyMedium
+                                      .copyWith(color: AppColors.grey400)),
+                            ],
+                          ),
+                        )
+                      : DropdownButton<T>(
+                          value: value,
+                          isExpanded: true,
+                          hint: Text(hint,
+                              style: AppTypography.bodyMedium
+                                  .copyWith(color: AppColors.grey400)),
+                          style: AppTypography.bodyMedium
+                              .copyWith(color: AppColors.grey800),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.grey400),
+                          onChanged: onChanged,
+                          items: items,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

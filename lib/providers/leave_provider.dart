@@ -188,9 +188,7 @@ class LeaveNotifier extends AsyncNotifier<LeaveListState> {
       final cur = state.valueOrNull ?? const LeaveListState();
       state = AsyncData(
         cur.copyWith(
-          items: cur.items
-              .map((l) => l.id == leaveId ? updated : l)
-              .toList(),
+          items: cur.items.map((l) => l.id == leaveId ? updated : l).toList(),
           isSubmitting: false,
         ),
       );
@@ -224,10 +222,27 @@ final leaveNotifierProvider =
 // FutureProvider.family keyed by academicYearId (nullable string).
 // Invalidated when a leave is applied.
 
-final leaveBalanceProvider = FutureProvider.family<List<LeaveBalanceModel>, String?>(
+final leaveBalanceProvider =
+    FutureProvider.family<List<LeaveBalanceModel>, String?>(
   (ref, academicYearId) async {
     final repo = ref.read(leaveRepositoryProvider);
     return repo.getBalance(academicYearId: academicYearId);
+  },
+);
+
+typedef TeacherLeaveBalanceParams = ({
+  String teacherId,
+  String? academicYearId
+});
+
+final teacherLeaveBalanceProvider =
+    FutureProvider.family<List<LeaveBalanceModel>, TeacherLeaveBalanceParams>(
+  (ref, params) async {
+    final repo = ref.read(leaveRepositoryProvider);
+    return repo.getTeacherBalance(
+      teacherId: params.teacherId,
+      academicYearId: params.academicYearId,
+    );
   },
 );
 

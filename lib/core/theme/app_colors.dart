@@ -26,6 +26,8 @@ abstract final class AppColors {
   // ── Neutrals ──────────────────────────────────────────────────────────────
   /// Primary background for all screens.
   static const Color white = Color(0xFFFFFFFF);
+  static const Color white70 = Color(0xB3FFFFFF);
+  static const Color white54 = Color(0x8AFFFFFF);
 
   /// Card backgrounds, input fields, list backgrounds.
   static const Color surface50 = Color(0xFFF8F9FB);
@@ -36,11 +38,20 @@ abstract final class AppColors {
   /// Borders on cards and inputs.
   static const Color surface200 = Color(0xFFDDE2EA);
 
+  /// Very light neutral for subtle borders and muted surfaces.
+  static const Color grey300 = Color(0xFFC7D0DB);
+
   /// Placeholder text, disabled labels, secondary metadata.
   static const Color grey400 = Color(0xFF9BA5B4);
 
+  /// Mid neutral text tone for helper/caption usage.
+  static const Color grey500 = Color(0xFF7B8794);
+
   /// Secondary text — subtitles, descriptions, captions.
   static const Color grey600 = Color(0xFF637082);
+
+  /// Intermediate neutral text/border tone for legacy widget compatibility.
+  static const Color grey700 = Color(0xFF4A5568);
 
   /// Primary text on white backgrounds.
   static const Color grey800 = Color(0xFF2D3748);
@@ -81,6 +92,7 @@ abstract final class AppColors {
 
   // ── Transparency helpers ──────────────────────────────────────────────────
   static const Color transparent = Color(0x00000000);
+  static const Color shadowSoft = Color(0x140B1F3A);
 
   // ── Avatar fallback palette (seeded from name hash) ───────────────────────
   static const List<Color> avatarPalette = [

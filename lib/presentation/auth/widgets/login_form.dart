@@ -60,7 +60,6 @@ class _LoginFormState extends ConsumerState<LoginForm>
           phone: _usePhone ? identifier : null,
           password: _passwordController.text,
         );
-    // Navigation is handled by GoRouter redirect on auth state change
   }
 
   @override
@@ -74,44 +73,25 @@ class _LoginFormState extends ConsumerState<LoginForm>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Email / Phone toggle
-          Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surface100,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusSmall),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: AppColors.white,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusSmall - 2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D0B1F3A),
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelStyle: AppTypography.labelMedium
-                  .copyWith(fontWeight: FontWeight.w600),
-              unselectedLabelStyle: AppTypography.labelMedium,
-              labelColor: AppColors.navyDeep,
-              unselectedLabelColor: AppColors.grey400,
-              dividerColor: Colors.transparent,
-              padding: const EdgeInsets.all(3),
-              tabs: const [Tab(text: 'Email'), Tab(text: 'Phone')],
-            ),
+          _SectionLabel(label: 'Sign in with'),
+          const SizedBox(height: 10),
+          _TabToggle(
+            controller: _tabController,
+            tabs: const ['Email', 'Phone'],
           ),
-
-          const SizedBox(height: AppDimensions.space24),
-
+          const SizedBox(height: 20),
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.05, 0),
+                  end: Offset.zero,
+                ).animate(anim),
+                child: child,
+              ),
+            ),
             child: _usePhone
                 ? AppTextField(
                     key: const ValueKey('phone'),
@@ -135,9 +115,7 @@ class _LoginFormState extends ConsumerState<LoginForm>
                     validator: Validators.validateEmail,
                   ),
           ),
-
-          const SizedBox(height: AppDimensions.space16),
-
+          const SizedBox(height: 16),
           AppTextField(
             controller: _passwordController,
             label: 'Password',
@@ -151,73 +129,163 @@ class _LoginFormState extends ConsumerState<LoginForm>
               return null;
             },
           ),
-
-          const SizedBox(height: AppDimensions.space12),
-
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: Checkbox(
-                      value: _rememberMe,
-                      onChanged: (v) =>
-                          setState(() => _rememberMe = v ?? false),
-                      activeColor: AppColors.navyDeep,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimensions.space4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppDimensions.space8),
-                  Text('Remember me', style: AppTypography.labelMedium),
-                ],
+              _RememberMe(
+                value: _rememberMe,
+                onChanged: (v) => setState(() => _rememberMe = v ?? false),
               ),
               GestureDetector(
                 onTap: () => context.push(RouteNames.forgotPassword),
-                child: Text('Forgot password?',
-                    style: AppTypography.bodyMediumLink),
+                child: Text(
+                  'Forgot password?',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.navyMedium,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
-
-          const SizedBox(height: AppDimensions.space32),
-
+          const SizedBox(height: 28),
           AppButton.primary(
             label: 'Sign In',
             onTap: isLoading ? null : _submit,
             isLoading: isLoading,
             icon: Icons.login_rounded,
           ),
-
-          const SizedBox(height: AppDimensions.space16),
-
+          const SizedBox(height: 20),
           Row(
             children: [
-              const Expanded(
-                  child: Divider(color: AppColors.surface200)),
+              Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.space12),
-                child:
-                    Text('Need help?', style: AppTypography.labelMedium),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  'Need help?',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.grey400,
+                    fontSize: 12,
+                  ),
+                ),
               ),
-              const Expanded(
-                  child: Divider(color: AppColors.surface200)),
+              Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
             ],
           ),
-
-          const SizedBox(height: AppDimensions.space16),
-
+          const SizedBox(height: 16),
           AppButton.secondary(
             label: 'Contact Administrator',
             onTap: () {},
             icon: Icons.support_agent_outlined,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: AppTypography.labelMedium.copyWith(
+        color: AppColors.grey500,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _TabToggle extends StatelessWidget {
+  const _TabToggle({required this.controller, required this.tabs});
+  final TabController controller;
+  final List<String> tabs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.surface100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: TabBar(
+        controller: controller,
+        indicator: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelStyle: AppTypography.labelMedium.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: AppTypography.labelMedium.copyWith(
+          fontSize: 13,
+        ),
+        labelColor: AppColors.navyDeep,
+        unselectedLabelColor: AppColors.grey400,
+        dividerColor: Colors.transparent,
+        tabs: tabs.map((t) => Tab(text: t)).toList(),
+      ),
+    );
+  }
+}
+
+class _RememberMe extends StatelessWidget {
+  const _RememberMe({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: value ? AppColors.navyDeep : AppColors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: value ? AppColors.navyDeep : AppColors.surface200,
+                width: 1.5,
+              ),
+            ),
+            child: value
+                ? const Icon(
+                    Icons.check_rounded,
+                    size: 13,
+                    color: AppColors.white,
+                  )
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Remember me',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.grey600,
+              fontSize: 13,
+            ),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import '../core/constants/storage_keys.dart';
 import '../core/storage/local_storage.dart';
@@ -135,13 +136,25 @@ class ChildrenNotifier extends AsyncNotifier<ChildrenState> {
   }) async {
     final repo = ref.read(parentRepositoryProvider);
     final previous = state.valueOrNull?.children ?? const <ChildSummaryModel>[];
-    final children = await repo.linkMyChild(
-      studentId: studentId,
-      admissionNumber: admissionNumber,
-      studentEmail: studentEmail,
-      studentPhone: studentPhone,
-      studentPassword: studentPassword,
-    );
+    List<ChildSummaryModel> children;
+    try {
+      children = await repo.linkMyChild(
+        studentId: studentId,
+        admissionNumber: admissionNumber,
+        studentEmail: studentEmail,
+        studentPhone: studentPhone,
+        studentPassword: studentPassword,
+      );
+    } on DioException catch (e) {
+      final message =
+          (e.response?.data is Map ? (e.response?.data['detail'] ?? '') : '')
+              .toString()
+              .toLowerCase();
+      final isAlreadyLinked = e.response?.statusCode == 409 &&
+          message.contains('already linked to your account');
+      if (!isAlreadyLinked) rethrow;
+      children = await repo.getMyChildren();
+    }
 
     final current = state.valueOrNull ?? const ChildrenState();
     final previousIds = previous.map((c) => c.id).toSet();

@@ -8,9 +8,14 @@ import '../../../data/models/auth/current_user.dart';
 import '../../../providers/auth_provider.dart';
 
 class GreetingHeader extends ConsumerWidget {
-  const GreetingHeader({super.key, this.subtitle});
+  const GreetingHeader({
+    super.key,
+    this.subtitle,
+    this.showBackButton = false,
+  });
 
   final String? subtitle;
+  final bool showBackButton;
 
   static String _greeting() {
     final hour = DateTime.now().hour;
@@ -56,6 +61,30 @@ class GreetingHeader extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (showBackButton) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20,
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 16,
+                    color: AppColors.white,
+                  ),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space12),
+          ],
           Text(
             dayStr,
             style: AppTypography.labelMedium.copyWith(

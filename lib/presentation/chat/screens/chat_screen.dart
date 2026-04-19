@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/chat/conversation_model.dart';
-import '../../../data/models/chat/message_model.dart';
-import '../../../presentation/common/widgets/app_app_bar.dart';
 import '../../../presentation/common/widgets/app_error_state.dart';
 import '../../../presentation/common/widgets/app_loading.dart';
 import '../../../providers/auth_provider.dart';
@@ -37,7 +35,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Mark messages as read when entering
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatRoomProvider(widget.conversationId).notifier).markAllRead();
     });
@@ -52,7 +49,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    // With reverse: true, maxScrollExtent = top of chat (oldest messages)
     final nearTop = _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200;
     if (nearTop && !_isLoadingMore) {
@@ -74,16 +70,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        0, // 0 = bottom in reversed list
+        0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     }
   }
 
-  String get _title {
-    return widget.conversation?.displayName ?? 'Chat';
-  }
+  String get _title => widget.conversation?.displayName ?? 'Chat';
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +88,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUser = ref.watch(currentUserProvider);
     final currentUserId = currentUser?.id ?? '';
 
-    // Auto-scroll when new message arrives
     ref.listen(chatRoomProvider(widget.conversationId), (prev, next) {
       final prevCount = prev?.valueOrNull?.messages.length ?? 0;
       final nextCount = next.valueOrNull?.messages.length ?? 0;
@@ -101,39 +97,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.surface50,
-      appBar: AppBar(
-        backgroundColor: AppColors.navyDeep,
-        foregroundColor: AppColors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.white, size: AppDimensions.iconMD),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: _ChatAppBarTitle(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64),
+        child: _ChatAppBar(
           title: _title,
           conversation: widget.conversation,
           isConnected: chatAsync.valueOrNull?.isConnected ?? false,
+          onBack: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go(RouteNames.dashboard);
+            }
+          },
+          onReconnect: chatAsync.valueOrNull?.isConnected == false
+              ? () => ref
+                  .read(chatRoomProvider(widget.conversationId).notifier)
+                  .reconnect()
+              : null,
         ),
-        actions: [
-          chatAsync.whenOrNull(
-            data: (state) => state.isConnected
-                ? const SizedBox.shrink()
-                : IconButton(
-                    icon: const Icon(Icons.refresh_rounded,
-                        color: AppColors.white),
-                    onPressed: () => ref
-                        .read(chatRoomProvider(widget.conversationId)
-                            .notifier)
-                        .reconnect(),
-                    tooltip: 'Reconnect',
-                  ),
-          ) ??
-              const SizedBox.shrink(),
-          const SizedBox(width: AppDimensions.space4),
-        ],
       ),
       body: chatAsync.when(
         loading: () => AppLoading.listView(count: 10, withAvatar: true),
@@ -145,25 +128,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         data: (state) {
           return Column(
             children: [
-              // Loading older messages indicator
               if (state.isLoadingMore)
                 const LinearProgressIndicator(
                   color: AppColors.navyMedium,
                   backgroundColor: AppColors.surface100,
                   minHeight: 2,
                 ),
-              // Error banner
               if (state.error != null) _ErrorBanner(message: state.error!),
-              // Messages list
               Expanded(
                 child: state.messages.isEmpty
                     ? _EmptyChat(conversationName: _title)
                     : ListView.builder(
                         controller: _scrollController,
-                        reverse: true, // newest at bottom
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppDimensions.space8,
-                        ),
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         itemCount: state.messages.length,
                         itemBuilder: (context, index) {
                           final message = state.messages[index];
@@ -171,14 +149,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               index < state.messages.length - 1
                                   ? state.messages[index + 1]
                                   : null;
-
-                          // Day separator: check if date changed between messages
-                          // In reversed list, index+1 is the OLDER message
-                          final showDateSep =
-                              previousMessage != null &&
-                                  !_isSameDay(
-                                      message.sentAt,
-                                      previousMessage.sentAt);
+                          final showDateSep = previousMessage != null &&
+                              !_isSameDay(
+                                  message.sentAt, previousMessage.sentAt);
 
                           return Column(
                             mainAxisSize: MainAxisSize.min,
@@ -195,7 +168,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         },
                       ),
               ),
-              // Input bar
               MessageInputBar(
                 isConnected: state.isConnected,
                 isSending: state.isSending,
@@ -208,8 +180,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   required messageType,
                 }) =>
                     ref
-                        .read(chatRoomProvider(widget.conversationId)
-                            .notifier)
+                        .read(chatRoomProvider(widget.conversationId).notifier)
                         .sendFile(
                           filePath: filePath,
                           fileName: fileName,
@@ -225,84 +196,143 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
     );
   }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
 }
 
-class _ChatAppBarTitle extends StatelessWidget {
-  const _ChatAppBarTitle({
+class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ChatAppBar({
     required this.title,
     required this.conversation,
     required this.isConnected,
+    required this.onBack,
+    this.onReconnect,
   });
 
   final String title;
   final ConversationModel? conversation;
   final bool isConnected;
+  final VoidCallback onBack;
+  final VoidCallback? onReconnect;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Avatar
-        if (conversation != null)
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: conversation!.avatarColor,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(
-                conversation!.type.icon,
-                color: AppColors.white,
-                size: AppDimensions.iconSM,
-              ),
-            ),
-          ),
-        if (conversation != null)
-          const SizedBox(width: AppDimensions.space12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: AppTypography.titleLargeOnDark.copyWith(fontSize: 16),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0B1F3A), Color(0xFF1A3A5C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 64,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onBack,
+                  child: Container(
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: isConnected
-                          ? AppColors.successGreen
-                          : AppColors.grey400,
+                      color: AppColors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: AppColors.white, size: 16),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (conversation != null) ...[
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: conversation!.avatarColor,
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      conversation!.type.icon,
+                      color: AppColors.white,
+                      size: 18,
                     ),
                   ),
-                  const SizedBox(width: AppDimensions.space4),
-                  Text(
-                    isConnected ? 'Connected' : 'Connecting…',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.7),
-                      fontSize: 10,
-                    ),
-                  ),
+                  const SizedBox(width: 10),
                 ],
-              ),
-            ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTypography.titleLargeOnDark.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: isConnected
+                                  ? AppColors.successGreen
+                                  : AppColors.warningAmber,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isConnected ? 'Connected' : 'Connecting…',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.6),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (onReconnect != null)
+                  GestureDetector(
+                    onTap: onReconnect,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.refresh_rounded,
+                          color: AppColors.white, size: 18),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -315,7 +345,7 @@ class _EmptyChat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppDimensions.space32),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -323,25 +353,30 @@ class _EmptyChat extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.navyLight.withValues(alpha: 0.1),
+                color: AppColors.navyDeep.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.chat_bubble_outline_rounded,
-                size: 36,
-                color: AppColors.navyLight,
+                size: 34,
+                color: AppColors.navyMedium,
               ),
             ),
-            const SizedBox(height: AppDimensions.space16),
+            const SizedBox(height: 20),
             Text(
               'Start the conversation',
-              style: AppTypography.headlineSmall,
+              style: AppTypography.headlineSmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppDimensions.space8),
+            const SizedBox(height: 8),
             Text(
               'Send your first message to $conversationName.',
-              style: AppTypography.bodyMedium,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.grey500,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -359,10 +394,7 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space16,
-        vertical: AppDimensions.space8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: AppColors.errorLight,
       child: Text(
         message,

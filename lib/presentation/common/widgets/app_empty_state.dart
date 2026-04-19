@@ -4,10 +4,6 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import 'app_button.dart';
 
-/// Displayed when a list or page has no content.
-///
-/// Provides a centered icon, contextual heading, subtitle, and optional action.
-/// Always use this instead of leaving screens blank.
 class AppEmptyState extends StatefulWidget {
   const AppEmptyState({
     super.key,
@@ -26,8 +22,6 @@ class AppEmptyState extends StatefulWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final Color? iconColor;
-
-  /// Compact mode — smaller icon and spacing for inline use.
   final bool compact;
 
   @override
@@ -45,17 +39,14 @@ class _AppEmptyStateState extends State<AppEmptyState>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 450),
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
+    _fadeAnimation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+      begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
     _controller.forward();
   }
 
@@ -67,9 +58,7 @@ class _AppEmptyStateState extends State<AppEmptyState>
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = widget.compact
-        ? AppDimensions.iconXL
-        : AppDimensions.iconJumbo;
+    final iconSize = widget.compact ? 52.0 : 72.0;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -80,7 +69,8 @@ class _AppEmptyStateState extends State<AppEmptyState>
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                constraints:
+                    BoxConstraints(minHeight: constraints.maxHeight),
                 child: Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -92,20 +82,30 @@ class _AppEmptyStateState extends State<AppEmptyState>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          widget.icon ?? Icons.inbox_outlined,
-                          size: iconSize,
-                          color: widget.iconColor ?? AppColors.grey400,
+                        Container(
+                          width: iconSize,
+                          height: iconSize,
+                          decoration: BoxDecoration(
+                            color: (widget.iconColor ?? AppColors.grey400)
+                                .withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            widget.icon ?? Icons.inbox_outlined,
+                            size: iconSize * 0.5,
+                            color: widget.iconColor ?? AppColors.grey400,
+                          ),
                         ),
                         SizedBox(
                           height: widget.compact
                               ? AppDimensions.space16
-                              : AppDimensions.space24,
+                              : AppDimensions.space20,
                         ),
                         Text(
                           widget.title,
                           style: AppTypography.headlineSmall.copyWith(
                             color: AppColors.grey800,
+                            fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -113,7 +113,10 @@ class _AppEmptyStateState extends State<AppEmptyState>
                           const SizedBox(height: AppDimensions.space8),
                           Text(
                             widget.subtitle!,
-                            style: AppTypography.bodyMedium,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.grey600,
+                              height: 1.5,
+                            ),
                             textAlign: TextAlign.center,
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,

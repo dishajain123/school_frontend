@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/chat/message_model.dart';
 
@@ -35,6 +32,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _hasText = false;
+  bool _isFocused = false;
 
   @override
   void initState() {
@@ -42,6 +40,9 @@ class _MessageInputBarState extends State<MessageInputBar> {
     _controller.addListener(() {
       final has = _controller.text.trim().isNotEmpty;
       if (has != _hasText) setState(() => _hasText = has);
+    });
+    _focusNode.addListener(() {
+      setState(() => _isFocused = _focusNode.hasFocus);
     });
   }
 
@@ -63,15 +64,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
   Future<void> _handleAttach() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: [
-        'jpg',
-        'jpeg',
-        'png',
-        'gif',
-        'pdf',
-        'doc',
-        'docx',
-      ],
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
     );
     if (result == null || result.files.isEmpty) return;
     final picked = result.files.first;
@@ -92,82 +85,79 @@ class _MessageInputBarState extends State<MessageInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.white,
-        border: const Border(
+        border: Border(
           top: BorderSide(color: AppColors.surface100, width: 1),
         ),
       ),
-      padding: EdgeInsets.only(
-        left: AppDimensions.space8,
-        right: AppDimensions.space8,
-        top: AppDimensions.space8,
-        bottom: AppDimensions.space8 + (bottomInset > 0 ? 0 : 0),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Disconnected banner
             if (!widget.isConnected)
               _DisconnectedBanner(onRetry: widget.onRetryConnect),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Attach button
-                _IconBtn(
-                  icon: Icons.attach_file_rounded,
+                _AttachButton(
                   onTap: widget.isSending ? null : _handleAttach,
-                  tooltip: 'Attach file',
                 ),
-                const SizedBox(width: AppDimensions.space4),
-                // Text field
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(maxHeight: 120),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface50,
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusMedium),
-                      border: Border.all(
-                        color: AppColors.surface200,
-                        width: AppDimensions.borderMedium,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      maxLines: null,
-                      minLines: 1,
-                      textCapitalization: TextCapitalization.sentences,
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: AppColors.grey800),
-                      decoration: InputDecoration(
-                        hintText: widget.isConnected
-                            ? 'Type a message…'
-                            : 'Reconnecting…',
-                        hintStyle: AppTypography.bodyMedium
-                            .copyWith(color: AppColors.grey400),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.space12,
-                          vertical: 10,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _isFocused
+                              ? AppColors.navyMedium.withValues(alpha: 0.5)
+                              : AppColors.surface200,
+                          width: _isFocused ? 1.5 : 1,
                         ),
-                        isDense: true,
                       ),
-                      enabled: widget.isConnected && !widget.isSending,
-                      onSubmitted: (_) => _handleSend(),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        maxLines: null,
+                        minLines: 1,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.grey800,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: widget.isConnected
+                              ? 'Type a message…'
+                              : 'Reconnecting…',
+                          hintStyle: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.grey400,
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          isDense: true,
+                        ),
+                        enabled: widget.isConnected && !widget.isSending,
+                        onSubmitted: (_) => _handleSend(),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: AppDimensions.space4),
-                // Send / loading button
+                const SizedBox(width: 6),
                 _SendButton(
                   hasText: _hasText,
                   isSending: widget.isSending,
@@ -183,35 +173,25 @@ class _MessageInputBarState extends State<MessageInputBar> {
   }
 }
 
-class _IconBtn extends StatelessWidget {
-  const _IconBtn({
-    required this.icon,
-    required this.onTap,
-    this.tooltip,
-  });
-
-  final IconData icon;
+class _AttachButton extends StatelessWidget {
+  const _AttachButton({required this.onTap});
   final VoidCallback? onTap;
-  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip ?? '',
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.space8),
-            child: Icon(
-              icon,
-              size: AppDimensions.iconMD,
-              color: onTap != null ? AppColors.grey600 : AppColors.grey400,
-            ),
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.surface100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.attach_file_rounded,
+          size: 20,
+          color: onTap != null ? AppColors.grey600 : AppColors.grey400,
         ),
       ),
     );
@@ -237,34 +217,49 @@ class _SendButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: _active ? AppColors.navyDeep : AppColors.surface200,
-        shape: BoxShape.circle,
+        gradient: _active
+            ? const LinearGradient(
+                colors: [Color(0xFF1E3A5F), Color(0xFF0F2340)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: _active ? null : AppColors.surface100,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: _active
+            ? [
+                BoxShadow(
+                  color: AppColors.navyDeep.withValues(alpha: 0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
-        shape: const CircleBorder(),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: _active ? onTap : null,
-          customBorder: const CircleBorder(),
+          borderRadius: BorderRadius.circular(12),
           child: Center(
             child: isSending
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator.adaptive(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.white),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(AppColors.white),
                     ),
                   )
                 : Icon(
                     Icons.send_rounded,
-                    size: AppDimensions.iconSM,
-                    color:
-                        _active ? AppColors.white : AppColors.grey400,
+                    size: 18,
+                    color: _active ? AppColors.white : AppColors.grey400,
                   ),
           ),
         ),
@@ -280,28 +275,24 @@ class _DisconnectedBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.space8),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space12,
-        vertical: AppDimensions.space4,
-      ),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.warningLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        borderRadius: BorderRadius.circular(10),
+        border:
+            Border.all(color: AppColors.warningAmber.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.wifi_off_rounded,
-            size: AppDimensions.iconXS,
-            color: AppColors.warningDark,
-          ),
-          const SizedBox(width: AppDimensions.space8),
+          const Icon(Icons.wifi_off_rounded,
+              size: 13, color: AppColors.warningDark),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Connection lost',
               style: AppTypography.labelSmall
-                  .copyWith(color: AppColors.warningDark),
+                  .copyWith(color: AppColors.warningDark, fontSize: 11),
             ),
           ),
           if (onRetry != null)
@@ -311,7 +302,8 @@ class _DisconnectedBanner extends StatelessWidget {
                 'Retry',
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.navyMedium,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
                 ),
               ),
             ),

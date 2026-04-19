@@ -3,16 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Draggable modal bottom sheet with design system styling.
-///
-/// Use the static [AppBottomSheet.show] method to present:
-/// ```dart
-/// await AppBottomSheet.show(
-///   context,
-///   title: 'Filter',
-///   child: FilterWidget(),
-/// );
-/// ```
 class AppBottomSheet extends StatelessWidget {
   const AppBottomSheet({
     super.key,
@@ -35,9 +25,6 @@ class AppBottomSheet extends StatelessWidget {
   final double maxHeightFraction;
   final EdgeInsetsGeometry? padding;
 
-  // ── Static show helpers ───────────────────────────────────────────────────
-
-  /// Shows a modal bottom sheet.
   static Future<T?> show<T>(
     BuildContext context, {
     String? title,
@@ -58,7 +45,7 @@ class AppBottomSheet extends StatelessWidget {
       isDismissible: isDismissible,
       enableDrag: enableDrag,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColors.black.withValues(alpha: 0.5),
+      barrierColor: AppColors.black.withValues(alpha: 0.45),
       builder: (_) => AppBottomSheet(
         title: title,
         titleWidget: titleWidget,
@@ -85,22 +72,21 @@ class AppBottomSheet extends StatelessWidget {
         decoration: const BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppDimensions.radiusXL),
-            topRight: Radius.circular(AppDimensions.radiusXL),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Drag handle
             if (showDragHandle)
               Padding(
-                padding: const EdgeInsets.only(top: AppDimensions.space12),
+                padding: const EdgeInsets.only(top: 12),
                 child: Center(
                   child: Container(
-                    width: AppDimensions.dragHandleWidth,
-                    height: AppDimensions.dragHandleHeight,
+                    width: 36,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: AppColors.surface200,
                       borderRadius: BorderRadius.circular(
@@ -109,18 +95,11 @@ class AppBottomSheet extends StatelessWidget {
                   ),
                 ),
               ),
-
-            // Header
             if (title != null ||
                 titleWidget != null ||
                 subtitle != null) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimensions.space16,
-                  AppDimensions.space16,
-                  AppDimensions.space16,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 child: titleWidget ??
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,41 +108,43 @@ class AppBottomSheet extends StatelessWidget {
                         if (title != null)
                           Text(
                             title!,
-                            style: AppTypography.headlineSmall,
+                            style: AppTypography.headlineSmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         if (subtitle != null) ...[
-                          const SizedBox(height: AppDimensions.space4),
+                          const SizedBox(height: 4),
                           Text(
                             subtitle!,
-                            style: AppTypography.bodyMedium,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.grey600,
+                            ),
                           ),
                         ],
                       ],
                     ),
               ),
             ],
-
-            // Content
             Flexible(
               child: SingleChildScrollView(
                 padding: padding ??
                     EdgeInsets.fromLTRB(
-                      AppDimensions.space16,
-                      AppDimensions.space16,
-                      AppDimensions.space16,
+                      20,
+                      16,
+                      20,
                       AppDimensions.space32 + bottomPadding,
                     ),
                 child: child,
               ),
             ),
-
-            // Action buttons
             if (actions != null && actions!.isNotEmpty)
               Padding(
                 padding: EdgeInsets.fromLTRB(
-                  AppDimensions.space16,
+                  20,
                   AppDimensions.space8,
-                  AppDimensions.space16,
+                  20,
                   AppDimensions.space16 + bottomPadding,
                 ),
                 child: Row(
@@ -172,9 +153,7 @@ class AppBottomSheet extends StatelessWidget {
                         (a) => Expanded(
                           child: Padding(
                             padding: EdgeInsets.only(
-                              left: actions!.indexOf(a) > 0
-                                  ? AppDimensions.space8
-                                  : 0,
+                              left: actions!.indexOf(a) > 0 ? 10 : 0,
                             ),
                             child: a,
                           ),

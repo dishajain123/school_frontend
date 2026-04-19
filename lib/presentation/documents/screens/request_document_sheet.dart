@@ -1,3 +1,5 @@
+// presentation/documents/screens/request_document_sheet.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,8 +10,6 @@ import '../../../data/models/document/document_model.dart';
 import '../../../providers/document_provider.dart';
 import '../widgets/document_type_card.dart';
 
-/// Modal bottom sheet variant for requesting a document.
-/// Presented via showModalBottomSheet from DocumentListScreen.
 class RequestDocumentSheet extends ConsumerStatefulWidget {
   const RequestDocumentSheet({super.key, required this.studentId});
 
@@ -36,9 +36,9 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
         ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
-          // ── Drag handle ──────────────────────────────────────────────
+          // ── Drag handle ───────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.only(top: AppDimensions.space12),
             child: Center(
@@ -47,40 +47,72 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                 height: AppDimensions.dragHandleHeight,
                 decoration: BoxDecoration(
                   color: AppColors.surface200,
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radiusFull),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
               ),
             ),
           ),
 
-          // ── Scrollable body ──────────────────────────────────────────
-          Flexible(
+          // ── Header ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.space24,
+              AppDimensions.space16,
+              AppDimensions.space24,
+              AppDimensions.space4,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.navyDeep.withValues(alpha: 0.08),
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusMedium),
+                  ),
+                  child: const Icon(Icons.description_outlined,
+                      size: 18, color: AppColors.navyDeep),
+                ),
+                const SizedBox(width: AppDimensions.space12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Request Document',
+                        style: AppTypography.headlineSmall),
+                    Text(
+                      'Select a document type below',
+                      style: AppTypography.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            margin: const EdgeInsets.symmetric(
+                vertical: AppDimensions.space12,
+                horizontal: AppDimensions.space24),
+            height: 1,
+            color: AppColors.surface100,
+          ),
+
+          // ── Scrollable body ───────────────────────────────────────
+          Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                 AppDimensions.space24,
-                AppDimensions.space16,
+                0,
                 AppDimensions.space24,
                 AppDimensions.space8,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Request Document',
-                    style: AppTypography.headlineSmall,
-                  ),
-                  const SizedBox(height: AppDimensions.space4),
-                  Text(
-                    'Select a document type to request.',
-                    style: AppTypography.bodySmall,
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-
                   ...DocumentType.values.map(
                     (type) => Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: AppDimensions.space8),
+                      padding:
+                          const EdgeInsets.only(bottom: AppDimensions.space8),
                       child: DocumentTypeCard(
                         type: type,
                         isSelected: _selected == type,
@@ -93,37 +125,57 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
             ),
           ),
 
-          // ── Actions ──────────────────────────────────────────────────
-          Padding(
+          // ── Actions ───────────────────────────────────────────────
+          Container(
             padding: EdgeInsets.fromLTRB(
               AppDimensions.space24,
-              AppDimensions.space8,
+              AppDimensions.space12,
               AppDimensions.space24,
               AppDimensions.space16 + bottomPadding,
             ),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              border: Border(
+                top: BorderSide(color: AppColors.surface100),
+              ),
+            ),
             child: Row(
               children: [
-                // Cancel
-                Expanded(
-                  child: SizedBox(
-                    height: AppDimensions.buttonHeight,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                SizedBox(
+                  height: AppDimensions.buttonHeight,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.grey600,
+                      side: const BorderSide(color: AppColors.surface200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMedium),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.space20),
                     ),
+                    child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.space12),
-                // Submit
                 Expanded(
-                  flex: 2,
                   child: SizedBox(
                     height: AppDimensions.buttonHeight,
                     child: ElevatedButton(
-                      onPressed:
-                          _selected == null || state.isRequesting
-                              ? null
-                              : () => _submit(context),
+                      onPressed: _selected == null || state.isRequesting
+                          ? null
+                          : () => _submit(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.navyDeep,
+                        foregroundColor: AppColors.white,
+                        disabledBackgroundColor:
+                            AppColors.navyDeep.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusMedium),
+                        ),
+                      ),
                       child: state.isRequesting
                           ? const SizedBox(
                               width: 20,
@@ -134,7 +186,15 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                                     AppColors.white),
                               ),
                             )
-                          : const Text('Request'),
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.send_rounded, size: 16),
+                                const SizedBox(width: AppDimensions.space8),
+                                Text('Request',
+                                    style: AppTypography.buttonPrimary),
+                              ],
+                            ),
                     ),
                   ),
                 ),
@@ -148,6 +208,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
 
   Future<void> _submit(BuildContext context) async {
     if (_selected == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
     final ok = await ref.read(documentProvider.notifier).requestDocument(
           studentId: widget.studentId,
           documentType: _selected!,
@@ -155,7 +216,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
     if (!context.mounted) return;
     Navigator.of(context).pop();
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -165,7 +226,9 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
               Expanded(
                 child: Text(
                   '${_selected!.label} requested! Generating in background.',
-                  style: const TextStyle(color: AppColors.white),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white,
+                  ),
                 ),
               ),
             ],
@@ -173,26 +236,23 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
           backgroundColor: AppColors.successGreen,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusMedium),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           ),
           duration: const Duration(seconds: 4),
         ),
       );
     } else {
       final err = ref.read(documentProvider).error ?? 'Request failed.';
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Text(err),
           backgroundColor: AppColors.errorRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(AppDimensions.radiusMedium),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           ),
         ),
       );
     }
   }
 }
-

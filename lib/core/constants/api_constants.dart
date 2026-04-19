@@ -4,14 +4,40 @@ class ApiConstants {
   ApiConstants._();
 
   // ── Base ─────────────────────────────────────────────────────────────────
-  static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator
-  // static const String baseUrl = 'http://localhost:8000'; // iOS simulator
+  static const String androidBaseUrl =
+      'http://10.0.2.2:8000'; // Android emulator
+  static const String localBaseUrl =
+      'http://localhost:8000'; // iOS sim / desktop
   static const String apiPrefix = '/api/v1';
   static const String apiBaseUrlEnv = String.fromEnvironment('API_BASE_URL');
+  static const String wsBaseUrlEnv = String.fromEnvironment('WS_BASE_URL');
+
+  static String get webBaseUrl {
+    final host = Uri.base.host.isEmpty ? 'localhost' : Uri.base.host;
+    final safeHost = (host == '0.0.0.0' || host == '::') ? 'localhost' : host;
+    return 'http://$safeHost:8000';
+  }
 
   static String get resolvedBaseUrl {
-    if (apiBaseUrlEnv.isNotEmpty) return apiBaseUrlEnv;
-    return kIsWeb ? 'http://localhost:8000' : baseUrl;
+    if (apiBaseUrlEnv.isNotEmpty) {
+      return _applyPlatformHostFix(_normalizeBaseUrl(apiBaseUrlEnv));
+    }
+    if (kIsWeb) return webBaseUrl;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return _applyPlatformHostFix(androidBaseUrl);
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.fuchsia:
+        return _applyPlatformHostFix(localBaseUrl);
+    }
+  }
+
+  static String get resolvedWsBaseUrl {
+    if (wsBaseUrlEnv.isNotEmpty) return _normalizeBaseUrl(wsBaseUrlEnv);
+    return _httpToWsBaseUrl(resolvedBaseUrl);
   }
 
   // ── Connect / Receive timeouts ────────────────────────────────────────────
@@ -76,6 +102,8 @@ class ApiConstants {
       '/students/$id/promotion-status';
   static const String studentBulkPromotionStatus =
       '/students/promotion-status/bulk';
+  static const String studentSectionPromotionStatus =
+      '/students/promotion-status/section';
 
   // ── Parents ───────────────────────────────────────────────────────────────
   static const String parents = '/parents';
@@ -132,6 +160,7 @@ class ApiConstants {
       '/results/exams/$examId/publish';
   static String reportCard(String studentId) =>
       '/results/report-card/$studentId';
+  static const String reportCardUpload = '/results/report-card/upload';
 
   // ── Fees ──────────────────────────────────────────────────────────────────
   static const String feeStructures = '/fees/structures';
@@ -156,6 +185,7 @@ class ApiConstants {
 
   // ── Chat ──────────────────────────────────────────────────────────────────
   static const String chatConversations = '/chat/conversations';
+  static const String chatUsers = '/chat/users';
   static String chatMessages(String conversationId) =>
       '/chat/conversations/$conversationId/messages';
   static String chatMarkRead(String conversationId) =>
@@ -163,13 +193,18 @@ class ApiConstants {
   static String chatUploadFile(String conversationId) =>
       '/chat/conversations/$conversationId/files';
   static String chatWebSocket(String token, String conversationId) =>
-      '${baseUrl.replaceFirst('http', 'ws')}/api/v1/ws/chat?token=$token&conversation_id=$conversationId';
+      '$resolvedWsBaseUrl$apiPrefix/ws/chat?${Uri(queryParameters: {
+            'token': token,
+            'conversation_id': conversationId,
+          }).query}';
 
   // ── Leave ─────────────────────────────────────────────────────────────────
   static const String leaveApply = '/leave/apply';
   static const String leave = '/leave';
   static String leaveDecision(String id) => '/leave/$id/decision';
   static const String leaveBalance = '/leave/balance';
+  static String leaveTeacherBalance(String teacherId) =>
+      '/leave/balance/teacher/$teacherId';
 
   // ── Gallery ───────────────────────────────────────────────────────────────
   static const String galleryAlbums = '/gallery/albums';
@@ -181,8 +216,10 @@ class ApiConstants {
 
   // ── Documents ─────────────────────────────────────────────────────────────
   static const String documentRequest = '/documents/request';
+  static const String documentUpload = '/documents/upload';
   static const String documents = '/documents';
   static String documentDownload(String id) => '/documents/$id/download';
+  static String documentVerify(String id) => '/documents/$id/verify';
 
   // ── Behaviour ─────────────────────────────────────────────────────────────
   static const String behaviour = '/behaviour';
@@ -191,4 +228,34 @@ class ApiConstants {
   static const String complaints = '/complaints';
   static String complaintStatus(String id) => '/complaints/$id/status';
   static const String feedback = '/complaints/feedback';
+
+  static String _normalizeBaseUrl(String raw) {
+    if (raw.endsWith('/')) return raw.substring(0, raw.length - 1);
+    return raw;
+  }
+
+  static String _httpToWsBaseUrl(String httpBaseUrl) {
+    final normalized = _normalizeBaseUrl(httpBaseUrl);
+    if (normalized.startsWith('https://')) {
+      return normalized.replaceFirst('https://', 'wss://');
+    }
+    if (normalized.startsWith('http://')) {
+      return normalized.replaceFirst('http://', 'ws://');
+    }
+    return normalized;
+  }
+
+  static String _applyPlatformHostFix(String baseUrl) {
+    if (kIsWeb) return baseUrl;
+    if (defaultTargetPlatform != TargetPlatform.android) return baseUrl;
+    try {
+      final uri = Uri.parse(baseUrl);
+      final host = uri.host.toLowerCase();
+      final isLoopback = host == 'localhost' || host == '127.0.0.1';
+      if (!isLoopback) return baseUrl;
+      return uri.replace(host: '10.0.2.2').toString();
+    } catch (_) {
+      return baseUrl;
+    }
+  }
 }

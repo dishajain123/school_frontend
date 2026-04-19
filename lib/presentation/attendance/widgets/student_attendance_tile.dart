@@ -38,83 +38,93 @@ class StudentAttendanceTile extends StatelessWidget {
     final roll = rollNumber?.trim();
     final hasRoll = roll != null && roll.isNotEmpty;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
         color: _rowBackground,
         border: isLast
             ? null
-            : const Border(
-                bottom: BorderSide(color: AppColors.surface100, width: 1)),
+            : const Border(bottom: BorderSide(color: AppColors.surface100, width: 1)),
       ),
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16, vertical: AppDimensions.space12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Checkbox(
-            value: isSelected,
-            activeColor: AppColors.navyMedium,
-            onChanged: (value) => onSelectionChanged(value ?? false),
+          GestureDetector(
+            onTap: () => onSelectionChanged(!isSelected),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.navyDeep : AppColors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSelected ? AppColors.navyDeep : AppColors.surface200,
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded, size: 13, color: AppColors.white)
+                  : null,
+            ),
           ),
-          const SizedBox(width: AppDimensions.space4),
-          // Student avatar / initials
+          const SizedBox(width: 10),
           Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: AppColors.surface100,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              color: AppColors.navyDeep.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 resolvedName.length >= 2
                     ? resolvedName.substring(0, 2).toUpperCase()
                     : resolvedName.toUpperCase(),
-                style: AppTypography.labelMedium.copyWith(
+                style: AppTypography.labelSmall.copyWith(
                   color: AppColors.navyMedium,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: AppDimensions.space12),
-          // Student info
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(resolvedName,
-                    style: AppTypography.titleSmall,
+                    style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis),
                 Text(
-                  hasRoll ? 'Roll $roll • $admissionNumber' : admissionNumber,
-                  style:
-                      AppTypography.caption.copyWith(color: AppColors.grey600),
+                  hasRoll ? 'Roll $roll · $admissionNumber' : admissionNumber,
+                  style: AppTypography.caption.copyWith(color: AppColors.grey500, fontSize: 11),
                 ),
-                if (section != null && section!.isNotEmpty)
-                  Text('Section $section',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey400)),
               ],
             ),
           ),
-          const SizedBox(width: AppDimensions.space8),
-          // Status toggle buttons
-          _StatusToggleGroup(
-            currentStatus: currentStatus,
-            onChanged: onStatusChanged,
-          ),
+          const SizedBox(width: 8),
+          _StatusToggleGroup(currentStatus: currentStatus, onChanged: onStatusChanged),
         ],
       ),
     );
   }
+
+  Color get _rowBackground {
+    switch (currentStatus) {
+      case AttendanceStatus.present:
+        return AppColors.successLight.withValues(alpha: 0.3);
+      case AttendanceStatus.absent:
+        return AppColors.errorLight.withValues(alpha: 0.25);
+      case AttendanceStatus.late:
+        return AppColors.warningLight.withValues(alpha: 0.25);
+    }
+  }
 }
 
 class _StatusToggleGroup extends StatelessWidget {
-  const _StatusToggleGroup({
-    required this.currentStatus,
-    required this.onChanged,
-  });
-
+  const _StatusToggleGroup({required this.currentStatus, required this.onChanged});
   final AttendanceStatus currentStatus;
   final ValueChanged<AttendanceStatus> onChanged;
 
@@ -125,20 +135,26 @@ class _StatusToggleGroup extends StatelessWidget {
       children: [
         _StatusButton(
           label: 'P',
-          status: AttendanceStatus.present,
           isSelected: currentStatus == AttendanceStatus.present,
           selectedColor: AppColors.successGreen,
           selectedBg: AppColors.successLight,
           onTap: () => onChanged(AttendanceStatus.present),
         ),
-        const SizedBox(width: AppDimensions.space4),
+        const SizedBox(width: 4),
         _StatusButton(
           label: 'A',
-          status: AttendanceStatus.absent,
           isSelected: currentStatus == AttendanceStatus.absent,
           selectedColor: AppColors.errorRed,
           selectedBg: AppColors.errorLight,
           onTap: () => onChanged(AttendanceStatus.absent),
+        ),
+        const SizedBox(width: 4),
+        _StatusButton(
+          label: 'L',
+          isSelected: currentStatus == AttendanceStatus.late,
+          selectedColor: AppColors.warningAmber,
+          selectedBg: AppColors.warningLight,
+          onTap: () => onChanged(AttendanceStatus.late),
         ),
       ],
     );
@@ -148,7 +164,6 @@ class _StatusToggleGroup extends StatelessWidget {
 class _StatusButton extends StatelessWidget {
   const _StatusButton({
     required this.label,
-    required this.status,
     required this.isSelected,
     required this.selectedColor,
     required this.selectedBg,
@@ -156,10 +171,8 @@ class _StatusButton extends StatelessWidget {
   });
 
   final String label;
-  final AttendanceStatus status;
   final bool isSelected;
-  final Color selectedColor;
-  final Color selectedBg;
+  final Color selectedColor, selectedBg;
   final VoidCallback onTap;
 
   @override
@@ -167,12 +180,12 @@ class _StatusButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 34,
-        height: 34,
+        duration: const Duration(milliseconds: 160),
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           color: isSelected ? selectedBg : AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(
             color: isSelected ? selectedColor : AppColors.surface200,
             width: isSelected ? 1.5 : 1,
@@ -183,24 +196,12 @@ class _StatusButton extends StatelessWidget {
             label,
             style: AppTypography.labelMedium.copyWith(
               color: isSelected ? selectedColor : AppColors.grey400,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+              fontSize: 12,
             ),
           ),
         ),
       ),
     );
-  }
-}
-
-extension on StudentAttendanceTile {
-  Color get _rowBackground {
-    switch (currentStatus) {
-      case AttendanceStatus.present:
-        return AppColors.successLight.withValues(alpha: 0.25);
-      case AttendanceStatus.absent:
-        return AppColors.errorLight.withValues(alpha: 0.22);
-      case AttendanceStatus.late:
-        return AppColors.warningLight.withValues(alpha: 0.2);
-    }
   }
 }

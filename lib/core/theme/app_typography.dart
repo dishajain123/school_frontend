@@ -6,7 +6,7 @@ import 'app_colors.dart';
 /// Never use literal font sizes or weights outside this file.
 abstract final class AppTypography {
   // ── Internal builder ──────────────────────────────────────────────────────
-  static TextStyle _inter({
+  static _inter({
     required double fontSize,
     required FontWeight fontWeight,
     double letterSpacing = 0,
@@ -25,7 +25,7 @@ abstract final class AppTypography {
 
   // ── Display ───────────────────────────────────────────────────────────────
   /// 32px / w700 — Large hero text, splash, onboarding.
-  static TextStyle displayLarge = _inter(
+  static final displayLarge = _inter(
     fontSize: 32,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.5,
@@ -34,7 +34,7 @@ abstract final class AppTypography {
 
   // ── Headline ──────────────────────────────────────────────────────────────
   /// 24px / w700 — Page titles in AppBar, major section headings.
-  static TextStyle headlineLarge = _inter(
+  static final headlineLarge = _inter(
     fontSize: 24,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
@@ -42,7 +42,7 @@ abstract final class AppTypography {
   );
 
   /// 20px / w600 — Section major headings, dialog titles.
-  static TextStyle headlineMedium = _inter(
+  static final headlineMedium = _inter(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
@@ -50,7 +50,7 @@ abstract final class AppTypography {
   );
 
   /// 18px / w600 — Sub-section headings, card prominent titles.
-  static TextStyle headlineSmall = _inter(
+  static final headlineSmall = _inter(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.1,
@@ -59,21 +59,21 @@ abstract final class AppTypography {
 
   // ── Title ─────────────────────────────────────────────────────────────────
   /// 16px / w600 — Card titles, list item primary labels.
-  static TextStyle titleLarge = _inter(
+  static final titleLarge = _inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.grey800,
   );
 
   /// 15px / w500 — Secondary card titles, modal section labels.
-  static TextStyle titleMedium = _inter(
+  static final titleMedium = _inter(
     fontSize: 15,
     fontWeight: FontWeight.w500,
     color: AppColors.grey800,
   );
 
   /// 14px / w500 — Tertiary labels, dense list primary text.
-  static TextStyle titleSmall = _inter(
+  static final titleSmall = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
@@ -82,32 +82,32 @@ abstract final class AppTypography {
 
   // ── Body ──────────────────────────────────────────────────────────────────
   /// 16px / w400 — Main descriptive text, paragraphs, form field values.
-  static TextStyle bodyLarge = _inter(
+  static final bodyLarge = _inter(
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 1.4,
     color: AppColors.grey800,
   );
 
   /// 14px / w400 — Supporting text, subtitles, descriptions.
-  static TextStyle bodyMedium = _inter(
+  static final bodyMedium = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 1.4,
     color: AppColors.grey600,
   );
 
   /// 13px / w400 — Supplementary text, card metadata.
-  static TextStyle bodySmall = _inter(
+  static final bodySmall = _inter(
     fontSize: 13,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 1.35,
     color: AppColors.grey600,
   );
 
   // ── Label ─────────────────────────────────────────────────────────────────
   /// 14px / w500 — Chips, form labels, section headers, button text.
-  static TextStyle labelLarge = _inter(
+  static final labelLarge = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
@@ -115,7 +115,7 @@ abstract final class AppTypography {
   );
 
   /// 12px / w500 — Badge text, small chips, input field labels.
-  static TextStyle labelMedium = _inter(
+  static final labelMedium = _inter(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.3,
@@ -123,7 +123,7 @@ abstract final class AppTypography {
   );
 
   /// 11px / w500 — Status chip text, micro labels.
-  static TextStyle labelSmall = _inter(
+  static final labelSmall = _inter(
     fontSize: 11,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.4,
@@ -132,31 +132,31 @@ abstract final class AppTypography {
 
   // ── Caption ───────────────────────────────────────────────────────────────
   /// 11px / w400 — Timestamps, metadata, fine print.
-  static TextStyle caption = _inter(
+  static final caption = _inter(
     fontSize: 11,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.2,
-    height: 1.4,
+    height: 1.3,
     color: AppColors.grey400,
   );
 
   // ── Button ────────────────────────────────────────────────────────────────
   /// Used inside ElevatedButton and OutlinedButton — same as labelLarge on white.
-  static TextStyle buttonPrimary = _inter(
+  static final buttonPrimary = _inter(
     fontSize: 15,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: AppColors.white,
   );
 
-  static TextStyle buttonSecondary = _inter(
+  static final buttonSecondary = _inter(
     fontSize: 15,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: AppColors.navyDeep,
   );
 
-  static TextStyle buttonText = _inter(
+  static final buttonText = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
@@ -166,7 +166,7 @@ abstract final class AppTypography {
   // ── Convenience copies with color overrides ───────────────────────────────
 
   /// [labelLarge] on a white/navy dark background.
-  static TextStyle labelLargeOnDark = _inter(
+  static final labelLargeOnDark = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
@@ -174,7 +174,7 @@ abstract final class AppTypography {
   );
 
   /// [bodyMedium] with primary color for links/tappable text.
-  static TextStyle bodyMediumLink = _inter(
+  static final bodyMediumLink = _inter(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0,
@@ -184,78 +184,29 @@ abstract final class AppTypography {
   );
 
   /// [titleLarge] on dark (AppBar title, dark card header).
-  static TextStyle titleLargeOnDark = _inter(
+  static final titleLargeOnDark = _inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
   );
 
   // ── Derive Google Fonts TextTheme for ThemeData ───────────────────────────
-  static TextTheme toTextTheme() => GoogleFonts.interTextTheme(
-        const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-          headlineLarge: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.3,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
-          headlineSmall: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.1,
-          ),
-          titleLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-          titleMedium: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-          titleSmall: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.1,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          bodySmall: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          labelLarge: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.1,
-          ),
-          labelMedium: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
-          ),
-          labelSmall: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.4,
-          ),
-        ),
-      );
+  static TextTheme toTextTheme() {
+    final base = GoogleFonts.interTextTheme();
+    return base.copyWith(
+      displayLarge: displayLarge,
+      headlineLarge: headlineLarge,
+      headlineMedium: headlineMedium,
+      headlineSmall: headlineSmall,
+      titleLarge: titleLarge,
+      titleMedium: titleMedium,
+      titleSmall: titleSmall,
+      bodyLarge: bodyLarge,
+      bodyMedium: bodyMedium,
+      bodySmall: bodySmall,
+      labelLarge: labelLarge,
+      labelMedium: labelMedium,
+      labelSmall: labelSmall,
+    );
+  }
 }

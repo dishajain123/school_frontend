@@ -8,6 +8,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../common/widgets/app_section_header.dart';
 import '../widgets/greeting_header.dart';
+import '../widgets/needs_attention_section.dart';
 import '../widgets/quick_action_grid.dart';
 import '../widgets/stat_card.dart';
 
@@ -18,21 +19,34 @@ class TrusteeDashboard extends ConsumerWidget {
     if (amount >= 10000000) {
       return '${(amount / 10000000).toStringAsFixed(1)}Cr';
     }
-    if (amount >= 100000) {
-      return '${(amount / 100000).toStringAsFixed(1)}L';
-    }
-    if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}K';
-    }
+    if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
     return amount.toStringAsFixed(0);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(principalDashboardStatsProvider);
+    final statsAsync = ref.watch(trusteeDashboardStatsProvider);
     final stats = statsAsync.valueOrNull;
+    final hasStats = stats != null;
+    final statsLoading =
+        statsAsync.isLoading || (statsAsync.hasError && !hasStats);
 
-    final quickActions = [
+    final openComplaints = hasStats ? stats.openComplaints : 0;
+
+    final attentionItems = [
+      if (hasStats && openComplaints > 0)
+        AttentionItem(
+          label:
+              '$openComplaints Open Complaint${openComplaints == 1 ? '' : 's'}',
+          icon: Icons.feedback_outlined,
+          color: AppColors.errorRed,
+          count: openComplaints,
+          onTap: () => context.go(RouteNames.complaints),
+        ),
+    ];
+
+    final primaryActions = [
       QuickActionItem(
         icon: Icons.school_outlined,
         label: 'Students',
@@ -46,16 +60,27 @@ class TrusteeDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.teachers),
       ),
       QuickActionItem(
-        icon: Icons.bar_chart_outlined,
-        label: 'Attendance',
-        color: AppColors.successGreen,
-        onTap: () => context.go(RouteNames.attendance),
-      ),
-      QuickActionItem(
         icon: Icons.account_balance_wallet_outlined,
         label: 'Fees',
         color: AppColors.goldPrimary,
         onTap: () => context.go(RouteNames.feeDashboard),
+      ),
+      QuickActionItem(
+        icon: Icons.bar_chart_outlined,
+        label: 'Reports',
+        color: AppColors.subjectScience,
+        onTap: () => context.go(
+          '${RouteNames.principalReportDetails}?metric=student_attendance',
+        ),
+      ),
+    ];
+
+    final secondaryActions = [
+      QuickActionItem(
+        icon: Icons.bar_chart_outlined,
+        label: 'Attendance',
+        color: AppColors.successGreen,
+        onTap: () => context.go(RouteNames.attendance),
       ),
       QuickActionItem(
         icon: Icons.campaign_outlined,
@@ -67,15 +92,8 @@ class TrusteeDashboard extends ConsumerWidget {
         icon: Icons.feedback_outlined,
         label: 'Complaints',
         color: AppColors.errorRed,
+        badge: openComplaints > 0 ? openComplaints.toString() : null,
         onTap: () => context.go(RouteNames.complaints),
-      ),
-      QuickActionItem(
-        icon: Icons.bar_chart_outlined,
-        label: 'Reports',
-        color: AppColors.subjectScience,
-        onTap: () => context.go(
-          '${RouteNames.principalReportDetails}?metric=student_attendance',
-        ),
       ),
       QuickActionItem(
         icon: Icons.quiz_outlined,
@@ -83,14 +101,20 @@ class TrusteeDashboard extends ConsumerWidget {
         color: AppColors.subjectPhysics,
         onTap: () => context.go(RouteNames.examSchedules),
       ),
+      QuickActionItem(
+        icon: Icons.photo_library_outlined,
+        label: 'Gallery',
+        color: AppColors.subjectChem,
+        onTap: () => context.go(RouteNames.galleryAlbums),
+      ),
     ];
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(principalDashboardStatsProvider);
-          await ref.read(principalDashboardStatsProvider.future);
+          ref.invalidate(trusteeDashboardStatsProvider);
+          await ref.read(trusteeDashboardStatsProvider.future);
         },
         child: CustomScrollView(
           slivers: [
@@ -100,62 +124,87 @@ class TrusteeDashboard extends ConsumerWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.pageHorizontal,
+                AppDimensions.space20,
+                AppDimensions.pageHorizontal,
+                100,
+              ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  const SizedBox(height: AppDimensions.space8),
-                  Row(
+                  Column(
                     children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Total Students',
-                          value: stats?.totalStudents.toString() ?? '--',
-                          icon: Icons.school_outlined,
-                          iconColor: AppColors.navyMedium,
-                          onTap: () => context.go(RouteNames.students),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(
+                              label: 'Total Students',
+                              value: hasStats
+                                  ? stats.totalStudents.toString()
+                                  : '--',
+                              icon: Icons.school_outlined,
+                              iconColor: AppColors.navyMedium,
+                              isLoading: statsLoading,
+                              onTap: () => context.go(RouteNames.students),
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.space12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Total Teachers',
+                              value: hasStats
+                                  ? stats.totalTeachers.toString()
+                                  : '--',
+                              icon: Icons.co_present_outlined,
+                              iconColor: AppColors.infoBlue,
+                              isLoading: statsLoading,
+                              onTap: () => context.go(RouteNames.teachers),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppDimensions.space12),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Total Teachers',
-                          value: stats?.totalTeachers.toString() ?? '--',
-                          icon: Icons.co_present_outlined,
-                          iconColor: AppColors.infoBlue,
-                          onTap: () => context.go(RouteNames.teachers),
-                        ),
+                      const SizedBox(height: AppDimensions.space12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(
+                              label: 'Fee Collection',
+                              value: hasStats
+                                  ? '₹${_compactAmount(stats.feesPaidAmount)}'
+                                  : '--',
+                              icon: Icons.account_balance_wallet_outlined,
+                              iconColor: AppColors.goldPrimary,
+                              isLoading: statsLoading,
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.space12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Open Complaints',
+                              value: hasStats
+                                  ? stats.openComplaints.toString()
+                                  : '--',
+                              icon: Icons.feedback_outlined,
+                              iconColor: AppColors.errorRed,
+                              isLoading: statsLoading,
+                              onTap: () => context.go(RouteNames.complaints),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppDimensions.space12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Fee Collection',
-                          value:
-                              '₹${_compactAmount(stats?.feesPaidAmount ?? 0)}',
-                          icon: Icons.account_balance_wallet_outlined,
-                          iconColor: AppColors.goldPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: AppDimensions.space12),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Open Complaints',
-                          value: stats?.openComplaints.toString() ?? '--',
-                          icon: Icons.feedback_outlined,
-                          iconColor: AppColors.errorRed,
-                          onTap: () => context.go(RouteNames.complaints),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.space24),
+                  if (attentionItems.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.space20),
+                    NeedsAttentionSection(items: attentionItems),
+                  ],
+                  const SizedBox(height: AppDimensions.space20),
                   const AppSectionHeader(title: 'Quick Actions'),
                   const SizedBox(height: AppDimensions.space12),
-                  QuickActionGrid(actions: quickActions),
-                  const SizedBox(height: AppDimensions.space40),
+                  QuickActionGrid(
+                    actions: [...primaryActions, ...secondaryActions],
+                    primaryCount: 4,
+                  ),
                 ]),
               ),
             ),

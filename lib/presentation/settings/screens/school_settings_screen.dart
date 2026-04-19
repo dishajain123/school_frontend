@@ -13,6 +13,7 @@ import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
+import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_text_field.dart';
 
@@ -24,15 +25,31 @@ class SchoolSettingsScreen extends ConsumerStatefulWidget {
       _SchoolSettingsScreenState();
 }
 
-class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
+class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen>
+    with SingleTickerProviderStateMixin {
   String? _editingKey;
+  late AnimationController _animCtrl;
+  late Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(schoolSettingsProvider.notifier).load();
     });
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _saveAll() async {
@@ -52,7 +69,6 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     final user = ref.watch(currentUserProvider);
     final settingsState = ref.watch(schoolSettingsProvider);
     final settingsNotifier = ref.read(schoolSettingsProvider.notifier);
-
     final canManageSettings = user?.role == UserRole.principal;
 
     if (!canManageSettings) {
@@ -67,9 +83,17 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
     }
 
     if (settingsState.isLoading) {
-      return const AppScaffold(
-        appBar: AppAppBar(title: 'School Settings', showBack: true),
-        body: Center(child: CircularProgressIndicator.adaptive()),
+      return Scaffold(
+        backgroundColor: AppColors.surface50,
+        appBar: const AppAppBar(title: 'School Settings', showBack: true),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: 5,
+          itemBuilder: (_, __) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppLoading.card(height: 80),
+          ),
+        ),
       );
     }
 
@@ -94,51 +118,97 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
       );
     }
 
-    return AppScaffold(
-      appBar: const AppAppBar(
-        title: 'School Settings',
-        showBack: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppDimensions.space16,
-          AppDimensions.space16,
-          AppDimensions.space16,
-          AppDimensions.pageBottomScroll,
-        ),
-        children: [
-          ...settingsState.items.map((item) {
-            final key = item.settingKey;
-            final value = settingsState.edits[key] ?? item.settingValue;
-            final isEditing = _editingKey == key;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.space12),
-              child: _SettingCard(
-                item: item,
-                value: value,
-                isEditing: isEditing,
-                onTap: () {
-                  setState(() {
-                    _editingKey = isEditing ? null : key;
-                  });
-                },
-                onChanged: (newValue) {
-                  settingsNotifier.setValue(key, newValue);
-                },
-                onDone: () {
-                  setState(() => _editingKey = null);
-                },
+    return Scaffold(
+      backgroundColor: AppColors.surface50,
+      appBar: const AppAppBar(title: 'School Settings', showBack: true),
+      body: FadeTransition(
+        opacity: _fade,
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _InfoBanner(),
+                  const SizedBox(height: 16),
+                  ...settingsState.items.map((item) {
+                    final key = item.settingKey;
+                    final value = settingsState.edits[key] ?? item.settingValue;
+                    final isEditing = _editingKey == key;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _SettingCard(
+                        item: item,
+                        value: value,
+                        isEditing: isEditing,
+                        onTap: () => setState(
+                            () => _editingKey = isEditing ? null : key),
+                        onChanged: (newValue) =>
+                            settingsNotifier.setValue(key, newValue),
+                        onDone: () => setState(() => _editingKey = null),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                ],
               ),
-            );
-          }),
-          const SizedBox(height: AppDimensions.space12),
-          AppButton.primary(
-            label: 'Save All',
-            onTap: settingsState.isSaving ? null : _saveAll,
-            isLoading: settingsState.isSaving,
-            icon: Icons.save_outlined,
+            ),
+            _SaveBar(
+              isSaving: settingsState.isSaving,
+              onSave: _saveAll,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.infoBlue.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.infoBlue.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.settings_outlined, size: 15, color: AppColors.infoBlue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Tap any setting to edit. Press "Save All" when done.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.infoBlue,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SaveBar extends StatelessWidget {
+  const _SaveBar({required this.isSaving, required this.onSave});
+  final bool isSaving;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      color: AppColors.white,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
+      child: AppButton.primary(
+        label: 'Save All Settings',
+        onTap: isSaving ? null : onSave,
+        isLoading: isSaving,
+        icon: Icons.save_outlined,
       ),
     );
   }
@@ -204,48 +274,105 @@ class _SettingCardState extends State<_SettingCard> {
         value != null;
   }
 
+  String _prettyLabel(String key) {
+    return key
+        .split('_')
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: widget.onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-      child: Container(
-        padding: const EdgeInsets.all(AppDimensions.space16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          border: Border.all(color: AppColors.surface200),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: widget.isEditing
+                ? AppColors.navyMedium.withValues(alpha: 0.4)
+                : AppColors.surface100,
+            width: widget.isEditing ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep
+                  .withValues(alpha: widget.isEditing ? 0.08 : 0.04),
+              blurRadius: widget.isEditing ? 14 : 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _prettyLabel(widget.item.settingKey),
-                    style: AppTypography.titleMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: widget.isEditing
+                          ? AppColors.navyDeep.withValues(alpha: 0.1)
+                          : AppColors.surface100,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(
+                      Icons.tune_outlined,
+                      size: 15,
+                      color: widget.isEditing
+                          ? AppColors.navyDeep
+                          : AppColors.grey500,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _prettyLabel(widget.item.settingKey),
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grey800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: widget.isEditing
+                          ? AppColors.navyDeep.withValues(alpha: 0.1)
+                          : AppColors.surface50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      widget.isEditing ? Icons.edit : Icons.edit_outlined,
+                      size: 14,
+                      color: widget.isEditing
+                          ? AppColors.navyDeep
+                          : AppColors.grey400,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (widget.isEditing)
+                _buildEditor()
+              else
+                Text(
+                  widget.value,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.grey700,
+                    fontSize: 14,
                   ),
                 ),
-                Icon(
-                  widget.isEditing ? Icons.edit : Icons.edit_outlined,
-                  size: AppDimensions.iconSM,
-                  color:
-                      widget.isEditing ? AppColors.navyDeep : AppColors.grey400,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDimensions.space8),
-            if (widget.isEditing)
-              _buildEditor()
-            else
-              Text(
-                widget.value,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.grey800,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -254,17 +381,30 @@ class _SettingCardState extends State<_SettingCard> {
   Widget _buildEditor() {
     if (_isBoolean) {
       final boolValue = widget.value.toLowerCase() == 'true';
-      return Row(
-        children: [
-          Switch.adaptive(
-            value: boolValue,
-            onChanged: (value) => widget.onChanged(value.toString()),
-          ),
-          Text(
-            boolValue ? 'Enabled' : 'Disabled',
-            style: AppTypography.bodyMedium,
-          ),
-        ],
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.surface200),
+        ),
+        child: Row(
+          children: [
+            Switch.adaptive(
+              value: boolValue,
+              onChanged: (value) => widget.onChanged(value.toString()),
+              activeColor: AppColors.navyDeep,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              boolValue ? 'Enabled' : 'Disabled',
+              style: AppTypography.bodyMedium.copyWith(
+                color: boolValue ? AppColors.navyDeep : AppColors.grey500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -278,14 +418,26 @@ class _SettingCardState extends State<_SettingCard> {
             min: 0,
             max: 100,
             divisions: 100,
-            activeColor: AppColors.navyMedium,
+            activeColor: AppColors.navyDeep,
             label: '${initial.toStringAsFixed(0)}%',
-            onChanged: (value) => widget.onChanged(value.toStringAsFixed(0)),
+            onChanged: (value) =>
+                widget.onChanged(value.toStringAsFixed(0)),
           ),
-          Text(
-            '${initial.toStringAsFixed(0)}%',
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.grey600,
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.navyDeep.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${initial.toStringAsFixed(0)}%',
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.navyDeep,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
         ],
@@ -300,24 +452,37 @@ class _SettingCardState extends State<_SettingCard> {
           hint: 'Enter setting value',
           onChanged: widget.onChanged,
         ),
-        const SizedBox(height: AppDimensions.space8),
+        const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: widget.onDone,
-            icon: const Icon(Icons.check_rounded),
-            label: const Text('Done'),
+          child: GestureDetector(
+            onTap: widget.onDone,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.navyDeep,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_rounded,
+                      size: 14, color: AppColors.white),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Done',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
     );
-  }
-
-  String _prettyLabel(String key) {
-    return key
-        .split('_')
-        .where((part) => part.trim().isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' ');
   }
 }

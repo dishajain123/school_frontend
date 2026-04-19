@@ -3,21 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_dimensions.dart';
 
-/// Elevated card wrapper that applies design system shadow, radius, and ripple.
-///
-/// Usage:
-/// ```dart
-/// AppCard(
-///   onTap: () => context.push('/detail'),
-///   child: Text('Card content'),
-/// )
-/// ```
-///
-/// Variants:
-/// - Default: white background, shadow1, radiusMedium
-/// - [AppCard.hero]: white background, shadow2, radiusLarge (for dashboard sections)
-/// - [AppCard.outlined]: no shadow, border only
-/// - [AppCard.surface]: off-white background, for section containers
 class AppCard extends StatefulWidget {
   const AppCard({
     super.key,
@@ -128,9 +113,9 @@ class _AppCardState extends State<AppCard>
     super.initState();
     _scaleController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 120),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.99).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.985).animate(
       CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
     );
   }
@@ -146,17 +131,22 @@ class _AppCardState extends State<AppCard>
       BorderRadius.circular(
         widget._variant == _CardVariant.hero
             ? AppDimensions.radiusLarge
-            : AppDimensions.radiusMedium,
+            : 14,
       );
 
   List<BoxShadow> get _shadow =>
       widget.boxShadow ??
       (widget._variant == _CardVariant.hero
           ? AppDecorations.shadow2
-          : AppDecorations.shadow1);
+          : [
+              BoxShadow(
+                color: AppColors.navyDeep.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ]);
 
-  EdgeInsetsGeometry get _defaultPadding =>
-      EdgeInsets.all(
+  EdgeInsetsGeometry get _defaultPadding => EdgeInsets.all(
         widget._variant == _CardVariant.hero
             ? AppDimensions.space20
             : AppDimensions.space16,

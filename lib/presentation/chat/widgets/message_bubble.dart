@@ -35,30 +35,32 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: isMine ? 64 : AppDimensions.space16,
-        right: isMine ? AppDimensions.space16 : 64,
-        top: _isSameMinute ? 2 : AppDimensions.space8,
+        left: isMine ? 56 : 12,
+        right: isMine ? 12 : 56,
+        top: _isSameMinute ? 2 : 10,
         bottom: 2,
       ),
-      child: Column(
-        crossAxisAlignment:
-            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _BubbleBody(message: message, isMine: isMine),
-          if (!_isSameMinute)
-            Padding(
-              padding: const EdgeInsets.only(
-                top: AppDimensions.space4,
-                left: AppDimensions.space4,
-                right: AppDimensions.space4,
+      child: Align(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment:
+              isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _BubbleBody(message: message, isMine: isMine),
+            if (!_isSameMinute)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                child: Text(
+                  DateFormatter.formatTime(message.sentAt),
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 10,
+                    color: AppColors.grey400,
+                  ),
+                ),
               ),
-              child: Text(
-                DateFormatter.formatTime(message.sentAt),
-                style: AppTypography.caption.copyWith(fontSize: 10),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -69,8 +71,7 @@ class _BubbleBody extends StatelessWidget {
   final MessageModel message;
   final bool isMine;
 
-  Color get _bgColor =>
-      isMine ? AppColors.navyMedium : AppColors.white;
+  Color get _bgColor => isMine ? AppColors.navyMedium : AppColors.white;
 
   Color get _textColor => isMine ? AppColors.white : AppColors.grey800;
 
@@ -83,25 +84,20 @@ class _BubbleBody extends StatelessWidget {
       decoration: BoxDecoration(
         color: _bgColor,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(AppDimensions.radiusMedium),
-          topRight: const Radius.circular(AppDimensions.radiusMedium),
-          bottomLeft: Radius.circular(
-              isMine ? AppDimensions.radiusMedium : AppDimensions.space4),
-          bottomRight: Radius.circular(
-              isMine ? AppDimensions.space4 : AppDimensions.radiusMedium),
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(isMine ? 18 : 4),
+          bottomRight: Radius.circular(isMine ? 4 : 18),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: 0.06),
-            blurRadius: 6,
+            color: AppColors.navyDeep.withValues(alpha: isMine ? 0.15 : 0.06),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space12,
-        vertical: AppDimensions.space8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: _buildContent(),
     );
   }
@@ -115,7 +111,11 @@ class _BubbleBody extends StatelessWidget {
     }
     return Text(
       message.content ?? '',
-      style: AppTypography.bodyMedium.copyWith(color: _textColor, height: 1.4),
+      style: AppTypography.bodyMedium.copyWith(
+        color: _textColor,
+        height: 1.45,
+        fontSize: 14,
+      ),
     );
   }
 }
@@ -130,9 +130,16 @@ class _FileContent extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.attach_file_rounded,
-            size: AppDimensions.iconSM, color: textColor),
-        const SizedBox(width: AppDimensions.space8),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: textColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.attach_file_rounded, size: 16, color: textColor),
+        ),
+        const SizedBox(width: 10),
         Flexible(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,14 +148,18 @@ class _FileContent extends StatelessWidget {
                 message.content?.isNotEmpty == true
                     ? message.content!
                     : 'Attachment',
-                style: AppTypography.labelMedium.copyWith(color: textColor),
+                style: AppTypography.labelMedium.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 'Tap to download',
                 style: AppTypography.caption.copyWith(
-                  color: textColor.withValues(alpha: 0.7),
+                  color: textColor.withValues(alpha: 0.65),
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -169,19 +180,28 @@ class _ImageContent extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.image_outlined,
-            size: AppDimensions.iconSM, color: textColor),
-        const SizedBox(width: AppDimensions.space8),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: textColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.image_outlined, size: 16, color: textColor),
+        ),
+        const SizedBox(width: 10),
         Text(
           'Image',
-          style: AppTypography.labelMedium.copyWith(color: textColor),
+          style: AppTypography.labelMedium.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
   }
 }
 
-/// Shows a date separator between messages from different days.
 class DateSeparator extends StatelessWidget {
   const DateSeparator({super.key, required this.date});
   final DateTime date;
@@ -189,36 +209,39 @@ class DateSeparator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.space16),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          const Expanded(
-            child: Divider(color: AppColors.surface200, thickness: 1),
+          Expanded(
+            child: Divider(
+              color: AppColors.surface200,
+              thickness: 1,
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space12),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.space12,
-                vertical: AppDimensions.space4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.surface100,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusFull),
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                border: Border.all(color: AppColors.surface200),
               ),
               child: Text(
                 DateFormatter.formatDate(date),
                 style: AppTypography.caption.copyWith(
-                  color: AppColors.grey600,
-                  fontWeight: FontWeight.w500,
+                  color: AppColors.grey500,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
               ),
             ),
           ),
-          const Expanded(
-            child: Divider(color: AppColors.surface200, thickness: 1),
+          Expanded(
+            child: Divider(
+              color: AppColors.surface200,
+              thickness: 1,
+            ),
           ),
         ],
       ),

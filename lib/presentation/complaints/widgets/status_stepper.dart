@@ -6,10 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../data/models/complaint/complaint_model.dart';
 
 class StatusStepper extends StatelessWidget {
-  const StatusStepper({
-    super.key,
-    required this.currentStatus,
-  });
+  const StatusStepper({super.key, required this.currentStatus});
 
   final ComplaintStatus currentStatus;
 
@@ -26,15 +23,23 @@ class StatusStepper extends StatelessWidget {
         : currentStatus.indexValue;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: List.generate(_steps.length * 2 - 1, (i) {
         if (i.isOdd) {
           final connectorIndex = i ~/ 2;
           final done = connectorIndex < currentIndex;
           return Expanded(
-            child: Container(
-              height: 2,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              color: done ? AppColors.successGreen : AppColors.surface200,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: done ? AppColors.successGreen : AppColors.surface200,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
             ),
           );
         }
@@ -43,46 +48,57 @@ class StatusStepper extends StatelessWidget {
         final step = _steps[stepIndex];
         final done = stepIndex < currentIndex;
         final active = stepIndex == currentIndex;
+        final stepColor = done ? AppColors.successGreen : step.color;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 24,
-              height: 24,
+              duration: const Duration(milliseconds: 250),
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 color: done
                     ? AppColors.successGreen
-                    : (active ? step.color : AppColors.white),
+                    : active
+                        ? stepColor
+                        : AppColors.white,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 border: Border.all(
-                  color: done || active ? step.color : AppColors.surface200,
+                  color: done || active ? stepColor : AppColors.surface200,
+                  width: active ? 2 : 1.5,
                 ),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: stepColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : null,
               ),
               child: Center(
                 child: done
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 14,
-                        color: AppColors.white,
-                      )
+                    ? const Icon(Icons.check_rounded,
+                        size: 15, color: AppColors.white)
                     : Icon(
                         step.icon,
-                        size: 12,
-                        color: active ? AppColors.white : step.color,
+                        size: 13,
+                        color: active ? AppColors.white : stepColor,
                       ),
               ),
             ),
-            const SizedBox(height: AppDimensions.space6),
+            const SizedBox(height: 6),
             SizedBox(
-              width: 70,
+              width: 72,
               child: Text(
                 step.label,
                 textAlign: TextAlign.center,
                 style: AppTypography.labelSmall.copyWith(
                   color: active || done ? AppColors.grey800 : AppColors.grey400,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 11,
                 ),
               ),
             ),

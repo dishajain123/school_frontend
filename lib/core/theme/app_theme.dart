@@ -105,7 +105,7 @@ abstract final class AppTheme {
       ),
 
       // ── Bottom Navigation Bar ──────────────────────────────────────────────
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.white,
         selectedItemColor: AppColors.navyDeep,
         unselectedItemColor: AppColors.grey400,
@@ -113,19 +113,21 @@ abstract final class AppTheme {
         type: BottomNavigationBarType.fixed,
         showSelectedLabels: true,
         showUnselectedLabels: true,
-        selectedLabelStyle: TextStyle(
+        selectedLabelStyle: AppTypography.labelSmall.copyWith(
           fontSize: 10,
           fontWeight: FontWeight.w600,
+          color: AppColors.navyDeep,
         ),
-        unselectedLabelStyle: TextStyle(
+        unselectedLabelStyle: AppTypography.labelSmall.copyWith(
           fontSize: 10,
           fontWeight: FontWeight.w400,
+          color: AppColors.grey400,
         ),
-        selectedIconTheme: IconThemeData(
+        selectedIconTheme: const IconThemeData(
           size: AppDimensions.iconMD,
           color: AppColors.navyDeep,
         ),
-        unselectedIconTheme: IconThemeData(
+        unselectedIconTheme: const IconThemeData(
           size: AppDimensions.iconMD,
           color: AppColors.grey400,
         ),
@@ -134,10 +136,10 @@ abstract final class AppTheme {
       // ── Card ──────────────────────────────────────────────────────────────
       cardTheme: CardThemeData(
         color: AppColors.white,
-        elevation: 0,
-        shadowColor: Colors.transparent,
+        elevation: 1.5,
+        shadowColor: AppColors.shadowSoft,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: AppColors.surface200, width: AppDimensions.borderThin),
         ),
         margin: EdgeInsets.zero,
@@ -174,7 +176,7 @@ abstract final class AppTheme {
             const Size(double.infinity, AppDimensions.buttonHeight),
           ),
           padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: AppDimensions.space24),
+            const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
@@ -216,7 +218,7 @@ abstract final class AppTheme {
             const Size(double.infinity, AppDimensions.buttonHeight),
           ),
           padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: AppDimensions.space24),
+            const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
@@ -288,7 +290,7 @@ abstract final class AppTheme {
         fillColor: AppColors.surface50,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.space16,
-          vertical: 14,
+          vertical: AppDimensions.space12,
         ),
         // Unfocused
         border: OutlineInputBorder(
@@ -367,10 +369,10 @@ abstract final class AppTheme {
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.space12,
-          vertical: AppDimensions.space4,
+          vertical: AppDimensions.space8,
         ),
-        labelPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.space4),
-        shape: StadiumBorder(
+        labelPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.space8),
+        shape: const StadiumBorder(
           side: BorderSide.none,
           // ignore: unused_element
         ),
@@ -614,7 +616,7 @@ abstract final class AppTheme {
         collapsedTextColor: AppColors.grey800,
         tilePadding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.space16,
-          vertical: AppDimensions.space4,
+          vertical: AppDimensions.space8,
         ),
         childrenPadding: const EdgeInsets.only(
           left: AppDimensions.space16,

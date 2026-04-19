@@ -100,6 +100,54 @@ class LeaveRepository {
         .toList();
   }
 
+  // ── GET /api/v1/leave/balance/teacher/{teacher_id} ───────────────────────
+  // Permission: leave:approve (PRINCIPAL)
+  // Returns leave balances for a specific teacher.
+  Future<List<LeaveBalanceModel>> getTeacherBalance({
+    required String teacherId,
+    String? academicYearId,
+  }) async {
+    final params = <String, dynamic>{
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+
+    final response = await _dio.get(
+      ApiConstants.leaveTeacherBalance(teacherId),
+      queryParameters: params.isEmpty ? null : params,
+    );
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => LeaveBalanceModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ── PUT /api/v1/leave/balance/teacher/{teacher_id} ───────────────────────
+  // Permission: leave:approve (PRINCIPAL)
+  // Upserts leave allocation totals for a specific teacher.
+  Future<List<LeaveBalanceModel>> setTeacherBalance({
+    required String teacherId,
+    required List<LeaveBalanceAllocationInput> allocations,
+    String? academicYearId,
+  }) async {
+    final body = <String, dynamic>{
+      'allocations': allocations
+          .map((a) => {
+                'leave_type': a.leaveType.backendValue,
+                'total_days': a.totalDays,
+              })
+          .toList(),
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+    final response = await _dio.put(
+      ApiConstants.leaveTeacherBalance(teacherId),
+      data: body,
+    );
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => LeaveBalanceModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   static String _formatDate(DateTime d) {
@@ -107,6 +155,16 @@ class LeaveRepository {
     final day = d.day.toString().padLeft(2, '0');
     return '${d.year}-$m-$day';
   }
+}
+
+class LeaveBalanceAllocationInput {
+  const LeaveBalanceAllocationInput({
+    required this.leaveType,
+    required this.totalDays,
+  });
+
+  final LeaveType leaveType;
+  final double totalDays;
 }
 
 final leaveRepositoryProvider = Provider<LeaveRepository>((ref) {

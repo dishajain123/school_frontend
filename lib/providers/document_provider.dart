@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/failure.dart';
@@ -13,18 +14,21 @@ class DocumentState {
     this.documents = const [],
     this.isLoading = false,
     this.isRequesting = false,
+    this.isUploading = false,
     this.error,
   });
 
   final List<DocumentModel> documents;
   final bool isLoading;
   final bool isRequesting;
+  final bool isUploading;
   final String? error;
 
   DocumentState copyWith({
     List<DocumentModel>? documents,
     bool? isLoading,
     bool? isRequesting,
+    bool? isUploading,
     String? error,
     bool clearError = false,
   }) {
@@ -32,6 +36,7 @@ class DocumentState {
       documents: documents ?? this.documents,
       isLoading: isLoading ?? this.isLoading,
       isRequesting: isRequesting ?? this.isRequesting,
+      isUploading: isUploading ?? this.isUploading,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -41,7 +46,6 @@ class DocumentState {
 
 class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
   Timer? _pollTimer;
-  String? _currentStudentId;
 
   @override
   DocumentState build() {
@@ -54,7 +58,6 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
   // ── Load list ─────────────────────────────────────────────────────────────
 
   Future<void> load(String studentId) async {
-    _currentStudentId = studentId;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _repo.listDocuments(studentId);
@@ -102,6 +105,33 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     }
   }
 
+  Future<bool> uploadDocument({
+    required String studentId,
+    required DocumentType documentType,
+    required PlatformFile file,
+  }) async {
+    state = state.copyWith(isUploading: true, clearError: true);
+    try {
+      final doc = await _repo.uploadDocument(
+        studentId: studentId,
+        documentType: documentType,
+        file: file,
+      );
+      state = state.copyWith(
+        documents: [doc, ...state.documents],
+        isUploading: false,
+      );
+      _maybeStartPolling(studentId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isUploading: false,
+        error: Failure.fromError(e).message,
+      );
+      return false;
+    }
+  }
+
   // ── Get download URL (not cached — presigned URLs are short-lived) ─────────
 
   Future<DocumentDownloadResponse?> getDownloadUrl(String documentId) async {
@@ -110,6 +140,26 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     } catch (e) {
       state = state.copyWith(error: Failure.fromError(e).message);
       return null;
+    }
+  }
+
+  Future<bool> verifyDocument({
+    required String documentId,
+    required bool approve,
+  }) async {
+    try {
+      final updated = await _repo.verifyDocument(
+        documentId: documentId,
+        approve: approve,
+      );
+      final merged = state.documents
+          .map((d) => d.id == updated.id ? updated : d)
+          .toList(growable: false);
+      state = state.copyWith(documents: merged, clearError: true);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: Failure.fromError(e).message);
+      return false;
     }
   }
 

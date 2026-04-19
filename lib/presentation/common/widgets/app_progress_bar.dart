@@ -3,19 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Animated horizontal progress bar.
-///
-/// Animates from 0 to [value] on first render (600ms, easeOutCubic).
-/// Commonly used for attendance percentages and completion indicators.
-///
-/// Usage:
-/// ```dart
-/// AppProgressBar(
-///   value: attendancePercent / 100,
-///   label: '${attendancePercent.toStringAsFixed(1)}%',
-///   color: attendancePercent >= 75 ? AppColors.successGreen : AppColors.errorRed,
-/// )
-/// ```
 class AppProgressBar extends StatefulWidget {
   const AppProgressBar({
     super.key,
@@ -31,33 +18,16 @@ class AppProgressBar extends StatefulWidget {
   }) : assert(value >= 0.0 && value <= 1.0,
             'value must be between 0.0 and 1.0');
 
-  /// Progress from 0.0 (empty) to 1.0 (full).
   final double value;
-
-  /// Optional label shown to the right of the bar.
   final String? label;
-
-  /// Optional secondary text shown below the bar.
   final String? subLabel;
-
   final Color? color;
   final Color? backgroundColor;
-
-  /// Height of the bar track.
   final double height;
-
-  /// Whether to animate the fill on initial render.
   final bool animate;
-
-  /// When true, automatically appends a percentage label.
   final bool showPercentage;
-
   final BorderRadius? borderRadius;
 
-  /// Returns a semantic color based on the value:
-  /// - ≥ 0.85 → success green
-  /// - ≥ 0.75 → warning amber
-  /// - < 0.75 → error red
   static Color semanticColor(double value) {
     if (value >= 0.85) return AppColors.successGreen;
     if (value >= 0.75) return AppColors.warningAmber;
@@ -79,7 +49,7 @@ class _AppProgressBarState extends State<AppProgressBar>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
     );
     _animation = Tween<double>(
       begin: 0,
@@ -87,10 +57,7 @@ class _AppProgressBarState extends State<AppProgressBar>
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-
-    if (widget.animate) {
-      _controller.forward();
-    }
+    if (widget.animate) _controller.forward();
     _previousValue = widget.value;
   }
 
@@ -136,25 +103,29 @@ class _AppProgressBarState extends State<AppProgressBar>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (effectiveLabel != null)
+        if (effectiveLabel != null || widget.subLabel != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: AppDimensions.space4),
+            padding: const EdgeInsets.only(bottom: AppDimensions.space6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (widget.subLabel != null)
                   Text(
                     widget.subLabel!,
-                    style: AppTypography.bodySmall,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.grey600,
+                    ),
+                  )
+                else
+                  const Spacer(),
+                if (effectiveLabel != null)
+                  Text(
+                    effectiveLabel,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: _barColor,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                const Spacer(),
-                Text(
-                  effectiveLabel,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: _barColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ),
@@ -174,14 +145,6 @@ class _AppProgressBarState extends State<AppProgressBar>
             );
           },
         ),
-        if (widget.subLabel != null && effectiveLabel == null)
-          Padding(
-            padding: const EdgeInsets.only(top: AppDimensions.space4),
-            child: Text(
-              widget.subLabel!,
-              style: AppTypography.caption,
-            ),
-          ),
       ],
     );
   }

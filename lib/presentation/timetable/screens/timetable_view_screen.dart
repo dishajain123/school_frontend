@@ -58,9 +58,9 @@ class TimetableViewScreen extends ConsumerWidget {
             currentUser.role == UserRole.teacher);
 
     if (currentUser == null) {
-      return const AppScaffold(
-        appBar: AppAppBar(title: 'Timetable', showBack: true),
-        body: Center(child: CircularProgressIndicator()),
+      return AppScaffold(
+        appBar: const AppAppBar(title: 'Timetable', showBack: true),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -254,7 +254,7 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
           const Divider(height: 1),
           Expanded(
             child: _loadedStandardId == null
-                ? const AppEmptyState(
+                ? AppEmptyState(
                     icon: Icons.schedule_outlined,
                     title: 'Select Class',
                     subtitle:
@@ -457,7 +457,9 @@ class _TimetableDataBody extends ConsumerWidget {
         if (msg.contains('404') ||
             msg.toLowerCase().contains('timetable') ||
             msg.contains('Not Found')) {
-          return TimetablePlaceholder(canUpload: canUpload);
+          return TimetablePlaceholder(
+            canUpload: canUpload,
+          );
         }
         return AppErrorState(
           message: msg,
@@ -466,7 +468,9 @@ class _TimetableDataBody extends ConsumerWidget {
       },
       data: (timetable) {
         if (timetable.fileUrl == null) {
-          return TimetablePlaceholder(canUpload: canUpload);
+          return TimetablePlaceholder(
+            canUpload: canUpload,
+          );
         }
         return Column(
           children: [
@@ -632,7 +636,7 @@ class _TimetableMetaBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppDimensions.space8),
             decoration: BoxDecoration(
-              color: AppColors.navyDeep.withOpacity(0.08),
+              color: AppColors.navyDeep.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
             ),
             child: Icon(

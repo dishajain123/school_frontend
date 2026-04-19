@@ -3,22 +3,18 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
-/// Thin horizontal rule using the design system border color.
-///
-/// Optionally supports a centered [label] (used for "or" separators in forms).
 class AppDivider extends StatelessWidget {
   const AppDivider({
     super.key,
     this.label,
     this.color,
-    this.thickness = AppDimensions.borderThin,
+    this.thickness = 1,
     this.indent = 0,
     this.endIndent = 0,
     this.height,
     this.padding,
   });
 
-  /// When set, renders the label centered over the divider line.
   final String? label;
   final Color? color;
   final double thickness;
@@ -45,7 +41,10 @@ class AppDivider extends StatelessWidget {
             ),
             Text(
               label!,
-              style: AppTypography.labelMedium,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.grey400,
+                fontSize: 12,
+              ),
             ),
             Expanded(
               child: Divider(

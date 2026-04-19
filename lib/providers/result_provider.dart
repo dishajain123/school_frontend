@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../data/models/result/result_model.dart';
 import '../data/repositories/result_repository.dart';
@@ -19,6 +20,17 @@ typedef ExamListParams = ({
 typedef ReportCardParams = ({
   String studentId,
   String examId,
+});
+
+typedef ExamDistributionParams = ({
+  String examId,
+  String? section,
+  String? studentId,
+});
+
+typedef ResultSectionsParams = ({
+  String standardId,
+  String? academicYearId,
 });
 
 // ── Results list provider ─────────────────────────────────────────────────────
@@ -54,6 +66,29 @@ final reportCardProvider =
     return repo.getReportCard(
       studentId: params.studentId,
       examId: params.examId,
+    );
+  },
+);
+
+final examDistributionProvider =
+    FutureProvider.family<ResultDistributionModel, ExamDistributionParams>(
+  (ref, params) async {
+    final repo = ref.read(resultRepositoryProvider);
+    return repo.getExamDistribution(
+      examId: params.examId,
+      section: params.section,
+      studentId: params.studentId,
+    );
+  },
+);
+
+final resultSectionsProvider =
+    FutureProvider.family<List<String>, ResultSectionsParams>(
+  (ref, params) async {
+    final repo = ref.read(resultRepositoryProvider);
+    return repo.listResultSections(
+      standardId: params.standardId,
+      academicYearId: params.academicYearId,
     );
   },
 );
@@ -223,4 +258,59 @@ class PublishExamNotifier extends Notifier<PublishExamState> {
 final publishExamProvider =
     NotifierProvider<PublishExamNotifier, PublishExamState>(
   PublishExamNotifier.new,
+);
+
+class UploadReportCardState {
+  const UploadReportCardState({
+    this.isUploading = false,
+    this.error,
+    this.result,
+  });
+
+  final bool isUploading;
+  final String? error;
+  final ReportCardModel? result;
+
+  UploadReportCardState copyWith({
+    bool? isUploading,
+    String? error,
+    ReportCardModel? result,
+    bool clearError = false,
+  }) {
+    return UploadReportCardState(
+      isUploading: isUploading ?? this.isUploading,
+      error: clearError ? null : (error ?? this.error),
+      result: result ?? this.result,
+    );
+  }
+}
+
+class UploadReportCardNotifier extends Notifier<UploadReportCardState> {
+  @override
+  UploadReportCardState build() => const UploadReportCardState();
+
+  Future<ReportCardModel?> upload({
+    required String studentId,
+    required String examId,
+    required PlatformFile file,
+  }) async {
+    state = state.copyWith(isUploading: true, clearError: true);
+    try {
+      final result = await ref.read(resultRepositoryProvider).uploadReportCard(
+            studentId: studentId,
+            examId: examId,
+            file: file,
+          );
+      state = state.copyWith(isUploading: false, result: result);
+      return result;
+    } catch (e) {
+      state = state.copyWith(isUploading: false, error: e.toString());
+      return null;
+    }
+  }
+}
+
+final uploadReportCardProvider =
+    NotifierProvider<UploadReportCardNotifier, UploadReportCardState>(
+  UploadReportCardNotifier.new,
 );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 
 class SchoolLogo extends StatelessWidget {
   const SchoolLogo({
@@ -27,23 +26,23 @@ class SchoolLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: 0.15),
-            blurRadius: 12,
+            color: AppColors.navyDeep.withValues(alpha: 0.18),
+            blurRadius: 16,
             offset: const Offset(0, 4),
+            spreadRadius: -2,
           ),
         ],
       ),
       padding: EdgeInsets.all(imagePadding),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(
-          AppDimensions.radiusSmall,
-        ),
+        borderRadius: BorderRadius.circular(borderRadius * 0.5),
         child: Image.asset(
           assetPath,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
+          errorBuilder: (_, __, ___) => Icon(
             Icons.school_rounded,
             color: AppColors.navyDeep,
+            size: size * 0.5,
           ),
         ),
       ),

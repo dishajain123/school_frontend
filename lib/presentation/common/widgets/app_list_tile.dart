@@ -51,8 +51,8 @@ class AppListTile extends StatelessWidget {
   /// Outer padding around the tile.
   final EdgeInsetsGeometry? padding;
 
-  final TextStyle? titleStyle;
-  final TextStyle? subtitleStyle;
+  final dynamic titleStyle;
+  final dynamic subtitleStyle;
   final bool showDivider;
 
   /// Left indent for the divider line (defaults to 56px).
