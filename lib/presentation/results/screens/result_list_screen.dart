@@ -40,8 +40,14 @@ class ResultListScreen extends ConsumerWidget {
             : currentStudentIdAsync.valueOrNull);
 
     if (resolvedStudentId == null || resolvedStudentId.isEmpty) {
-      return const AppScaffold(
-        appBar: AppAppBar(title: 'Results', showBack: false),
+      return AppScaffold(
+        appBar: AppAppBar(
+          title: 'Results',
+          showBack: true,
+          onBackPressed: currentUser?.role == UserRole.parent
+              ? () => context.go(RouteNames.dashboard)
+              : null,
+        ),
         body: AppEmptyState(
           icon: Icons.analytics_outlined,
           title: 'Student not selected',
@@ -59,7 +65,13 @@ class ResultListScreen extends ConsumerWidget {
     final examsAsync = ref.watch(examListProvider(params));
 
     return AppScaffold(
-      appBar: const AppAppBar(title: 'Results', showBack: false),
+      appBar: AppAppBar(
+        title: 'Results',
+        showBack: true,
+        onBackPressed: currentUser?.role == UserRole.parent
+            ? () => context.go(RouteNames.dashboard)
+            : null,
+      ),
       body: examsAsync.when(
         loading: _buildShimmer,
         error: (e, _) => AppErrorState(

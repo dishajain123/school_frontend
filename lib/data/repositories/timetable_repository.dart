@@ -29,15 +29,19 @@ class TimetableRepository {
     return TimetableModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  // ── POST upload timetable (PRINCIPAL only) ─────────────────────────────────
+  // ── POST upload timetable (PRINCIPAL / TEACHER) ───────────────────────────
 
   Future<TimetableModel> uploadTimetable({
     required String standardId,
     required PlatformFile file,
     String? academicYearId,
     String? section,
+    String? overrideFileName,
   }) async {
-    final fileName = file.name;
+    final fileName =
+        (overrideFileName != null && overrideFileName.trim().isNotEmpty)
+            ? overrideFileName.trim()
+            : file.name;
     MultipartFile multipartFile;
     if (file.bytes != null) {
       multipartFile = MultipartFile.fromBytes(

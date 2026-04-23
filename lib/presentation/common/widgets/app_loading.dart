@@ -24,21 +24,19 @@ class AppLoading extends StatelessWidget {
     bool withAvatar = true,
     double? width,
   }) {
-    return Padding(
+    return ListView.separated(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.pageHorizontal,
         vertical: AppDimensions.pageVertical,
       ),
-      child: SizedBox(
-        width: width,
-        child: Column(
-          children: List.generate(
-            count,
-            (i) => Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.space12),
-              child: _shimmer(child: _ShimmerListTile(withAvatar: withAvatar)),
-            ),
-          ),
+      itemCount: count,
+      separatorBuilder: (_, __) =>
+          const SizedBox(height: AppDimensions.space12),
+      itemBuilder: (_, __) => Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: width,
+          child: _shimmer(child: _ShimmerListTile(withAvatar: withAvatar)),
         ),
       ),
     );
@@ -130,14 +128,11 @@ class AppLoading extends StatelessWidget {
           const SizedBox(height: AppDimensions.space16),
           Row(
             children: [
-              Expanded(
-                  child: _shimmer(child: const _ShimmerCard(height: 90))),
+              Expanded(child: _shimmer(child: const _ShimmerCard(height: 90))),
               const SizedBox(width: AppDimensions.gridGap2col),
-              Expanded(
-                  child: _shimmer(child: const _ShimmerCard(height: 90))),
+              Expanded(child: _shimmer(child: const _ShimmerCard(height: 90))),
               const SizedBox(width: AppDimensions.gridGap2col),
-              Expanded(
-                  child: _shimmer(child: const _ShimmerCard(height: 90))),
+              Expanded(child: _shimmer(child: const _ShimmerCard(height: 90))),
             ],
           ),
           const SizedBox(height: AppDimensions.space16),
@@ -146,8 +141,7 @@ class AppLoading extends StatelessWidget {
           ...List.generate(
             3,
             (i) => Padding(
-              padding:
-                  const EdgeInsets.only(bottom: AppDimensions.space12),
+              padding: const EdgeInsets.only(bottom: AppDimensions.space12),
               child: _shimmer(child: const _ShimmerListTile()),
             ),
           ),

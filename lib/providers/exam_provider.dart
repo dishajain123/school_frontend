@@ -15,7 +15,7 @@ typedef ExamScheduleParams = ({
 
 final examScheduleProvider =
     FutureProvider.family<ExamScheduleTable, ExamScheduleParams>(
-      (ref, params) => ref.read(examRepositoryProvider).getSchedule(
+  (ref, params) => ref.read(examRepositoryProvider).getSchedule(
         standardId: params.standardId,
         seriesId: params.seriesId,
       ),

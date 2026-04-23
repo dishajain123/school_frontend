@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/homework/homework_model.dart';
+import '../data/models/homework/homework_submission_model.dart';
 import '../data/repositories/homework_repository.dart';
 
 // ── Params type for the list provider ────────────────────────────────────────
@@ -15,6 +16,7 @@ typedef HomeworkParams = ({
   String? standardId,
   String? subjectId,
   String? academicYearId,
+  bool? isSubmitted,
 });
 
 // ── Homework list provider ────────────────────────────────────────────────────
@@ -33,8 +35,27 @@ final homeworkListProvider =
       standardId: params.standardId,
       subjectId: params.subjectId,
       academicYearId: params.academicYearId,
+      isSubmitted: params.isSubmitted,
       page: 1,
       pageSize: 100, // Daily homework lists are small; load all in one shot
+    );
+  },
+);
+
+typedef HomeworkResponsesParams = ({
+  String homeworkId,
+  String? studentId,
+});
+
+final homeworkResponsesProvider = FutureProvider.family<
+    HomeworkSubmissionListResponse, HomeworkResponsesParams>(
+  (ref, params) async {
+    final repo = ref.read(homeworkRepositoryProvider);
+    return repo.listResponses(
+      homeworkId: params.homeworkId,
+      studentId: params.studentId,
+      page: 1,
+      pageSize: 100,
     );
   },
 );

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +9,18 @@ import '../models/gallery/photo_model.dart';
 class GalleryRepository {
   const GalleryRepository(this._dio);
   final Dio _dio;
+
+  String? _guessImageMimeType(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.bmp')) return 'image/bmp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.heif')) return 'image/heif';
+    return null;
+  }
 
   Future<AlbumListResponse> listAlbums() async {
     final response = await _dio.get(ApiConstants.galleryAlbums);
@@ -27,12 +37,17 @@ class GalleryRepository {
 
   Future<PhotoModel> uploadPhoto({
     required String albumId,
-    required File file,
+    required List<int> fileBytes,
+    required String fileName,
     String? caption,
   }) async {
-    final fileName = file.path.split('/').last;
+    final mimeType = _guessImageMimeType(fileName);
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(file.path, filename: fileName),
+      'file': MultipartFile.fromBytes(
+        fileBytes,
+        filename: fileName,
+        contentType: mimeType == null ? null : DioMediaType.parse(mimeType),
+      ),
       if (caption != null && caption.trim().isNotEmpty)
         'caption': caption.trim(),
     });
@@ -54,6 +69,38 @@ class GalleryRepository {
     final response =
         await _dio.patch(ApiConstants.galleryPhotoFeature(photoId));
     return PhotoModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<PhotoInteractionModel> getPhotoInteractions(String photoId) async {
+    final response =
+        await _dio.get(ApiConstants.galleryPhotoInteractions(photoId));
+    return PhotoInteractionModel.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  Future<PhotoInteractionModel> setReaction(String photoId) async {
+    final response = await _dio.put(ApiConstants.galleryPhotoReaction(photoId));
+    return PhotoInteractionModel.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  Future<PhotoInteractionModel> clearReaction(String photoId) async {
+    final response =
+        await _dio.delete(ApiConstants.galleryPhotoReaction(photoId));
+    return PhotoInteractionModel.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  Future<PhotoInteractionModel> addComment({
+    required String photoId,
+    required String comment,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.galleryPhotoComments(photoId),
+      data: {'comment': comment},
+    );
+    return PhotoInteractionModel.fromJson(
+        response.data as Map<String, dynamic>);
   }
 }
 

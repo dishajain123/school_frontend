@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/auth/current_user.dart';
@@ -221,7 +219,8 @@ class AlbumPhotoListNotifier extends StateNotifier<AlbumPhotoListState> {
   }
 
   Future<bool> uploadPhoto({
-    required File file,
+    required List<int> fileBytes,
+    required String fileName,
     String? caption,
   }) async {
     state = state.copyWith(isSubmitting: true, clearError: true);
@@ -230,7 +229,8 @@ class AlbumPhotoListNotifier extends StateNotifier<AlbumPhotoListState> {
       final repo = ref.read(galleryRepositoryProvider);
       final uploaded = await repo.uploadPhoto(
         albumId: albumId,
-        file: file,
+        fileBytes: fileBytes,
+        fileName: fileName,
         caption: caption,
       );
 
@@ -317,3 +317,128 @@ final galleryCanManageProvider = Provider<bool>((ref) {
       user.role == UserRole.principal ||
       user.role == UserRole.teacher;
 });
+
+final galleryCanInteractProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  return user.role == UserRole.parent || user.role == UserRole.student;
+});
+
+class PhotoInteractionState {
+  const PhotoInteractionState({
+    this.photoId = '',
+    this.reactionsCount = 0,
+    this.hasReacted = false,
+    this.comments = const [],
+    this.totalComments = 0,
+    this.isLoading = false,
+    this.isSubmitting = false,
+    this.error,
+  });
+
+  final String photoId;
+  final int reactionsCount;
+  final bool hasReacted;
+  final List<PhotoCommentModel> comments;
+  final int totalComments;
+  final bool isLoading;
+  final bool isSubmitting;
+  final String? error;
+
+  PhotoInteractionState copyWith({
+    String? photoId,
+    int? reactionsCount,
+    bool? hasReacted,
+    List<PhotoCommentModel>? comments,
+    int? totalComments,
+    bool? isLoading,
+    bool? isSubmitting,
+    String? error,
+    bool clearError = false,
+  }) {
+    return PhotoInteractionState(
+      photoId: photoId ?? this.photoId,
+      reactionsCount: reactionsCount ?? this.reactionsCount,
+      hasReacted: hasReacted ?? this.hasReacted,
+      comments: comments ?? this.comments,
+      totalComments: totalComments ?? this.totalComments,
+      isLoading: isLoading ?? this.isLoading,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+class PhotoInteractionNotifier extends StateNotifier<PhotoInteractionState> {
+  PhotoInteractionNotifier(this.ref, this.photoId)
+      : super(PhotoInteractionState(photoId: photoId)) {
+    load();
+  }
+
+  final Ref ref;
+  final String photoId;
+
+  void _applyInteraction(PhotoInteractionModel model,
+      {bool keepLoading = false}) {
+    state = state.copyWith(
+      photoId: model.photoId,
+      reactionsCount: model.reactionsCount,
+      hasReacted: model.hasReacted,
+      comments: model.comments,
+      totalComments: model.totalComments,
+      isLoading: keepLoading ? state.isLoading : false,
+      isSubmitting: false,
+      clearError: true,
+    );
+  }
+
+  Future<void> load() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      final interactions = await repo.getPhotoInteractions(photoId);
+      _applyInteraction(interactions);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> toggleReaction() async {
+    state = state.copyWith(isSubmitting: true, clearError: true);
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      final interactions = state.hasReacted
+          ? await repo.clearReaction(photoId)
+          : await repo.setReaction(photoId);
+      _applyInteraction(interactions);
+    } catch (e) {
+      state = state.copyWith(isSubmitting: false, error: e.toString());
+    }
+  }
+
+  Future<bool> addComment(String comment) async {
+    final text = comment.trim();
+    if (text.isEmpty) return false;
+
+    state = state.copyWith(isSubmitting: true, clearError: true);
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      final interactions =
+          await repo.addComment(photoId: photoId, comment: text);
+      _applyInteraction(interactions);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isSubmitting: false, error: e.toString());
+      return false;
+    }
+  }
+
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
+}
+
+final photoInteractionProvider = StateNotifierProvider.family<
+    PhotoInteractionNotifier, PhotoInteractionState, String>(
+  (ref, photoId) => PhotoInteractionNotifier(ref, photoId),
+);

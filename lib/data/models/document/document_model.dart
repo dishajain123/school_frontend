@@ -205,6 +205,12 @@ class DocumentModel {
     required this.updatedAt,
     this.fileKey,
     this.generatedAt,
+    this.reviewNote,
+    this.reviewedAt,
+    this.reviewedBy,
+    this.studentName,
+    this.studentAdmissionNumber,
+    this.parentName,
   });
 
   final String id;
@@ -214,6 +220,12 @@ class DocumentModel {
   final DocumentStatus status;
   final DateTime requestedAt;
   final DateTime? generatedAt;
+  final String? reviewNote;
+  final DateTime? reviewedAt;
+  final String? reviewedBy;
+  final String? studentName;
+  final String? studentAdmissionNumber;
+  final String? parentName;
   final String academicYearId;
   final String schoolId;
   final DateTime createdAt;
@@ -234,6 +246,14 @@ class DocumentModel {
       generatedAt: json['generated_at'] != null
           ? DateTime.tryParse(json['generated_at'] as String)
           : null,
+      reviewNote: json['review_note'] as String?,
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.tryParse(json['reviewed_at'] as String)
+          : null,
+      reviewedBy: json['reviewed_by'] as String?,
+      studentName: json['student_name'] as String?,
+      studentAdmissionNumber: json['student_admission_number'] as String?,
+      parentName: json['parent_name'] as String?,
       academicYearId: json['academic_year_id'] as String,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -245,6 +265,12 @@ class DocumentModel {
     DocumentStatus? status,
     String? fileKey,
     DateTime? generatedAt,
+    String? reviewNote,
+    DateTime? reviewedAt,
+    String? reviewedBy,
+    String? studentName,
+    String? studentAdmissionNumber,
+    String? parentName,
   }) {
     return DocumentModel(
       id: id,
@@ -254,6 +280,13 @@ class DocumentModel {
       status: status ?? this.status,
       requestedAt: requestedAt,
       generatedAt: generatedAt ?? this.generatedAt,
+      reviewNote: reviewNote ?? this.reviewNote,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      reviewedBy: reviewedBy ?? this.reviewedBy,
+      studentName: studentName ?? this.studentName,
+      studentAdmissionNumber:
+          studentAdmissionNumber ?? this.studentAdmissionNumber,
+      parentName: parentName ?? this.parentName,
       academicYearId: academicYearId,
       schoolId: schoolId,
       createdAt: createdAt,
@@ -276,10 +309,15 @@ class DocumentModel {
 // Mirrors DocumentListResponse from app/schemas/document.py
 
 class DocumentListResponse {
-  const DocumentListResponse({required this.items, required this.total});
+  const DocumentListResponse({
+    required this.items,
+    required this.total,
+    this.requiredDocuments = const [],
+  });
 
   final List<DocumentModel> items;
   final int total;
+  final List<RequiredDocumentStatusModel> requiredDocuments;
 
   factory DocumentListResponse.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
@@ -288,6 +326,10 @@ class DocumentListResponse {
           .map((e) => DocumentModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       total: json['total'] as int? ?? 0,
+      requiredDocuments: (json['required_documents'] as List<dynamic>? ?? const [])
+          .map((e) =>
+              RequiredDocumentStatusModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -307,6 +349,82 @@ class DocumentDownloadResponse {
     return DocumentDownloadResponse(
       status: DocumentStatusX.fromString(json['status'] as String?),
       url: json['url'] as String?,
+    );
+  }
+}
+
+class RequiredDocumentModel {
+  const RequiredDocumentModel({
+    required this.documentType,
+    this.isMandatory = true,
+    this.note,
+  });
+
+  final DocumentType documentType;
+  final bool isMandatory;
+  final String? note;
+
+  factory RequiredDocumentModel.fromJson(Map<String, dynamic> json) {
+    return RequiredDocumentModel(
+      documentType: DocumentTypeX.fromString(json['document_type'] as String?),
+      isMandatory: json['is_mandatory'] as bool? ?? true,
+      note: json['note'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'document_type': documentType.backendValue,
+        'is_mandatory': isMandatory,
+        if (note != null && note!.trim().isNotEmpty) 'note': note!.trim(),
+      };
+}
+
+class RequiredDocumentStatusModel {
+  const RequiredDocumentStatusModel({
+    required this.documentType,
+    required this.isMandatory,
+    this.note,
+    this.latestDocumentId,
+    this.latestStatus,
+    this.uploadedAt,
+    this.reviewNote,
+    this.reviewedAt,
+    this.reviewedBy,
+    this.needsReupload = false,
+    this.isCompleted = false,
+  });
+
+  final DocumentType documentType;
+  final bool isMandatory;
+  final String? note;
+  final String? latestDocumentId;
+  final DocumentStatus? latestStatus;
+  final DateTime? uploadedAt;
+  final String? reviewNote;
+  final DateTime? reviewedAt;
+  final String? reviewedBy;
+  final bool needsReupload;
+  final bool isCompleted;
+
+  factory RequiredDocumentStatusModel.fromJson(Map<String, dynamic> json) {
+    return RequiredDocumentStatusModel(
+      documentType: DocumentTypeX.fromString(json['document_type'] as String?),
+      isMandatory: json['is_mandatory'] as bool? ?? true,
+      note: json['note'] as String?,
+      latestDocumentId: json['latest_document_id'] as String?,
+      latestStatus: json['latest_status'] != null
+          ? DocumentStatusX.fromString(json['latest_status'] as String?)
+          : null,
+      uploadedAt: json['uploaded_at'] != null
+          ? DateTime.tryParse(json['uploaded_at'] as String)
+          : null,
+      reviewNote: json['review_note'] as String?,
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.tryParse(json['reviewed_at'] as String)
+          : null,
+      reviewedBy: json['reviewed_by'] as String?,
+      needsReupload: json['needs_reupload'] as bool? ?? false,
+      isCompleted: json['is_completed'] as bool? ?? false,
     );
   }
 }

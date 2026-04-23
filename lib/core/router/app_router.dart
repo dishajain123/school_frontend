@@ -40,6 +40,7 @@ import '../../presentation/assignments/screens/assignment_detail_screen.dart';
 import '../../presentation/assignments/screens/submission_list_screen.dart';
 import '../../presentation/homework/screens/homework_list_screen.dart';
 import '../../presentation/homework/screens/create_homework_screen.dart';
+import '../../presentation/homework/screens/homework_detail_screen.dart';
 import '../../presentation/diary/screens/diary_list_screen.dart';
 import '../../presentation/diary/screens/create_diary_screen.dart';
 import '../../presentation/timetable/screens/timetable_view_screen.dart';
@@ -87,6 +88,7 @@ import '../../data/models/school/school_model.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
+import '../../data/models/homework/homework_model.dart';
 import '../../data/models/auth/current_user.dart';
 import '../../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
@@ -487,6 +489,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: 'create',
                 builder: (_, __) => const CreateHomeworkScreen(),
               ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => HomeworkDetailScreen(
+                  homeworkId: state.pathParameters['id']!,
+                  initialHomework: state.extra is HomeworkModel
+                      ? state.extra as HomeworkModel
+                      : null,
+                ),
+              ),
             ],
           ),
 
@@ -523,6 +534,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => UploadTimetableScreen(
                   initialStandardId: state.uri.queryParameters['standard_id'],
                   initialSection: state.uri.queryParameters['section'],
+                  examMode: (state.uri.queryParameters['exam_mode'] ?? '')
+                          .toLowerCase() ==
+                      'true',
                 ),
               ),
             ],

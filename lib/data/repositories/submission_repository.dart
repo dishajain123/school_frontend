@@ -34,6 +34,7 @@ class SubmissionRepository {
 
   Future<SubmissionListResponse> listSubmissions({
     required String assignmentId,
+    String? studentId,
     String? standardId,
     String? subjectId,
     String? section,
@@ -44,6 +45,7 @@ class SubmissionRepository {
       _base,
       queryParameters: {
         'assignment_id': assignmentId,
+        if (studentId != null) 'student_id': studentId,
         if (standardId != null) 'standard_id': standardId,
         if (subjectId != null) 'subject_id': subjectId,
         if (section != null && section.isNotEmpty) 'section': section,

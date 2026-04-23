@@ -12,31 +12,43 @@ import '../data/repositories/document_repository.dart';
 class DocumentState {
   const DocumentState({
     this.documents = const [],
+    this.requiredDocuments = const [],
+    this.requiredStatus = const [],
     this.isLoading = false,
     this.isRequesting = false,
     this.isUploading = false,
+    this.isSavingRequirements = false,
     this.error,
   });
 
   final List<DocumentModel> documents;
+  final List<RequiredDocumentModel> requiredDocuments;
+  final List<RequiredDocumentStatusModel> requiredStatus;
   final bool isLoading;
   final bool isRequesting;
   final bool isUploading;
+  final bool isSavingRequirements;
   final String? error;
 
   DocumentState copyWith({
     List<DocumentModel>? documents,
+    List<RequiredDocumentModel>? requiredDocuments,
+    List<RequiredDocumentStatusModel>? requiredStatus,
     bool? isLoading,
     bool? isRequesting,
     bool? isUploading,
+    bool? isSavingRequirements,
     String? error,
     bool clearError = false,
   }) {
     return DocumentState(
       documents: documents ?? this.documents,
+      requiredDocuments: requiredDocuments ?? this.requiredDocuments,
+      requiredStatus: requiredStatus ?? this.requiredStatus,
       isLoading: isLoading ?? this.isLoading,
       isRequesting: isRequesting ?? this.isRequesting,
       isUploading: isUploading ?? this.isUploading,
+      isSavingRequirements: isSavingRequirements ?? this.isSavingRequirements,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -57,15 +69,21 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
 
   // ── Load list ─────────────────────────────────────────────────────────────
 
-  Future<void> load(String studentId) async {
+  Future<void> load([String? studentId]) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _repo.listDocuments(studentId);
       state = state.copyWith(
         documents: result.items,
+        requiredStatus: result.requiredDocuments,
         isLoading: false,
       );
-      _maybeStartPolling(studentId);
+      await _loadRequirementsSilently();
+      if (studentId != null && studentId.isNotEmpty) {
+        _maybeStartPolling(studentId);
+      } else {
+        _stopPolling();
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -146,16 +164,41 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
   Future<bool> verifyDocument({
     required String documentId,
     required bool approve,
+    String? reason,
   }) async {
     try {
       final updated = await _repo.verifyDocument(
         documentId: documentId,
         approve: approve,
+        reason: reason,
       );
       final merged = state.documents
           .map((d) => d.id == updated.id ? updated : d)
           .toList(growable: false);
-      state = state.copyWith(documents: merged, clearError: true);
+      final requiredUpdated = state.requiredStatus
+          .map(
+            (r) => r.latestDocumentId == updated.id
+                ? RequiredDocumentStatusModel(
+                    documentType: r.documentType,
+                    isMandatory: r.isMandatory,
+                    note: r.note,
+                    latestDocumentId: updated.id,
+                    latestStatus: updated.status,
+                    uploadedAt: updated.requestedAt,
+                    reviewNote: updated.reviewNote,
+                    reviewedAt: updated.reviewedAt,
+                    reviewedBy: updated.reviewedBy,
+                    needsReupload: updated.status == DocumentStatus.failed,
+                    isCompleted: updated.status == DocumentStatus.ready,
+                  )
+                : r,
+          )
+          .toList(growable: false);
+      state = state.copyWith(
+        documents: merged,
+        requiredStatus: requiredUpdated,
+        clearError: true,
+      );
       return true;
     } catch (e) {
       state = state.copyWith(error: Failure.fromError(e).message);
@@ -189,11 +232,52 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
   Future<void> _pollDocuments(String studentId) async {
     try {
       final result = await _repo.listDocuments(studentId);
-      state = state.copyWith(documents: result.items);
+      state = state.copyWith(
+        documents: result.items,
+        requiredStatus: result.requiredDocuments,
+      );
       final hasPollable = result.items.any((d) => d.isPollable);
       if (!hasPollable) _stopPolling();
     } catch (_) {
       // Silently ignore poll errors — UI stays unchanged
+    }
+  }
+
+  Future<void> _loadRequirementsSilently() async {
+    try {
+      final items = await _repo.listRequiredDocuments();
+      state = state.copyWith(requiredDocuments: items);
+    } catch (_) {
+      // Keep UI non-blocking if requirements endpoint fails.
+    }
+  }
+
+  Future<bool> saveRequiredDocuments(
+    List<RequiredDocumentModel> items,
+  ) async {
+    state = state.copyWith(isSavingRequirements: true, clearError: true);
+    try {
+      final saved = await _repo.upsertRequiredDocuments(items);
+      state = state.copyWith(
+        requiredDocuments: saved,
+        isSavingRequirements: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isSavingRequirements: false,
+        error: Failure.fromError(e).message,
+      );
+      return false;
+    }
+  }
+
+  Future<void> refreshRequiredStatus(String studentId) async {
+    try {
+      final statuses = await _repo.listRequiredStatusForStudent(studentId);
+      state = state.copyWith(requiredStatus: statuses, clearError: true);
+    } catch (e) {
+      state = state.copyWith(error: Failure.fromError(e).message);
     }
   }
 

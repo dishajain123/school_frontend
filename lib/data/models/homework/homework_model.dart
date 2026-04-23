@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 class HomeworkModel {
   final String id;
   final String description;
+  final String? fileKey;
+  final String? fileUrl;
+  final bool? isSubmitted;
   final DateTime date;
   final String teacherId;
   final String standardId;
@@ -16,6 +19,9 @@ class HomeworkModel {
   const HomeworkModel({
     required this.id,
     required this.description,
+    this.fileKey,
+    this.fileUrl,
+    this.isSubmitted,
     required this.date,
     required this.teacherId,
     required this.standardId,
@@ -30,6 +36,9 @@ class HomeworkModel {
     return HomeworkModel(
       id: json['id'] as String,
       description: json['description'] as String,
+      fileKey: json['file_key'] as String?,
+      fileUrl: json['file_url'] as String?,
+      isSubmitted: json['is_submitted'] as bool?,
       // Backend returns "yyyy-MM-dd" — parse as local date
       date: DateTime.parse(json['date'] as String).toLocal(),
       teacherId: json['teacher_id'] as String,
@@ -45,6 +54,9 @@ class HomeworkModel {
   HomeworkModel copyWith({
     String? id,
     String? description,
+    String? fileKey,
+    String? fileUrl,
+    bool? isSubmitted,
     DateTime? date,
     String? teacherId,
     String? standardId,
@@ -57,6 +69,9 @@ class HomeworkModel {
     return HomeworkModel(
       id: id ?? this.id,
       description: description ?? this.description,
+      fileKey: fileKey ?? this.fileKey,
+      fileUrl: fileUrl ?? this.fileUrl,
+      isSubmitted: isSubmitted ?? this.isSubmitted,
       date: date ?? this.date,
       teacherId: teacherId ?? this.teacherId,
       standardId: standardId ?? this.standardId,

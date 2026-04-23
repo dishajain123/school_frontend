@@ -7,6 +7,7 @@ import '../data/repositories/student_repository.dart';
 import '../data/repositories/teacher_repository.dart';
 import 'academic_year_provider.dart';
 import 'auth_provider.dart';
+import 'timetable_provider.dart';
 
 class TeacherFilters {
   const TeacherFilters({
@@ -191,6 +192,22 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
       academicYearId: academicYearId,
     );
     ref.invalidate(teacherAssignmentsByTeacherProvider(teacherId));
+    ref.invalidate(
+      sectionsByStandardProvider(
+        (
+          standardId: standardId,
+          academicYearId: academicYearId,
+        ),
+      ),
+    );
+    ref.invalidate(
+      timetableSectionsProvider(
+        (
+          standardId: standardId,
+          academicYearId: academicYearId,
+        ),
+      ),
+    );
     return created;
   }
 
@@ -211,6 +228,22 @@ class TeacherNotifier extends AsyncNotifier<TeacherState> {
       academicYearId: academicYearId,
     );
     ref.invalidate(teacherAssignmentsByTeacherProvider(teacherId));
+    ref.invalidate(
+      sectionsByStandardProvider(
+        (
+          standardId: standardId,
+          academicYearId: academicYearId,
+        ),
+      ),
+    );
+    ref.invalidate(
+      timetableSectionsProvider(
+        (
+          standardId: standardId,
+          academicYearId: academicYearId,
+        ),
+      ),
+    );
     return updated;
   }
 

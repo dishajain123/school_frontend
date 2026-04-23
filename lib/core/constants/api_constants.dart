@@ -213,11 +213,20 @@ class ApiConstants {
       '/gallery/albums/$albumId/photos';
   static String galleryPhotoFeature(String photoId) =>
       '/gallery/photos/$photoId/feature';
+  static String galleryPhotoInteractions(String photoId) =>
+      '/gallery/photos/$photoId/interactions';
+  static String galleryPhotoReaction(String photoId) =>
+      '/gallery/photos/$photoId/reaction';
+  static String galleryPhotoComments(String photoId) =>
+      '/gallery/photos/$photoId/comments';
 
   // ── Documents ─────────────────────────────────────────────────────────────
   static const String documentRequest = '/documents/request';
   static const String documentUpload = '/documents/upload';
   static const String documents = '/documents';
+  static const String documentRequirements = '/documents/requirements';
+  static const String documentRequirementStatus = '/documents/requirements/status';
+  static const String documentReviewQueue = '/documents/review-queue';
   static String documentDownload(String id) => '/documents/$id/download';
   static String documentVerify(String id) => '/documents/$id/verify';
 

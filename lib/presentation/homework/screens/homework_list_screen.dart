@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/router/route_names.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/attendance_provider.dart';
@@ -29,6 +30,7 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
     with SingleTickerProviderStateMixin {
   DateTime _selectedDate = _today();
   String? _selectedSubjectId;
+  bool? _isSubmittedFilter;
   late AnimationController _dateAnimCtrl;
   late Animation<double> _dateFade;
 
@@ -69,6 +71,7 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
     setState(() {
       _selectedDate = newDate;
       _selectedSubjectId = null;
+      _isSubmittedFilter = null;
     });
     _dateAnimCtrl.forward();
   }
@@ -144,6 +147,7 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
       standardId: isParent ? selectedChild?.standardId : null,
       subjectId: _selectedSubjectId,
       academicYearId: null,
+      isSubmitted: _isSubmittedFilter,
     );
     final homeworkAsync = ref.watch(homeworkListProvider(params));
 
@@ -191,6 +195,12 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
                 });
               },
             ),
+          _SubmissionFilterBar(
+            selectedValue: _isSubmittedFilter,
+            onSelected: (value) {
+              setState(() => _isSubmittedFilter = value);
+            },
+          ),
           Container(height: 1, color: AppColors.surface100),
           Expanded(
             child: RefreshIndicator(
@@ -226,6 +236,10 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
                         return HomeworkCard(
                           homework: hw,
                           subjectName: subjectNameMap[hw.subjectId],
+                          onTap: () => context.push(
+                            RouteNames.homeworkDetailPath(hw.id),
+                            extra: hw,
+                          ),
                         );
                       },
                     );
@@ -416,6 +430,58 @@ class _SubjectChipBar extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SubmissionFilterBar extends StatelessWidget {
+  const _SubmissionFilterBar({
+    required this.selectedValue,
+    required this.onSelected,
+  });
+
+  final bool? selectedValue;
+  final ValueChanged<bool?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip({
+      required String label,
+      required bool? value,
+    }) {
+      final isSelected = selectedValue == value;
+      return GestureDetector(
+        onTap: () => onSelected(value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.navyDeep : AppColors.surface100,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: isSelected ? AppColors.white : AppColors.grey600,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      child: Row(
+        children: [
+          chip(label: 'All', value: null),
+          const SizedBox(width: 8),
+          chip(label: 'Pending', value: false),
+          const SizedBox(width: 8),
+          chip(label: 'Completed', value: true),
+        ],
       ),
     );
   }

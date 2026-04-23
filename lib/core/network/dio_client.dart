@@ -37,8 +37,8 @@ final dioClientProvider = Provider<Dio>((ref) {
     ),
     ErrorInterceptor(),
     LogInterceptor(
-      requestBody: false,
-      responseBody: false,
+      requestBody: true,   // ← ENABLED
+      responseBody: true,  // ← ENABLED
       logPrint: (o) {
         // ignore: avoid_print
         print('[Dio] $o');

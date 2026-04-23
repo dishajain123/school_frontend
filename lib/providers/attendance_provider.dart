@@ -23,6 +23,7 @@ typedef AttendanceListParams = ({
   int? month,
   int? year,
   String? subjectId,
+  int? lectureNumber,
 });
 
 typedef StudentAnalyticsParams = ({
@@ -107,6 +108,7 @@ final attendanceListProvider = FutureProvider.family<
       month: params.month,
       year: params.year,
       subjectId: params.subjectId,
+      lectureNumber: params.lectureNumber,
     );
   },
 );
@@ -150,6 +152,7 @@ final belowThresholdProvider =
 class MarkAttendanceFormState {
   const MarkAttendanceFormState({
     required this.date,
+    this.selectedLectureNumber = 1,
     this.selectedAcademicYearId,
     this.selectedAssignment,
     this.selectedSubjectId,
@@ -160,6 +163,7 @@ class MarkAttendanceFormState {
   });
 
   final DateTime date;
+  final int selectedLectureNumber;
   final String? selectedAcademicYearId;
   final TeacherClassSubjectModel? selectedAssignment;
   final String? selectedSubjectId;
@@ -170,6 +174,7 @@ class MarkAttendanceFormState {
 
   MarkAttendanceFormState copyWith({
     DateTime? date,
+    int? selectedLectureNumber,
     String? selectedAcademicYearId,
     TeacherClassSubjectModel? selectedAssignment,
     String? selectedSubjectId,
@@ -181,6 +186,8 @@ class MarkAttendanceFormState {
   }) {
     return MarkAttendanceFormState(
       date: date ?? this.date,
+      selectedLectureNumber:
+          selectedLectureNumber ?? this.selectedLectureNumber,
       selectedAcademicYearId:
           selectedAcademicYearId ?? this.selectedAcademicYearId,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
@@ -201,6 +208,13 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
 
   void setDate(DateTime date) {
     state = state.copyWith(date: date, clearSubmitError: true);
+  }
+
+  void setLectureNumber(int lectureNumber) {
+    state = state.copyWith(
+      selectedLectureNumber: lectureNumber,
+      clearSubmitError: true,
+    );
   }
 
   void setAcademicYear(String? academicYearId) {
@@ -334,6 +348,7 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
         subjectId: subjectId,
         academicYearId: academicYearId,
         date: state.date,
+        lectureNumber: state.selectedLectureNumber,
         records: records,
       );
 

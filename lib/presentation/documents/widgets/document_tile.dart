@@ -60,6 +60,23 @@ class DocumentTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if ((document.studentAdmissionNumber ?? '').isNotEmpty ||
+                          (document.studentName ?? '').isNotEmpty) ...[
+                        const SizedBox(height: AppDimensions.space2),
+                        Text(
+                          [
+                            if ((document.studentAdmissionNumber ?? '').isNotEmpty)
+                              'Adm ${document.studentAdmissionNumber}',
+                            if ((document.studentName ?? '').isNotEmpty)
+                              document.studentName!,
+                          ].join(' • '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppDimensions.space4),
                       _TimestampRow(document: document),
                     ],

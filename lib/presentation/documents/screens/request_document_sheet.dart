@@ -11,9 +11,14 @@ import '../../../providers/document_provider.dart';
 import '../widgets/document_type_card.dart';
 
 class RequestDocumentSheet extends ConsumerStatefulWidget {
-  const RequestDocumentSheet({super.key, required this.studentId});
+  const RequestDocumentSheet({
+    super.key,
+    required this.studentId,
+    this.allowedTypes,
+  });
 
   final String studentId;
+  final List<DocumentType>? allowedTypes;
 
   @override
   ConsumerState<RequestDocumentSheet> createState() =>
@@ -26,6 +31,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(documentProvider);
+    final types = widget.allowedTypes ?? DocumentType.values;
     final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
 
     return Container(
@@ -109,7 +115,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
               ),
               child: Column(
                 children: [
-                  ...DocumentType.values.map(
+                  ...types.map(
                     (type) => Padding(
                       padding:
                           const EdgeInsets.only(bottom: AppDimensions.space8),
@@ -144,7 +150,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                 SizedBox(
                   height: AppDimensions.buttonHeight,
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(context).pop(null),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.grey600,
                       side: const BorderSide(color: AppColors.surface200),
@@ -208,42 +214,17 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
 
   Future<void> _submit(BuildContext context) async {
     if (_selected == null) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
     final ok = await ref.read(documentProvider.notifier).requestDocument(
           studentId: widget.studentId,
           documentType: _selected!,
         );
-    if (!context.mounted) return;
-    Navigator.of(context).pop();
     if (ok) {
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_outline_rounded,
-                  color: AppColors.white, size: 18),
-              const SizedBox(width: AppDimensions.space8),
-              Expanded(
-                child: Text(
-                  '${_selected!.label} requested! Generating in background.',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.successGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop(_selected);
     } else {
+      if (!context.mounted) return;
       final err = ref.read(documentProvider).error ?? 'Request failed.';
-      messenger?.showSnackBar(
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(
           content: Text(err),
           backgroundColor: AppColors.errorRed,

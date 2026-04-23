@@ -11,6 +11,7 @@ class AssignmentFilters {
   final String? academicYearId;
   final bool? isActive;
   final bool? isOverdue;
+  final bool? isSubmitted;
 
   const AssignmentFilters({
     this.standardId,
@@ -18,6 +19,7 @@ class AssignmentFilters {
     this.academicYearId,
     this.isActive,
     this.isOverdue,
+    this.isSubmitted,
   });
 
   AssignmentFilters copyWith({
@@ -26,10 +28,12 @@ class AssignmentFilters {
     String? academicYearId,
     bool? isActive,
     bool? isOverdue,
+    bool? isSubmitted,
     bool clearStandard = false,
     bool clearSubject = false,
     bool clearIsActive = false,
     bool clearIsOverdue = false,
+    bool clearIsSubmitted = false,
   }) {
     return AssignmentFilters(
       standardId: clearStandard ? null : (standardId ?? this.standardId),
@@ -37,6 +41,7 @@ class AssignmentFilters {
       academicYearId: academicYearId ?? this.academicYearId,
       isActive: clearIsActive ? null : (isActive ?? this.isActive),
       isOverdue: clearIsOverdue ? null : (isOverdue ?? this.isOverdue),
+      isSubmitted: clearIsSubmitted ? null : (isSubmitted ?? this.isSubmitted),
     );
   }
 }
@@ -104,6 +109,7 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
       academicYearId: filters.academicYearId,
       isActive: filters.isActive,
       isOverdue: filters.isOverdue,
+      isSubmitted: filters.isSubmitted,
       page: page,
     );
     return AssignmentListState(
@@ -122,7 +128,8 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
   }
 
   Future<void> refresh() async {
-    final currentFilters = state.valueOrNull?.filters ?? const AssignmentFilters();
+    final currentFilters =
+        state.valueOrNull?.filters ?? const AssignmentFilters();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetchPage(1, currentFilters));
   }
@@ -140,6 +147,7 @@ class AssignmentsNotifier extends AsyncNotifier<AssignmentListState> {
         academicYearId: current.filters.academicYearId,
         isActive: current.filters.isActive,
         isOverdue: current.filters.isOverdue,
+        isSubmitted: current.filters.isSubmitted,
         page: current.page + 1,
       );
 

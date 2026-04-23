@@ -169,45 +169,54 @@ class _DiaryListScreenState extends ConsumerState<DiaryListScreen> {
 
           // ── Diary list ─────────────────────────────────────────────
           Expanded(
-            child: RefreshIndicator(
-              color: AppColors.navyDeep,
-              onRefresh: () async => ref.invalidate(diaryListProvider(params)),
-              child: diaryAsync.when(
-                loading: () => _DiaryShimmer(),
-                error: (e, _) => AppErrorState(
-                  message: e.toString(),
-                  onRetry: () => ref.invalidate(diaryListProvider(params)),
-                ),
-                data: (response) {
-                  if (response.items.isEmpty) {
-                    return AppEmptyState(
-                      icon: Icons.auto_stories_outlined,
-                      title: _isToday
-                          ? 'No diary entries today'
-                          : 'No diary entries on this day',
-                      subtitle: _isToday
-                          ? 'Teachers haven\'t added any entries yet.'
-                          : 'No diary was posted for this date.',
-                    );
-                  }
-                  return ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(
-                      top: AppDimensions.space8,
-                      bottom: AppDimensions.space64,
+            child: isParent && selectedChild == null
+                ? const AppEmptyState(
+                    icon: Icons.family_restroom_outlined,
+                    title: 'Select Child',
+                    subtitle:
+                        'Choose a child from dashboard first to view class diary.',
+                  )
+                : RefreshIndicator(
+                    color: AppColors.navyDeep,
+                    onRefresh: () async =>
+                        ref.invalidate(diaryListProvider(params)),
+                    child: diaryAsync.when(
+                      loading: () => _DiaryShimmer(),
+                      error: (e, _) => AppErrorState(
+                        message: e.toString(),
+                        onRetry: () =>
+                            ref.invalidate(diaryListProvider(params)),
+                      ),
+                      data: (response) {
+                        if (response.items.isEmpty) {
+                          return AppEmptyState(
+                            icon: Icons.auto_stories_outlined,
+                            title: _isToday
+                                ? 'No diary entries today'
+                                : 'No diary entries on this day',
+                            subtitle: _isToday
+                                ? 'Teachers haven\'t added any entries yet.'
+                                : 'No diary was posted for this date.',
+                          );
+                        }
+                        return ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(
+                            top: AppDimensions.space8,
+                            bottom: AppDimensions.space64,
+                          ),
+                          itemCount: response.items.length,
+                          itemBuilder: (context, index) {
+                            final entry = response.items[index];
+                            return DiaryEntryCard(
+                              diary: entry,
+                              subjectName: subjectNameMap[entry.subjectId],
+                            );
+                          },
+                        );
+                      },
                     ),
-                    itemCount: response.items.length,
-                    itemBuilder: (context, index) {
-                      final entry = response.items[index];
-                      return DiaryEntryCard(
-                        diary: entry,
-                        subjectName: subjectNameMap[entry.subjectId],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+                  ),
           ),
         ],
       ),

@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../data/models/exam/exam_series_model.dart';
-import '../../../data/models/exam/exam_entry_model.dart';
 import '../../../data/models/masters/subject_model.dart';
 import '../../../providers/exam_provider.dart';
 import '../../../providers/masters_provider.dart';
@@ -34,9 +33,18 @@ class CreateSeriesScreen extends ConsumerStatefulWidget {
 
 class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
     with SingleTickerProviderStateMixin {
+  static const List<String> _examTypes = [
+    'Unit Test',
+    'Mid Term',
+    'Oral Practical',
+    'Final',
+    'Other',
+  ];
+
   // Step 1: Create series
   final _seriesNameController = TextEditingController();
   String? _selectedAcademicYearId;
+  String _selectedExamType = _examTypes.first;
   ExamSeriesModel? _createdSeries;
 
   // Step 2: Add entries
@@ -75,6 +83,10 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
                 selectedAcademicYearId: _selectedAcademicYearId,
                 onAcademicYearSelected: (id) =>
                     setState(() => _selectedAcademicYearId = id),
+                examTypes: _examTypes,
+                selectedExamType: _selectedExamType,
+                onExamTypeSelected: (value) =>
+                    setState(() => _selectedExamType = value),
                 onNext: _handleCreateSeries,
               )
             : _StepTwoEntries(
@@ -91,18 +103,15 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
 
   Future<void> _handleCreateSeries() async {
     final name = _seriesNameController.text.trim();
-    if (name.isEmpty) {
-      SnackbarUtils.showError(context, 'Series name cannot be empty');
-      return;
-    }
+    final seriesName =
+        name.isEmpty ? _selectedExamType : '$_selectedExamType - $name';
 
-    final series = await ref
-        .read(examSeriesNotifierProvider.notifier)
-        .createSeries(
-          name: name,
-          standardId: widget.standardId,
-          academicYearId: _selectedAcademicYearId,
-        );
+    final series =
+        await ref.read(examSeriesNotifierProvider.notifier).createSeries(
+              name: seriesName,
+              standardId: widget.standardId,
+              academicYearId: _selectedAcademicYearId,
+            );
 
     if (!mounted) return;
 
@@ -111,7 +120,8 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
         _createdSeries = series;
         _step = 2;
       });
-      SnackbarUtils.showSuccess(context, 'Series created! Now add exam entries.');
+      SnackbarUtils.showSuccess(
+          context, 'Series created! Now add exam entries.');
     } else {
       final err = ref.read(examSeriesNotifierProvider).error;
       SnackbarUtils.showError(context, err ?? 'Failed to create series');
@@ -152,12 +162,18 @@ class _StepOneSeries extends ConsumerWidget {
     required this.nameController,
     required this.selectedAcademicYearId,
     required this.onAcademicYearSelected,
+    required this.examTypes,
+    required this.selectedExamType,
+    required this.onExamTypeSelected,
     required this.onNext,
   });
 
   final TextEditingController nameController;
   final String? selectedAcademicYearId;
   final ValueChanged<String> onAcademicYearSelected;
+  final List<String> examTypes;
+  final String selectedExamType;
+  final ValueChanged<String> onExamTypeSelected;
   final VoidCallback onNext;
 
   @override
@@ -189,8 +205,26 @@ class _StepOneSeries extends ConsumerWidget {
           const SizedBox(height: AppDimensions.space24),
           AppTextField(
             controller: nameController,
-            label: 'Series Name',
-            hint: 'e.g. Term 1 Exams 2025',
+            label: 'Series Name (optional)',
+            hint: 'e.g. Class 6-A',
+          ),
+          const SizedBox(height: AppDimensions.space20),
+          Text(
+            'Exam Type',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.grey600,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.space8),
+          DropdownButtonFormField<String>(
+            initialValue: selectedExamType,
+            decoration: const InputDecoration(),
+            items: examTypes
+                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) onExamTypeSelected(value);
+            },
           ),
           const SizedBox(height: AppDimensions.space20),
           // Academic year selector
@@ -203,9 +237,8 @@ class _StepOneSeries extends ConsumerWidget {
           const SizedBox(height: AppDimensions.space8),
           yearsAsync.when(
             data: (years) => _AcademicYearDropdown(
-              years: years
-                  .map((y) => _YearItem(id: y.id, name: y.name))
-                  .toList(),
+              years:
+                  years.map((y) => _YearItem(id: y.id, name: y.name)).toList(),
               selectedId: selectedAcademicYearId,
               onChanged: onAcademicYearSelected,
             ),
@@ -214,8 +247,8 @@ class _StepOneSeries extends ConsumerWidget {
               'Failed to load academic years',
               style:
                   AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+            ),
           ),
-        ),
           const SizedBox(height: AppDimensions.space32),
           AppButton.primary(
             label: 'Create Series & Continue',
@@ -379,8 +412,7 @@ class _StepTwoEntriesState extends ConsumerState<_StepTwoEntries> {
     return Column(
       children: [
         // Added entries summary
-        if (widget.entries.isNotEmpty)
-          _EntryChips(entries: widget.entries),
+        if (widget.entries.isNotEmpty) _EntryChips(entries: widget.entries),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppDimensions.space20),
@@ -425,16 +457,16 @@ class _StepTwoEntriesState extends ConsumerState<_StepTwoEntries> {
                     },
                   ),
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) =>
-                      Text('Failed to load subjects',
-                          style: AppTypography.bodySmall
-                              .copyWith(color: AppColors.errorRed)),
+                  error: (_, __) => Text('Failed to load subjects',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.errorRed)),
                 ),
                 const SizedBox(height: AppDimensions.space16),
                 // Exam date
                 InkWell(
                   onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusMedium),
                   child: InputDecorator(
                     decoration: const InputDecoration(
                       labelText: 'Exam Date *',
@@ -446,8 +478,8 @@ class _StepTwoEntriesState extends ConsumerState<_StepTwoEntries> {
                           : 'Tap to select',
                       style: _examDate != null
                           ? AppTypography.bodyMedium
-                          : AppTypography.bodyMedium.copyWith(
-                              color: AppColors.grey600),
+                          : AppTypography.bodyMedium
+                              .copyWith(color: AppColors.grey600),
                     ),
                   ),
                 ),
@@ -455,12 +487,12 @@ class _StepTwoEntriesState extends ConsumerState<_StepTwoEntries> {
                 // Start time
                 InkWell(
                   onTap: _pickTime,
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusMedium),
                   child: InputDecorator(
                     decoration: const InputDecoration(
                       labelText: 'Start Time *',
-                      suffixIcon:
-                          Icon(Icons.access_time_outlined, size: 18),
+                      suffixIcon: Icon(Icons.access_time_outlined, size: 18),
                     ),
                     child: Text(
                       _startTime != null
@@ -468,8 +500,8 @@ class _StepTwoEntriesState extends ConsumerState<_StepTwoEntries> {
                           : 'Tap to select',
                       style: _startTime != null
                           ? AppTypography.bodyMedium
-                          : AppTypography.bodyMedium.copyWith(
-                              color: AppColors.grey600),
+                          : AppTypography.bodyMedium
+                              .copyWith(color: AppColors.grey600),
                     ),
                   ),
                 ),

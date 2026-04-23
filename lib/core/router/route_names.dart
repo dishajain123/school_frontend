@@ -49,6 +49,7 @@ class RouteNames {
   static const String submissionList = '/assignments/:id/submissions';
 
   static const String homework = '/homework';
+  static const String homeworkDetail = '/homework/:id';
   static const String createHomework = '/homework/create';
 
   static const String diary = '/diary';
@@ -110,6 +111,7 @@ class RouteNames {
   static String assignmentDetailPath(String id) => '/assignments/$id';
   static String submissionListPath(String assignmentId) =>
       '/assignments/$assignmentId/submissions';
+  static String homeworkDetailPath(String id) => '/homework/$id';
   static String examScheduleTablePath(String id) => '/exam-schedule/$id/table';
   static String reportCardPath(String studentId) =>
       '/results/report-card/$studentId';

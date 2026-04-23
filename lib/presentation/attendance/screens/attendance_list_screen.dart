@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../data/models/attendance/attendance_model.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -28,6 +27,8 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   int _month = DateTime.now().month;
   int _year = DateTime.now().year;
   String? _selectedSubjectId;
+  _AttendanceViewMode _viewMode = _AttendanceViewMode.daily;
+  int? _selectedLectureNumber;
   bool _requestedParentChildrenLoad = false;
 
   @override
@@ -80,7 +81,9 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
         appBar: const AppAppBar(title: 'Attendance', showBack: true),
         body: AppEmptyState(
           icon: Icons.person_search_outlined,
-          title: role == UserRole.parent ? 'No child linked' : 'No student selected',
+          title: role == UserRole.parent
+              ? 'No child linked'
+              : 'No student selected',
           subtitle: role == UserRole.parent
               ? 'Link a child in parent dashboard to track attendance history.'
               : 'Please select a child to view attendance.',
@@ -97,6 +100,9 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
       month: _month,
       year: _year,
       subjectId: _selectedSubjectId,
+      lectureNumber: _viewMode == _AttendanceViewMode.lectureWise
+          ? _selectedLectureNumber
+          : null,
     );
 
     final attendanceAsync = ref.watch(attendanceListProvider(params));
@@ -119,11 +125,14 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   }
 
   Widget _buildContent(List<AttendanceModel> records) {
-    final present = records.where((r) => r.status == AttendanceStatus.present).length;
-    final absent = records.where((r) => r.status == AttendanceStatus.absent).length;
+    final present =
+        records.where((r) => r.status == AttendanceStatus.present).length;
+    final absent =
+        records.where((r) => r.status == AttendanceStatus.absent).length;
     final late = records.where((r) => r.status == AttendanceStatus.late).length;
     final total = records.length;
     final pct = total > 0 ? ((present + late) / total * 100) : 0.0;
+    final dailyItems = _buildDailySummaries(records);
 
     return CustomScrollView(
       slivers: [
@@ -134,6 +143,18 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
             late: late,
             total: total,
             pct: pct.toDouble(),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: _AttendanceViewFilters(
+              mode: _viewMode,
+              selectedLectureNumber: _selectedLectureNumber,
+              onModeChanged: (mode) => setState(() => _viewMode = mode),
+              onLectureChanged: (lecture) =>
+                  setState(() => _selectedLectureNumber = lecture),
+            ),
           ),
         ),
         SliverToBoxAdapter(
@@ -157,11 +178,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
                   records: records,
                   month: _month,
                   year: _year,
-                  onMonthChanged: (month, year) =>
-                      setState(() {
-                        _month = month;
-                        _year = year;
-                      }),
+                  onMonthChanged: (month, year) => setState(() {
+                    _month = month;
+                    _year = year;
+                  }),
                 ),
               ),
             ),
@@ -190,22 +210,80 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _AttendanceRecordTile(
-                  record: records[index],
-                  isLast: index == records.length - 1,
-                ),
-              ),
-            ),
+            sliver: _viewMode == _AttendanceViewMode.daily
+                ? SliverList.builder(
+                    itemCount: dailyItems.length,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _DailyAttendanceTile(summary: dailyItems[index]),
+                    ),
+                  )
+                : SliverList.builder(
+                    itemCount: records.length,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _AttendanceRecordTile(
+                        record: records[index],
+                        isLast: index == records.length - 1,
+                      ),
+                    ),
+                  ),
           ),
         ],
         const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
       ],
     );
   }
+
+  List<_DailyAttendanceSummary> _buildDailySummaries(
+      List<AttendanceModel> records) {
+    final grouped = <DateTime, List<AttendanceModel>>{};
+    for (final record in records) {
+      final key =
+          DateTime(record.date.year, record.date.month, record.date.day);
+      grouped.putIfAbsent(key, () => <AttendanceModel>[]).add(record);
+    }
+    final list = grouped.entries.map((entry) {
+      final dayRecords = entry.value;
+      dayRecords.sort((a, b) => a.lectureNumber.compareTo(b.lectureNumber));
+      final present =
+          dayRecords.where((r) => r.status == AttendanceStatus.present).length;
+      final absent =
+          dayRecords.where((r) => r.status == AttendanceStatus.absent).length;
+      final late =
+          dayRecords.where((r) => r.status == AttendanceStatus.late).length;
+      return _DailyAttendanceSummary(
+        date: entry.key,
+        totalLectures: dayRecords.length,
+        presentLectures: present,
+        absentLectures: absent,
+        lateLectures: late,
+        section: dayRecords.first.section,
+      );
+    }).toList();
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
+  }
+}
+
+enum _AttendanceViewMode { daily, lectureWise }
+
+class _DailyAttendanceSummary {
+  const _DailyAttendanceSummary({
+    required this.date,
+    required this.totalLectures,
+    required this.presentLectures,
+    required this.absentLectures,
+    required this.lateLectures,
+    required this.section,
+  });
+
+  final DateTime date;
+  final int totalLectures;
+  final int presentLectures;
+  final int absentLectures;
+  final int lateLectures;
+  final String section;
 }
 
 class _SummaryHeader extends StatelessWidget {
@@ -305,11 +383,16 @@ class _SummaryHeader extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _StatPill(label: 'Present', value: '$present', color: AppColors.successGreen),
+              _StatPill(
+                  label: 'Present',
+                  value: '$present',
+                  color: AppColors.successGreen),
               const SizedBox(width: 8),
-              _StatPill(label: 'Absent', value: '$absent', color: AppColors.errorRed),
+              _StatPill(
+                  label: 'Absent', value: '$absent', color: AppColors.errorRed),
               const SizedBox(width: 8),
-              _StatPill(label: 'Late', value: '$late', color: AppColors.warningAmber),
+              _StatPill(
+                  label: 'Late', value: '$late', color: AppColors.warningAmber),
             ],
           ),
         ],
@@ -319,7 +402,8 @@ class _SummaryHeader extends StatelessWidget {
 }
 
 class _StatPill extends StatelessWidget {
-  const _StatPill({required this.label, required this.value, required this.color});
+  const _StatPill(
+      {required this.label, required this.value, required this.color});
   final String label, value;
   final Color color;
 
@@ -335,8 +419,8 @@ class _StatPill extends StatelessWidget {
         child: Column(
           children: [
             Text(value,
-                style: AppTypography.titleMedium.copyWith(
-                    color: color, fontWeight: FontWeight.w700)),
+                style: AppTypography.titleMedium
+                    .copyWith(color: color, fontWeight: FontWeight.w700)),
             Text(label,
                 style: AppTypography.caption.copyWith(
                     color: AppColors.white.withValues(alpha: 0.65),
@@ -355,31 +439,53 @@ class _AttendanceRecordTile extends StatelessWidget {
 
   Color get _statusColor {
     switch (record.status) {
-      case AttendanceStatus.present: return AppColors.successGreen;
-      case AttendanceStatus.absent: return AppColors.errorRed;
-      case AttendanceStatus.late: return AppColors.warningAmber;
+      case AttendanceStatus.present:
+        return AppColors.successGreen;
+      case AttendanceStatus.absent:
+        return AppColors.errorRed;
+      case AttendanceStatus.late:
+        return AppColors.warningAmber;
     }
   }
 
   Color get _statusBg {
     switch (record.status) {
-      case AttendanceStatus.present: return AppColors.successLight;
-      case AttendanceStatus.absent: return AppColors.errorLight;
-      case AttendanceStatus.late: return AppColors.warningLight;
+      case AttendanceStatus.present:
+        return AppColors.successLight;
+      case AttendanceStatus.absent:
+        return AppColors.errorLight;
+      case AttendanceStatus.late:
+        return AppColors.warningLight;
     }
   }
 
   String get _statusLabel {
     switch (record.status) {
-      case AttendanceStatus.present: return 'Present';
-      case AttendanceStatus.absent: return 'Absent';
-      case AttendanceStatus.late: return 'Late';
+      case AttendanceStatus.present:
+        return 'Present';
+      case AttendanceStatus.absent:
+        return 'Absent';
+      case AttendanceStatus.late:
+        return 'Late';
     }
   }
 
   String _formatDate(DateTime d) {
-    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${d.day.toString().padLeft(2, '0')} ${months[d.month]}';
   }
 
@@ -430,10 +536,10 @@ class _AttendanceRecordTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  record.section.isNotEmpty
-                      ? 'Sec ${record.section}'
-                      : 'Daily record',
-                  style: AppTypography.caption.copyWith(color: AppColors.grey500),
+                  'Lecture ${record.lectureNumber}'
+                  '${record.section.isNotEmpty ? ' · Sec ${record.section}' : ''}',
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey500),
                 ),
               ],
             ),
@@ -448,6 +554,195 @@ class _AttendanceRecordTile extends StatelessWidget {
               _statusLabel,
               style: AppTypography.labelSmall.copyWith(
                 color: _statusColor,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceViewFilters extends StatelessWidget {
+  const _AttendanceViewFilters({
+    required this.mode,
+    required this.selectedLectureNumber,
+    required this.onModeChanged,
+    required this.onLectureChanged,
+  });
+
+  final _AttendanceViewMode mode;
+  final int? selectedLectureNumber;
+  final ValueChanged<_AttendanceViewMode> onModeChanged;
+  final ValueChanged<int?> onLectureChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final chipStyle = AppTypography.labelMedium.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ChoiceChip(
+              label: Text('Daily', style: chipStyle),
+              selected: mode == _AttendanceViewMode.daily,
+              onSelected: (_) => onModeChanged(_AttendanceViewMode.daily),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: Text('Lecture-wise', style: chipStyle),
+              selected: mode == _AttendanceViewMode.lectureWise,
+              onSelected: (_) => onModeChanged(_AttendanceViewMode.lectureWise),
+            ),
+          ],
+        ),
+        if (mode == _AttendanceViewMode.lectureWise) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text('All Lectures', style: chipStyle),
+                selected: selectedLectureNumber == null,
+                onSelected: (_) => onLectureChanged(null),
+              ),
+              for (var i = 1; i <= 8; i++)
+                ChoiceChip(
+                  label: Text('L$i', style: chipStyle),
+                  selected: selectedLectureNumber == i,
+                  onSelected: (_) => onLectureChanged(i),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DailyAttendanceTile extends StatelessWidget {
+  const _DailyAttendanceTile({required this.summary});
+  final _DailyAttendanceSummary summary;
+
+  String _formatDate(DateTime d) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${d.day.toString().padLeft(2, '0')} ${months[d.month]}';
+  }
+
+  ({String label, Color color, Color bg}) get _statusMeta {
+    if (summary.totalLectures == 0 ||
+        summary.absentLectures == summary.totalLectures) {
+      return (
+        label: 'Absent',
+        color: AppColors.errorRed,
+        bg: AppColors.errorLight,
+      );
+    }
+    if (summary.presentLectures == summary.totalLectures) {
+      return (
+        label: 'Present',
+        color: AppColors.successGreen,
+        bg: AppColors.successLight,
+      );
+    }
+    if (summary.presentLectures + summary.lateLectures ==
+            summary.totalLectures &&
+        summary.lateLectures > 0) {
+      return (
+        label: 'Late',
+        color: AppColors.warningAmber,
+        bg: AppColors.warningLight,
+      );
+    }
+    return (
+      label: 'Partial',
+      color: AppColors.infoBlue,
+      bg: AppColors.infoLight,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = _statusMeta;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: meta.bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.today_outlined,
+              color: meta.color,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _formatDate(summary.date),
+                  style: AppTypography.titleSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.grey800,
+                  ),
+                ),
+                Text(
+                  '${summary.presentLectures}/${summary.totalLectures} attended'
+                  '${summary.section.isNotEmpty ? ' · Sec ${summary.section}' : ''}',
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey500),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: meta.bg,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              meta.label,
+              style: AppTypography.labelSmall.copyWith(
+                color: meta.color,
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
               ),

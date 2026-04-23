@@ -6,19 +6,16 @@ import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
-import '../../../data/models/exam/exam_series_model.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/parent_provider.dart';
 import '../../../providers/masters_provider.dart';
+import '../../../data/models/auth/current_user.dart';
+import '../../../data/repositories/student_repository.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
-
-// NOTE: Since there is no list-series endpoint in the backend spec, the list
-// screen acts as a selector: choose a standard, then input a series ID to view.
-// When FM19 gets a list endpoint in the future this can be updated.
-// For now, the list screen lets the user navigate into the table screen.
 
 class ExamScheduleListScreen extends ConsumerStatefulWidget {
   const ExamScheduleListScreen({super.key});
@@ -32,11 +29,137 @@ class _ExamScheduleListScreenState
     extends ConsumerState<ExamScheduleListScreen> {
   String? _selectedStandardId;
 
+  Future<void> _refreshScoped(CurrentUser? user) async {
+    if (user?.role == UserRole.parent) {
+      await ref.read(childrenNotifierProvider.notifier).loadMyChildren();
+    } else if (user?.role == UserRole.student) {
+      ref.invalidate(studentRepositoryProvider);
+    }
+  }
+
+  Future<String?> _resolveScopedStandardId(CurrentUser? user) async {
+    if (user == null) return null;
+
+    if (user.role == UserRole.parent) {
+      await ref.read(childrenNotifierProvider.notifier).loadMyChildren();
+      final child = ref.read(selectedChildProvider);
+      if (child != null) {
+        try {
+          final student =
+              await ref.read(studentRepositoryProvider).getById(child.id);
+          final sid = student.standardId?.trim();
+          if (sid != null && sid.isNotEmpty) return sid;
+        } catch (_) {
+          final sid = child.standardId?.trim();
+          if (sid != null && sid.isNotEmpty) return sid;
+        }
+      }
+      return null;
+    }
+
+    if (user.role == UserRole.student) {
+      final repo = ref.read(studentRepositoryProvider);
+      try {
+        final me = await repo.getMyProfile();
+        final sid = me.standardId?.trim();
+        if (sid != null && sid.isNotEmpty) return sid;
+      } catch (_) {
+        // fallback for older deployments
+        final result = await repo.list(page: 1, pageSize: 1);
+        if (result.items.isNotEmpty) {
+          final sid = result.items.first.standardId?.trim();
+          if (sid != null && sid.isNotEmpty) return sid;
+        }
+      }
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
+    final selectedChildId = ref.watch(selectedChildIdProvider);
     final standardsAsync = ref.watch(standardsProvider(null));
-    final canCreate = currentUser?.hasPermission('exam_schedule:create') ?? false;
+    final canCreate =
+        currentUser?.hasPermission('exam_schedule:create') ?? false;
+    final isScopedRole = currentUser?.role == UserRole.parent ||
+        currentUser?.role == UserRole.student;
+
+    if (isScopedRole) {
+      return FutureBuilder<String?>(
+        key: ValueKey('${currentUser?.role}-${selectedChildId ?? ''}'),
+        future: _resolveScopedStandardId(currentUser),
+        builder: (context, snapshot) {
+          final standardId = snapshot.data;
+          return AppScaffold(
+            appBar: const AppAppBar(title: 'Exam Schedules'),
+            body: snapshot.connectionState == ConnectionState.waiting
+                ? AppLoading.fullPage()
+                : (standardId == null || standardId.isEmpty)
+                    ? AppErrorState(
+                        message: currentUser?.role == UserRole.parent
+                            ? 'Child class is not available yet. Please select a child in dashboard and retry.'
+                            : 'Student class is not available yet. Please retry.',
+                        onRetry: () => _refreshScoped(currentUser),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimensions.space16,
+                          AppDimensions.space16,
+                          AppDimensions.space16,
+                          100,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            standardsAsync.when(
+                              data: (standards) {
+                                final standard = standards
+                                    .where((s) => s.id == standardId)
+                                    .toList()
+                                    .firstOrNull;
+                                final title = standard?.name ?? 'Your Class';
+                                return Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppDimensions.space12,
+                                    vertical: AppDimensions.space8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.infoBlue.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(
+                                      AppDimensions.radiusMedium,
+                                    ),
+                                    border: Border.all(
+                                      color:
+                                          AppColors.infoBlue.withOpacity(0.25),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Class: $title',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      color: AppColors.infoBlue,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                );
+                              },
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                            const SizedBox(height: AppDimensions.space12),
+                            _SeriesList(
+                              standardId: standardId,
+                              canCreate: false,
+                            ),
+                          ],
+                        ),
+                      ),
+          );
+        },
+      );
+    }
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -84,7 +207,8 @@ class _ExamScheduleListScreenState
               onSelect: (id) => setState(() => _selectedStandardId = id),
             ),
             loading: () => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
               child: AppLoading.fullPage(),
             ),
             error: (e, _) => AppErrorState(
@@ -139,8 +263,7 @@ class _StandardChips extends StatelessWidget {
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space16),
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
         itemCount: standards.length,
         separatorBuilder: (_, __) =>
             const SizedBox(width: AppDimensions.space8),
@@ -151,16 +274,13 @@ class _StandardChips extends StatelessWidget {
             onTap: () => onSelect(s.id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.space12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
               decoration: BoxDecoration(
                 color: selected ? AppColors.navyDeep : Colors.transparent,
-                borderRadius:
-                    BorderRadius.circular(AppDimensions.radiusFull),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 border: Border.all(
-                  color: selected
-                      ? AppColors.navyDeep
-                      : AppColors.surface200,
+                  color: selected ? AppColors.navyDeep : AppColors.surface200,
                 ),
               ),
               child: Center(
@@ -168,8 +288,7 @@ class _StandardChips extends StatelessWidget {
                   s.name,
                   style: AppTypography.labelMedium.copyWith(
                     color: selected ? Colors.white : AppColors.grey600,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ),
@@ -181,11 +300,7 @@ class _StandardChips extends StatelessWidget {
   }
 }
 
-// ── Series list for selected standard ────────────────────────────────────────
-
-// Since the backend does not expose a "list series by standard" endpoint,
-// we show a prompt to enter a series ID or navigate to create one.
-// Real implementations can swap this out if a list endpoint is added.
+// ── Actions for selected standard ────────────────────────────────────────────
 class _SeriesList extends StatelessWidget {
   const _SeriesList({
     required this.standardId,

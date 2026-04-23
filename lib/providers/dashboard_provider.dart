@@ -275,14 +275,23 @@ final parentDashboardStatsProvider =
     children = <ChildSummaryModel>[];
   }
 
-  var openComplaintsCount = 0;
+  var totalComplaintsCount = 0;
   try {
-    final openComplaintsResponse = await complaintRepo.list(
-      status: ComplaintStatus.open,
-    );
-    openComplaintsCount = openComplaintsResponse.total;
+    // For parent dashboard, backend already scopes complaints to current parent.
+    // Avoid extra role filter here because some deployments may reject it and
+    // incorrectly fall back to 0.
+    final complaintsResponse = await complaintRepo.list();
+    totalComplaintsCount = complaintsResponse.total;
   } catch (_) {
-    openComplaintsCount = 0;
+    // Fallback for deployments that require explicit role filter.
+    try {
+      final complaintsResponse = await complaintRepo.list(
+        complainantType: ComplainantType.parent,
+      );
+      totalComplaintsCount = complaintsResponse.total;
+    } catch (_) {
+      totalComplaintsCount = 0;
+    }
   }
 
   final classKeys = <String>{};
@@ -330,7 +339,7 @@ final parentDashboardStatsProvider =
     linkedChildren: children.length,
     classTeachers: teacherIds.length,
     outstandingFeesAmount: outstandingTotal,
-    openComplaints: openComplaintsCount,
+    openComplaints: totalComplaintsCount,
   );
 });
 

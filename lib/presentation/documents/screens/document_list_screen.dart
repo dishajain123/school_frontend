@@ -1,6 +1,7 @@
 // presentation/documents/screens/document_list_screen.dart
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,29 +31,19 @@ class DocumentListScreen extends ConsumerStatefulWidget {
   ConsumerState<DocumentListScreen> createState() => _DocumentListScreenState();
 }
 
-class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
-    with SingleTickerProviderStateMixin {
+class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   DocumentStatus? _statusFilter;
   String? _resolvedStudentId;
-  late final AnimationController _fadeCtrl;
-  late final Animation<double> _fadeAnim;
+  bool _isRequestSheetOpen = false;
 
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
   @override
-  void dispose() {
-    _fadeCtrl.dispose();
-    super.dispose();
-  }
+  void dispose() => super.dispose();
 
   Future<void> _init() async {
     final user = ref.read(currentUserProvider);
@@ -81,19 +72,16 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
         if (!mounted) return;
         _resolvedStudentId = ref.read(selectedChildIdProvider);
       }
+    } else if (user.role == UserRole.principal ||
+        user.role == UserRole.superadmin) {
+      _resolvedStudentId = null;
     }
 
-    if (_resolvedStudentId != null) {
-      await ref.read(documentProvider.notifier).load(_resolvedStudentId!);
-      if (!mounted) return;
-      _fadeCtrl.forward();
-    }
+    await ref.read(documentProvider.notifier).load(_resolvedStudentId);
   }
 
   Future<void> _refresh() async {
-    if (_resolvedStudentId != null) {
-      await ref.read(documentProvider.notifier).load(_resolvedStudentId!);
-    }
+    await ref.read(documentProvider.notifier).load(_resolvedStudentId);
   }
 
   List<DocumentModel> _filtered(List<DocumentModel> docs) {
@@ -117,6 +105,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
     final canVerify = user != null &&
         canManage &&
         (user.role == UserRole.principal || user.role == UserRole.superadmin);
+    final canManageRequirements = canVerify;
 
     final state = ref.watch(documentProvider);
     final filtered = _filtered(state.documents);
@@ -156,6 +145,24 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
                 ),
               ),
             ),
+            if (_resolvedStudentId != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimensions.pageHorizontal,
+                    0,
+                    AppDimensions.pageHorizontal,
+                    AppDimensions.space8,
+                  ),
+                  child: _RequiredDocsPanel(
+                    items: state.requiredStatus,
+                    canManageRequirements: canManageRequirements,
+                    onManageTap: canManageRequirements
+                        ? () => _showManageRequiredDocsSheet(context)
+                        : null,
+                  ),
+                ),
+              ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -182,69 +189,66 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
                 child: _buildEmpty(),
               )
             else
-              FadeTransition(
-                opacity: _fadeAnim,
-                child: SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimensions.pageHorizontal,
-                    AppDimensions.space8,
-                    AppDimensions.pageHorizontal,
-                    AppDimensions.space64,
-                  ),
-                  sliver: SliverList.separated(
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppDimensions.space12),
-                    itemBuilder: (context, i) {
-                      final doc = filtered[i];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          DocumentTile(
-                            document: doc,
-                            onDownload: doc.isReady
-                                ? () => _handleDownload(context, doc)
-                                : null,
-                          ),
-                          if (canVerify &&
-                              doc.status == DocumentStatus.processing)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () =>
-                                          _verifyDocument(doc.id, false),
-                                      icon: const Icon(Icons.close_rounded,
-                                          size: 16),
-                                      label: const Text('Reject'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.errorRed,
-                                      ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimensions.pageHorizontal,
+                  AppDimensions.space8,
+                  AppDimensions.pageHorizontal,
+                  AppDimensions.space64,
+                ),
+                sliver: SliverList.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppDimensions.space12),
+                  itemBuilder: (context, i) {
+                    final doc = filtered[i];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        DocumentTile(
+                          document: doc,
+                          onDownload: doc.isReady
+                              ? () => _handleDownload(context, doc)
+                              : null,
+                        ),
+                        if (canVerify &&
+                            doc.status == DocumentStatus.processing)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () =>
+                                        _rejectDocumentWithReason(context, doc.id),
+                                    icon: const Icon(Icons.close_rounded,
+                                        size: 16),
+                                    label: const Text('Reject'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.errorRed,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () =>
-                                          _verifyDocument(doc.id, true),
-                                      icon: const Icon(Icons.check_rounded,
-                                          size: 16),
-                                      label: const Text('Verify'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.successGreen,
-                                        foregroundColor: AppColors.white,
-                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () =>
+                                        _verifyDocument(doc.id, true),
+                                    icon: const Icon(Icons.check_rounded,
+                                        size: 16),
+                                    label: const Text('Verify'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.successGreen,
+                                      foregroundColor: AppColors.white,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                        ],
-                      );
-                    },
-                  ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
           ],
@@ -311,6 +315,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
         child: SizedBox(
           width: maxWidth.clamp(0, 420).toDouble(),
           child: FloatingActionButton.extended(
+            heroTag: null,
             onPressed: state.isUploading ? null : () => _pickAndUpload(context),
             backgroundColor: AppColors.navyDeep,
             foregroundColor: AppColors.white,
@@ -346,7 +351,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
               child: SizedBox(
                 height: 52,
                 child: FloatingActionButton.extended(
-                  heroTag: 'upload_doc',
+                  heroTag: null,
                   onPressed:
                       state.isUploading ? null : () => _pickAndUpload(context),
                   backgroundColor: AppColors.navyDeep,
@@ -370,7 +375,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
             Expanded(
               child: SizedBox(
                 height: 52,
-                child: _requestFab(context, state, heroTag: 'request_doc'),
+                child: _requestFab(context, state),
               ),
             ),
           ],
@@ -381,11 +386,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
 
   Widget _requestFab(
     BuildContext context,
-    DocumentState state, {
-    String? heroTag,
-  }) {
+    DocumentState state,
+  ) {
     return FloatingActionButton.extended(
-      heroTag: heroTag,
+      heroTag: null,
       onPressed: state.isRequesting ? null : () => _showRequestSheet(context),
       backgroundColor: state.isRequesting
           ? AppColors.goldPrimary.withValues(alpha: 0.7)
@@ -585,6 +589,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
   }
 
   Future<void> _showRequestSheet(BuildContext context) async {
+    if (_isRequestSheetOpen) return;
     if (_resolvedStudentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -594,15 +599,42 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
       );
       return;
     }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.86,
-        child: RequestDocumentSheet(
-          studentId: _resolvedStudentId!,
+    _isRequestSheetOpen = true;
+    DocumentType? requestedType;
+    final requiredTypes = ref
+        .read(documentProvider)
+        .requiredDocuments
+        .map((e) => e.documentType)
+        .toSet();
+    final allowedTypes =
+        requiredTypes.isEmpty ? null : requiredTypes.toList(growable: false);
+    try {
+      requestedType = await showModalBottomSheet<DocumentType?>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        builder: (_) => FractionallySizedBox(
+          heightFactor: 0.86,
+          child: RequestDocumentSheet(
+            studentId: _resolvedStudentId!,
+            allowedTypes: allowedTypes,
+          ),
+        ),
+      );
+    } finally {
+      _isRequestSheetOpen = false;
+    }
+    if (!context.mounted || requestedType == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${requestedType.label} requested! Generating in background.',
+        ),
+        backgroundColor: AppColors.successGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         ),
       ),
     );
@@ -629,10 +661,29 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    final allowedTypes = DocumentType.values
+    final requiredTypes = ref
+        .read(documentProvider)
+        .requiredDocuments
+        .map((e) => e.documentType)
+        .toSet();
+
+    final baseAllowed = DocumentType.values
         .where((type) => _canUploadTypeForRole(user.role, type))
         .toList(growable: false);
-    if (allowedTypes.isEmpty) return;
+    final allowedTypes = (user.role == UserRole.parent ||
+            user.role == UserRole.student) &&
+        requiredTypes.isNotEmpty
+        ? baseAllowed.where((t) => requiredTypes.contains(t)).toList()
+        : baseAllowed;
+    if (allowedTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No uploadable document types available right now.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     var selectedType = allowedTypes.first;
     final pickedType = await showModalBottomSheet<DocumentType>(
@@ -661,8 +712,9 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
     try {
       picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
-        withData: true,
+        allowedExtensions: const ['pdf'],
+        // Avoid loading big bytes into memory on mobile/desktop; keep bytes for web.
+        withData: kIsWeb,
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -698,12 +750,13 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
   }
 
   Future<void> _verifyDocument(String documentId, bool approve) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
     final ok = await ref.read(documentProvider.notifier).verifyDocument(
           documentId: documentId,
           approve: approve,
         );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger?.showSnackBar(
       SnackBar(
         content: Text(ok
             ? (approve ? 'Document verified.' : 'Document rejected.')
@@ -712,6 +765,255 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen>
             ? (approve ? AppColors.successGreen : AppColors.warningAmber)
             : AppColors.errorRed,
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _rejectDocumentWithReason(
+      BuildContext context, String documentId) async {
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reject Document'),
+        content: TextField(
+          controller: reasonController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Enter rejection reason (optional)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(reasonController.text.trim()),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null) return;
+
+    final ok = await ref.read(documentProvider.notifier).verifyDocument(
+          documentId: documentId,
+          approve: false,
+          reason: reason,
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Document rejected. Student/parent notified to re-upload.'
+            : (ref.read(documentProvider).error ?? 'Update failed.')),
+        backgroundColor: ok ? AppColors.warningAmber : AppColors.errorRed,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _showManageRequiredDocsSheet(BuildContext context) async {
+    final current = ref.read(documentProvider).requiredDocuments;
+    final selected = current.map((e) => e.documentType).toSet();
+    final notesByType = <DocumentType, TextEditingController>{
+      for (final t in DocumentType.values)
+        t: TextEditingController(
+          text: current.firstWhere(
+            (e) => e.documentType == t,
+            orElse: () => RequiredDocumentModel(documentType: t),
+          ).note ??
+              '',
+        ),
+    };
+
+    final saveTapped = await showModalBottomSheet<bool>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Text('Required Documents',
+                          style: AppTypography.headlineSmall),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...DocumentType.values.map(
+                    (type) => Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              value: selected.contains(type),
+                              onChanged: (checked) => setModalState(() {
+                                if (checked == true) {
+                                  selected.add(type);
+                                } else {
+                                  selected.remove(type);
+                                }
+                              }),
+                              title: Text(type.label),
+                              subtitle: Text(type.description),
+                            ),
+                            TextField(
+                              controller: notesByType[type],
+                              enabled: selected.contains(type),
+                              decoration: const InputDecoration(
+                                labelText: 'Instruction (optional)',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    final payload = selected
+        .map(
+          (type) => RequiredDocumentModel(
+            documentType: type,
+            isMandatory: true,
+            note: notesByType[type]?.text.trim(),
+          ),
+        )
+        .toList(growable: false);
+    for (final c in notesByType.values) {
+      c.dispose();
+    }
+    if (saveTapped != true) return;
+    if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final ok =
+        await ref.read(documentProvider.notifier).saveRequiredDocuments(payload);
+    if (!mounted) return;
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Required documents updated.'
+            : (ref.read(documentProvider).error ?? 'Failed to save requirements')),
+        backgroundColor: ok ? AppColors.successGreen : AppColors.errorRed,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    if (ok && _resolvedStudentId != null) {
+      await ref
+          .read(documentProvider.notifier)
+          .refreshRequiredStatus(_resolvedStudentId!);
+    }
+  }
+}
+
+class _RequiredDocsPanel extends StatelessWidget {
+  const _RequiredDocsPanel({
+    required this.items,
+    required this.canManageRequirements,
+    this.onManageTap,
+  });
+
+  final List<RequiredDocumentStatusModel> items;
+  final bool canManageRequirements;
+  final VoidCallback? onManageTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: AppDecorations.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Required Documents', style: AppTypography.titleMedium),
+              const Spacer(),
+              if (canManageRequirements)
+                TextButton(
+                  onPressed: onManageTap,
+                  child: const Text('Manage'),
+                ),
+            ],
+          ),
+          if (items.isEmpty)
+            Text(
+              canManageRequirements
+                  ? 'No required docs configured.'
+                  : 'No required docs configured by school.',
+              style: AppTypography.bodySmall,
+            )
+          else
+            ...items.map((item) {
+              final status = item.latestStatus;
+              final summary = item.isCompleted
+                  ? 'Approved'
+                  : item.needsReupload
+                      ? 'Rejected - Reupload needed'
+                      : status == null
+                          ? 'Not uploaded'
+                          : status.label;
+              final color = item.isCompleted
+                  ? AppColors.successGreen
+                  : item.needsReupload
+                      ? AppColors.errorRed
+                      : AppColors.warningAmber;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(item.documentType.icon, color: item.documentType.color),
+                title: Text(item.documentType.label),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(summary),
+                    if ((item.note ?? '').trim().isNotEmpty)
+                      Text('Instruction: ${item.note!.trim()}'),
+                    if ((item.reviewNote ?? '').trim().isNotEmpty)
+                      Text('Reason: ${item.reviewNote!.trim()}'),
+                  ],
+                ),
+                trailing: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              );
+            }),
+        ],
       ),
     );
   }

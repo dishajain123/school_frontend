@@ -4,6 +4,9 @@ import '../data/models/masters/grade_master_model.dart';
 import '../data/models/masters/standard_model.dart';
 import '../data/models/masters/subject_model.dart';
 import '../data/repositories/masters_repository.dart';
+import 'student_provider.dart';
+import 'teacher_provider.dart';
+import 'timetable_provider.dart';
 
 // ── Standards ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +34,10 @@ class StandardsNotifier extends AsyncNotifier<List<StandardModel>> {
     final created = await repo.createStandard(payload);
     final current = state.valueOrNull ?? [];
     state = AsyncData([...current, created]..sort((a, b) => a.level.compareTo(b.level)));
+    ref.invalidate(standardsProvider);
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
   }
 
   Future<void> updateStandard(String id, Map<String, dynamic> payload) async {
@@ -41,6 +48,10 @@ class StandardsNotifier extends AsyncNotifier<List<StandardModel>> {
       current.map((s) => s.id == id ? updated : s).toList()
         ..sort((a, b) => a.level.compareTo(b.level)),
     );
+    ref.invalidate(standardsProvider);
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
   }
 
   Future<void> delete(String id) async {
@@ -48,6 +59,10 @@ class StandardsNotifier extends AsyncNotifier<List<StandardModel>> {
     await repo.deleteStandard(id);
     final current = state.valueOrNull ?? [];
     state = AsyncData(current.where((s) => s.id != id).toList());
+    ref.invalidate(standardsProvider);
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
   }
 }
 

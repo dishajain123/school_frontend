@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/student/student_model.dart';
 import '../data/repositories/student_repository.dart';
+import 'teacher_provider.dart';
+import 'timetable_provider.dart';
 
 class StudentFilters {
   const StudentFilters({
@@ -154,6 +156,9 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
         total: current.total + 1,
       ),
     );
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
     return created;
   }
 
@@ -167,6 +172,9 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
         items: current.items.map((s) => s.id == id ? updated : s).toList(),
       ),
     );
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
     return updated;
   }
 
@@ -211,6 +219,9 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
             .toList(),
       ),
     );
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
     return updatedItems;
   }
 
@@ -239,6 +250,9 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
             .toList(),
       ),
     );
+    ref.invalidate(studentSectionsProvider);
+    ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableSectionsProvider);
     return updatedItems;
   }
 }

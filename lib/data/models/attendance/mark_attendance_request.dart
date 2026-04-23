@@ -7,6 +7,7 @@ class MarkAttendanceRequest {
     required this.subjectId,
     required this.academicYearId,
     required this.date,
+    required this.lectureNumber,
     required this.records,
   });
 
@@ -15,6 +16,7 @@ class MarkAttendanceRequest {
   final String subjectId;
   final String academicYearId;
   final DateTime date;
+  final int lectureNumber;
   final List<AttendanceRecordInput> records;
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +25,7 @@ class MarkAttendanceRequest {
         'subject_id': subjectId,
         'academic_year_id': academicYearId,
         'date': _formatDate(date),
+        'lecture_number': lectureNumber,
         'records': records.map((r) => r.toJson()).toList(),
       };
 

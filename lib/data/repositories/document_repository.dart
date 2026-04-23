@@ -65,10 +65,12 @@ class DocumentRepository {
   // Permission: document:generate
   // Backend enforces RBAC — STUDENT sees only own, PARENT sees only child's
 
-  Future<DocumentListResponse> listDocuments(String studentId) async {
+  Future<DocumentListResponse> listDocuments([String? studentId]) async {
     final response = await _dio.get(
       ApiConstants.documents,
-      queryParameters: {'student_id': studentId},
+      queryParameters: {
+        if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
+      },
     );
     return DocumentListResponse.fromJson(response.data as Map<String, dynamic>);
   }
@@ -89,12 +91,56 @@ class DocumentRepository {
   Future<DocumentModel> verifyDocument({
     required String documentId,
     required bool approve,
+    String? reason,
   }) async {
     final response = await _dio.patch(
       ApiConstants.documentVerify(documentId),
-      data: {'approve': approve},
+      data: {
+        'approve': approve,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
     );
     return DocumentModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<RequiredDocumentModel>> listRequiredDocuments() async {
+    final response = await _dio.get(ApiConstants.documentRequirements);
+    final items =
+        (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ??
+            const [];
+    return items
+        .map((e) => RequiredDocumentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RequiredDocumentModel>> upsertRequiredDocuments(
+    List<RequiredDocumentModel> items,
+  ) async {
+    final response = await _dio.put(
+      ApiConstants.documentRequirements,
+      data: {
+        'items': items.map((e) => e.toJson()).toList(),
+      },
+    );
+    final raw =
+        (response.data as Map<String, dynamic>)['items'] as List<dynamic>? ??
+            const [];
+    return raw
+        .map((e) => RequiredDocumentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RequiredDocumentStatusModel>> listRequiredStatusForStudent(
+      String studentId) async {
+    final response = await _dio.get(
+      ApiConstants.documentRequirementStatus,
+      queryParameters: {'student_id': studentId},
+    );
+    final raw = response.data as List<dynamic>? ?? const [];
+    return raw
+        .map((e) =>
+            RequiredDocumentStatusModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 

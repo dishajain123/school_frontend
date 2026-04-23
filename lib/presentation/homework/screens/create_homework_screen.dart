@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -20,7 +22,8 @@ class CreateHomeworkScreen extends ConsumerStatefulWidget {
   const CreateHomeworkScreen({super.key});
 
   @override
-  ConsumerState<CreateHomeworkScreen> createState() => _CreateHomeworkScreenState();
+  ConsumerState<CreateHomeworkScreen> createState() =>
+      _CreateHomeworkScreenState();
 }
 
 class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
@@ -31,6 +34,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
   String? _selectedStandardId;
   String? _selectedSubjectId;
   DateTime _selectedDate = _today();
+  PlatformFile? _pickedFile;
   bool _isSubmitting = false;
 
   late AnimationController _animCtrl;
@@ -48,7 +52,8 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _animCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 450));
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
@@ -79,7 +84,8 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
       ),
     );
     if (picked != null && mounted) {
-      setState(() => _selectedDate = DateTime(picked.year, picked.month, picked.day));
+      setState(() =>
+          _selectedDate = DateTime(picked.year, picked.month, picked.day));
     }
   }
 
@@ -93,15 +99,36 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
       SnackbarUtils.showError(context, 'Please select a subject');
       return;
     }
+    if (_descCtrl.text.trim().isEmpty && _pickedFile == null) {
+      SnackbarUtils.showError(
+        context,
+        'Add homework text or attach a worksheet PDF/file',
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
       final repo = ref.read(homeworkRepositoryProvider);
+      MultipartFile? multipartFile;
+      if (_pickedFile != null && _pickedFile!.bytes != null) {
+        multipartFile = MultipartFile.fromBytes(
+          _pickedFile!.bytes!,
+          filename: _pickedFile!.name,
+        );
+      } else if (_pickedFile != null && _pickedFile!.path != null) {
+        multipartFile = await MultipartFile.fromFile(
+          _pickedFile!.path!,
+          filename: _pickedFile!.name,
+        );
+      }
       await repo.createHomework(
         standardId: _selectedStandardId!,
         subjectId: _selectedSubjectId!,
-        description: _descCtrl.text.trim(),
+        description:
+            _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         date: _toApiDate(_selectedDate),
+        file: multipartFile,
       );
       if (mounted) {
         SnackbarUtils.showSuccess(context, 'Homework posted successfully!');
@@ -114,10 +141,25 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
     }
   }
 
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
+    );
+    if (result != null && result.files.isNotEmpty && mounted) {
+      setState(() => _pickedFile = result.files.first);
+    }
+  }
+
+  void _removeFile() {
+    setState(() => _pickedFile = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeYear = ref.watch(activeYearProvider);
-    final assignmentsAsync = ref.watch(myTeacherAssignmentsProvider(activeYear?.id));
+    final assignmentsAsync =
+        ref.watch(myTeacherAssignmentsProvider(activeYear?.id));
 
     return AppScaffold(
       appBar: const AppAppBar(title: 'Post Homework', showBack: true),
@@ -128,7 +170,8 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
             padding: const EdgeInsets.all(24),
             child: Text(
               'Could not load your classes. Please try again.',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.errorRed),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.errorRed),
               textAlign: TextAlign.center,
             ),
           ),
@@ -153,11 +196,13 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
                     ),
                     const SizedBox(height: 20),
                     Text('No classes assigned',
-                        style: AppTypography.headlineSmall, textAlign: TextAlign.center),
+                        style: AppTypography.headlineSmall,
+                        textAlign: TextAlign.center),
                     const SizedBox(height: 8),
                     Text(
                       "You don't have any class assignments for this academic year.",
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.grey500),
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: AppColors.grey500),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -177,6 +222,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
                 selectedStandardId: _selectedStandardId,
                 selectedSubjectId: _selectedSubjectId,
                 selectedDate: _selectedDate,
+                pickedFile: _pickedFile,
                 isSubmitting: _isSubmitting,
                 onStandardChanged: (id) {
                   setState(() {
@@ -184,8 +230,11 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
                     _selectedSubjectId = null;
                   });
                 },
-                onSubjectChanged: (id) => setState(() => _selectedSubjectId = id),
+                onSubjectChanged: (id) =>
+                    setState(() => _selectedSubjectId = id),
                 onDateTap: _pickDate,
+                onPickFile: _pickFile,
+                onRemoveFile: _removeFile,
                 onSubmit: () => _submit(assignments),
               ),
             ),
@@ -204,10 +253,13 @@ class _HomeworkForm extends StatelessWidget {
     required this.selectedStandardId,
     required this.selectedSubjectId,
     required this.selectedDate,
+    required this.pickedFile,
     required this.isSubmitting,
     required this.onStandardChanged,
     required this.onSubjectChanged,
     required this.onDateTap,
+    required this.onPickFile,
+    required this.onRemoveFile,
     required this.onSubmit,
   });
 
@@ -217,10 +269,13 @@ class _HomeworkForm extends StatelessWidget {
   final String? selectedStandardId;
   final String? selectedSubjectId;
   final DateTime selectedDate;
+  final PlatformFile? pickedFile;
   final bool isSubmitting;
   final ValueChanged<String?> onStandardChanged;
   final ValueChanged<String?> onSubjectChanged;
   final VoidCallback onDateTap;
+  final VoidCallback onPickFile;
+  final VoidCallback onRemoveFile;
   final VoidCallback onSubmit;
 
   Map<String, String> get _uniqueStandards {
@@ -266,11 +321,14 @@ class _HomeworkForm extends StatelessWidget {
                       _StyledDropdown<String>(
                         hint: 'Select class',
                         value: selectedStandardId,
-                        items: standards.entries.map((e) => DropdownMenuItem(
-                              value: e.key,
-                              child: Text(e.value,
-                                  style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800)),
-                            )).toList(),
+                        items: standards.entries
+                            .map((e) => DropdownMenuItem(
+                                  value: e.key,
+                                  child: Text(e.value,
+                                      style: AppTypography.bodyMedium
+                                          .copyWith(color: AppColors.grey800)),
+                                ))
+                            .toList(),
                         onChanged: onStandardChanged,
                       ),
                       const SizedBox(height: 16),
@@ -279,18 +337,28 @@ class _HomeworkForm extends StatelessWidget {
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: selectedStandardId == null
-                            ? _DisabledField(hint: 'Select a class first', key: const ValueKey('no-class'))
+                            ? _DisabledField(
+                                hint: 'Select a class first',
+                                key: const ValueKey('no-class'))
                             : subjects.isEmpty
-                                ? _DisabledField(hint: 'No subjects for this class', key: const ValueKey('no-subject'))
+                                ? _DisabledField(
+                                    hint: 'No subjects for this class',
+                                    key: const ValueKey('no-subject'))
                                 : _StyledDropdown<String>(
                                     key: ValueKey(selectedStandardId),
                                     hint: 'Select subject',
                                     value: selectedSubjectId,
-                                    items: subjects.entries.map((e) => DropdownMenuItem(
-                                          value: e.key,
-                                          child: Text(e.value,
-                                              style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800)),
-                                        )).toList(),
+                                    items: subjects.entries
+                                        .map((e) => DropdownMenuItem(
+                                              value: e.key,
+                                              child: Text(e.value,
+                                                  style: AppTypography
+                                                      .bodyMedium
+                                                      .copyWith(
+                                                          color: AppColors
+                                                              .grey800)),
+                                            ))
+                                        .toList(),
                                     onChanged: onSubjectChanged,
                                   ),
                       ),
@@ -304,11 +372,13 @@ class _HomeworkForm extends StatelessWidget {
                       GestureDetector(
                         onTap: onDateTap,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
                             color: AppColors.surface50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.surface200, width: 1.5),
+                            border: Border.all(
+                                color: AppColors.surface200, width: 1.5),
                           ),
                           child: Row(
                             children: [
@@ -317,7 +387,8 @@ class _HomeworkForm extends StatelessWidget {
                               const SizedBox(width: 10),
                               Text(
                                 DateFormatter.formatDate(selectedDate),
-                                style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
+                                style: AppTypography.bodyMedium
+                                    .copyWith(color: AppColors.grey800),
                               ),
                               const Spacer(),
                               const Icon(Icons.keyboard_arrow_down_rounded,
@@ -336,20 +407,85 @@ class _HomeworkForm extends StatelessWidget {
                       AppTextField(
                         controller: descCtrl,
                         label: '',
-                        hint: 'Describe the homework clearly for students and parents...',
+                        hint:
+                            'Type homework instructions (optional if file attached)...',
                         maxLines: 5,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Description cannot be empty';
-                          if (v.trim().length < 5) return 'Description is too short';
-                          return null;
-                        },
                         textInputAction: TextInputAction.newline,
+                      ),
+                      const SizedBox(height: 14),
+                      GestureDetector(
+                        onTap: onPickFile,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: pickedFile != null
+                                ? AppColors.navyDeep.withValues(alpha: 0.04)
+                                : AppColors.surface50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: pickedFile != null
+                                  ? AppColors.navyMedium.withValues(alpha: 0.4)
+                                  : AppColors.surface200,
+                              width: pickedFile != null ? 1.5 : 1,
+                            ),
+                          ),
+                          child: pickedFile == null
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.attach_file_rounded,
+                                        color: AppColors.navyMedium, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Attach worksheet (PDF/image/doc)',
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: AppColors.navyMedium,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.navyDeep
+                                            .withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                          Icons.insert_drive_file_outlined,
+                                          color: AppColors.navyDeep,
+                                          size: 18),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        pickedFile!.name,
+                                        style: AppTypography.titleSmall,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: onRemoveFile,
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 18,
+                                        color: AppColors.grey400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   _InfoBanner(
-                    message: 'Students and parents in this class will be notified automatically.',
+                    message:
+                        'Students and parents in this class will be notified automatically.',
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -364,7 +500,8 @@ class _HomeworkForm extends StatelessWidget {
 }
 
 class _FormCard extends StatelessWidget {
-  const _FormCard({required this.title, required this.icon, required this.children});
+  const _FormCard(
+      {required this.title, required this.icon, required this.children});
   final String title;
   final IconData icon;
   final List<Widget> children;
@@ -414,7 +551,9 @@ class _FormCard extends StatelessWidget {
           Container(height: 1, color: AppColors.surface100),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children),
           ),
         ],
       ),
@@ -466,9 +605,12 @@ class _StyledDropdown<T> extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isExpanded: true,
-          hint: Text(hint, style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+          hint: Text(hint,
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
           style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.grey400),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppColors.grey400),
           onChanged: onChanged,
           items: items,
         ),
@@ -490,7 +632,8 @@ class _DisabledField extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.surface100, width: 1.5),
       ),
-      child: Text(hint, style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+      child: Text(hint,
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
     );
   }
 }
@@ -511,7 +654,8 @@ class _InfoBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.infoBlue),
+          const Icon(Icons.info_outline_rounded,
+              size: 15, color: AppColors.infoBlue),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

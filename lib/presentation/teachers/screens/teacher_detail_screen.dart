@@ -24,6 +24,7 @@ import '../../../providers/leave_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/student_provider.dart';
 import '../../../providers/teacher_provider.dart';
+import '../../../providers/timetable_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_bottom_sheet.dart';
 import '../../common/widgets/app_button.dart';
@@ -1627,6 +1628,17 @@ class _AssignTeacherBottomSheetState
       );
       ref.invalidate(sectionsByStandardProvider(params));
       ref.invalidate(studentSectionsProvider(_selectedStandard?.id));
+      final selectedStandardId = _selectedStandard?.id;
+      if (selectedStandardId != null && selectedStandardId.isNotEmpty) {
+        ref.invalidate(
+          timetableSectionsProvider(
+            (
+              standardId: selectedStandardId,
+              academicYearId: selectedYearId,
+            ),
+          ),
+        );
+      }
 
       setState(() {
         _selectedSection = created;

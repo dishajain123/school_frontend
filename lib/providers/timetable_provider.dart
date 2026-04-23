@@ -78,6 +78,7 @@ class TimetableUploadNotifier extends Notifier<TimetableUploadState> {
     required PlatformFile file,
     String? academicYearId,
     String? section,
+    String? overrideFileName,
   }) async {
     state = state.copyWith(
       isUploading: true,
@@ -91,10 +92,12 @@ class TimetableUploadNotifier extends Notifier<TimetableUploadState> {
         file: file,
         academicYearId: academicYearId,
         section: section,
+        overrideFileName: overrideFileName,
       );
       state = state.copyWith(isUploading: false, result: uploaded);
       // Bust the read-cache so view screens pick up the new file
       ref.invalidate(timetableProvider);
+      ref.invalidate(timetableSectionsProvider);
       return true;
     } catch (e) {
       state = state.copyWith(isUploading: false, error: e.toString());

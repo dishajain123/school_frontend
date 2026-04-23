@@ -7,12 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/timetable_provider.dart';
+import '../../../providers/teacher_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_loading.dart';
@@ -23,10 +23,12 @@ class UploadTimetableScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialStandardId,
     this.initialSection,
+    this.examMode = false,
   });
 
   final String? initialStandardId;
   final String? initialSection;
+  final bool examMode;
 
   @override
   ConsumerState<UploadTimetableScreen> createState() =>
@@ -35,7 +37,16 @@ class UploadTimetableScreen extends ConsumerStatefulWidget {
 
 class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     with SingleTickerProviderStateMixin {
+  static const List<String> _examTypes = [
+    'Unit Test',
+    'Mid Term',
+    'Oral Practical',
+    'Final',
+    'Other',
+  ];
+
   String? _selectedStandardId;
+  String? _selectedExamType;
   final _sectionController = TextEditingController();
   PlatformFile? _pickedFile;
   Uint8List? _pickedBytes;
@@ -74,7 +85,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         withData: true,
       );
       if (result == null || result.files.isEmpty) return;
@@ -102,22 +113,46 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
       SnackbarUtils.showError(context, 'Please attach a timetable file');
       return;
     }
+    if (widget.examMode &&
+        (_selectedExamType == null || _selectedExamType!.trim().isEmpty)) {
+      SnackbarUtils.showError(context, 'Please select exam timetable type');
+      return;
+    }
 
     final activeYear = ref.read(activeYearProvider);
     final section = _sectionController.text.trim().isEmpty
         ? null
         : _sectionController.text.trim().toUpperCase();
 
+    String? overrideFileName;
+    if (widget.examMode && _selectedExamType != null) {
+      final cleanType = _selectedExamType!
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+          .replaceAll(RegExp(r'_+'), '_')
+          .replaceAll(RegExp(r'^_|_$'), '');
+      overrideFileName = '${cleanType}_${_pickedFile!.name}';
+    }
+
     final success = await ref.read(timetableUploadProvider.notifier).upload(
           standardId: _selectedStandardId!,
           file: _pickedFile!,
           academicYearId: activeYear?.id,
           section: section,
+          overrideFileName: overrideFileName,
         );
 
     if (!mounted) return;
 
     if (success) {
+      ref.invalidate(sectionsByStandardProvider((
+        standardId: _selectedStandardId!,
+        academicYearId: activeYear?.id,
+      )));
+      ref.invalidate(timetableSectionsProvider((
+        standardId: _selectedStandardId!,
+        academicYearId: activeYear?.id,
+      )));
       SnackbarUtils.showSuccess(context, 'Timetable uploaded successfully!');
       final qp = <String, String>{'standard_id': _selectedStandardId!};
       if (section != null && section.isNotEmpty) qp['section'] = section;
@@ -152,14 +187,17 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                   padding: const EdgeInsets.all(16),
                   children: [
                     _FormCard(
-                      title: 'Class Selection',
+                      title: widget.examMode
+                          ? 'Exam Timetable Details'
+                          : 'Class Selection',
                       icon: Icons.school_outlined,
                       children: [
                         _FieldLabel('Class'),
                         const SizedBox(height: 8),
                         standardsAsync.when(
                           loading: () => AppLoading.card(height: 46),
-                          error: (_, __) => _InlineError('Could not load classes'),
+                          error: (_, __) =>
+                              _InlineError('Could not load classes'),
                           data: (standards) => _StyledDropdown<String>(
                             hint: 'Select class',
                             value: _selectedStandardId,
@@ -168,7 +206,8 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                                       value: s.id,
                                       child: Text(s.name,
                                           style: AppTypography.bodyMedium
-                                              .copyWith(color: AppColors.grey800)),
+                                              .copyWith(
+                                                  color: AppColors.grey800)),
                                     ))
                                 .toList(),
                             onChanged: (id) =>
@@ -176,6 +215,30 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                           ),
                         ),
                         const SizedBox(height: 16),
+                        if (widget.examMode) ...[
+                          _FieldLabel('Exam Timetable Type'),
+                          const SizedBox(height: 8),
+                          _StyledDropdown<String>(
+                            hint: 'Select exam type',
+                            value: _selectedExamType,
+                            items: _examTypes
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(
+                                      type,
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: AppColors.grey800,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _selectedExamType = value),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         _FieldLabel('Section (optional)'),
                         const SizedBox(height: 8),
                         _SectionInput(
@@ -229,7 +292,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                                 size: 13, color: AppColors.grey400),
                             const SizedBox(width: 5),
                             Text(
-                              'PDF, JPG or PNG · Max 10 MB',
+                              'PDF, DOC, DOCX, JPG or PNG · Max 10 MB',
                               style: AppTypography.caption.copyWith(
                                 color: AppColors.grey400,
                                 fontSize: 11,
@@ -371,7 +434,8 @@ class _StyledDropdown<T> extends StatelessWidget {
           value: value,
           isExpanded: true,
           hint: Text(hint,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
+              style:
+                  AppTypography.bodyMedium.copyWith(color: AppColors.grey400)),
           style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
               color: AppColors.grey400),
@@ -405,8 +469,8 @@ class _SectionInput extends StatelessWidget {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hint,
-          hintStyle:
-              AppTypography.bodyMedium.copyWith(color: AppColors.grey400, fontSize: 13),
+          hintStyle: AppTypography.bodyMedium
+              .copyWith(color: AppColors.grey400, fontSize: 13),
           counterText: '',
         ),
       ),

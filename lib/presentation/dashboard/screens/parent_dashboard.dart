@@ -211,7 +211,8 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
     final childrenAsync = ref.watch(childrenNotifierProvider);
     final childrenState = childrenAsync.valueOrNull ?? const ChildrenState();
     final linkedChildrenCount = childrenState.children.length;
-    final childrenLoading = childrenAsync.isLoading && childrenState.children.isEmpty;
+    final childrenLoading =
+        childrenAsync.isLoading && childrenState.children.isEmpty;
     final selectedChild = ref.watch(selectedChildProvider);
     final statsAsync = ref.watch(parentDashboardStatsProvider);
     final stats = statsAsync.valueOrNull;
@@ -281,6 +282,12 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
         onTap: () => context.go(RouteNames.results),
       ),
       QuickActionItem(
+        icon: Icons.menu_book_outlined,
+        label: 'Diary',
+        color: AppColors.subjectEnglish,
+        onTap: () => context.go(RouteNames.diary),
+      ),
+      QuickActionItem(
         icon: Icons.description_outlined,
         label: 'Documents',
         color: AppColors.subjectChem,
@@ -327,7 +334,8 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
                 delegate: SliverChildListDelegate([
                   if (!hasStats && statsAsync.hasError)
                     _ParentStatsError(
-                      onRetry: () => ref.invalidate(parentDashboardStatsProvider),
+                      onRetry: () =>
+                          ref.invalidate(parentDashboardStatsProvider),
                     )
                   else
                     _ParentStatsGrid(

@@ -566,7 +566,10 @@ abstract final class AppTheme {
           if (states.contains(WidgetState.selected)) return AppColors.navyDeep;
           return Colors.transparent;
         }),
-        todayForegroundColor: WidgetStateProperty.all(AppColors.navyDeep),
+        todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.white;
+          return AppColors.navyDeep;
+        }),
         todayBorder: const BorderSide(
           color: AppColors.navyDeep,
           width: AppDimensions.borderMedium,

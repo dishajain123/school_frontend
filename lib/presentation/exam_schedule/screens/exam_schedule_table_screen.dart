@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../data/models/exam/exam_entry_model.dart';
 import '../../../data/models/exam/exam_series_model.dart';
+import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/exam_provider.dart';
 import '../../../providers/masters_provider.dart';
@@ -53,6 +52,11 @@ class _ExamScheduleTableScreenState
     final currentUser = ref.watch(currentUserProvider);
     final canManage =
         currentUser?.hasPermission('exam_schedule:create') ?? false;
+    final activeYear = ref.watch(activeYearProvider);
+    final seriesListAsync = ref.watch(examSeriesListProvider((
+      standardId: widget.standardId,
+      academicYearId: activeYear?.id,
+    )));
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -62,27 +66,85 @@ class _ExamScheduleTableScreenState
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   tooltip: 'Add Series',
-                  onPressed: () => context.push(
-                    RouteNames.createExamSeries,
-                    extra: {'standard_id': widget.standardId},
-                  ),
+                  onPressed: () async {
+                    await context.push<void>(
+                      RouteNames.createExamSeries,
+                      extra: {'standard_id': widget.standardId},
+                    );
+                    if (!mounted) return;
+                    ref.invalidate(examSeriesListProvider((
+                      standardId: widget.standardId,
+                      academicYearId: activeYear?.id,
+                    )));
+                  },
                 ),
               ]
             : const [],
       ),
-      body: _selectedSeriesId == null
-          ? _SeriesIdPrompt(
-              onSeriesIdEntered: (id) =>
-                  setState(() => _selectedSeriesId = id),
-            )
-          : _buildScheduleContent(canManage),
+      body: seriesListAsync.when(
+        loading: () => const _ScheduleLoading(),
+        error: (e, _) => AppErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(examSeriesListProvider((
+            standardId: widget.standardId,
+            academicYearId: activeYear?.id,
+          ))),
+        ),
+        data: (seriesList) {
+          if (_selectedSeriesId == null && widget.seriesId != null) {
+            _selectedSeriesId = widget.seriesId;
+          }
+          if (_selectedSeriesId == null && seriesList.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() => _selectedSeriesId = seriesList.first.id);
+            });
+          }
+
+          if (seriesList.isEmpty) {
+            return AppEmptyState(
+              icon: Icons.event_busy_outlined,
+              title: 'No exam series yet',
+              subtitle: canManage
+                  ? 'Create a series, then add exam entries or upload a timetable file.'
+                  : 'Exam schedule has not been published yet for this class.',
+            );
+          }
+
+          final selected = seriesList.where((s) => s.id == _selectedSeriesId);
+          final selectedSeries =
+              selected.isNotEmpty ? selected.first : seriesList.first;
+          if (_selectedSeriesId != selectedSeries.id) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() => _selectedSeriesId = selectedSeries.id);
+            });
+          }
+
+          return Column(
+            children: [
+              _SeriesSelectorBar(
+                seriesList: seriesList,
+                selectedSeriesId: selectedSeries.id,
+                onChanged: (id) => setState(() => _selectedSeriesId = id),
+              ),
+              Expanded(
+                child: _buildScheduleContent(
+                  canManage,
+                  selectedSeries.id,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildScheduleContent(bool canManage) {
+  Widget _buildScheduleContent(bool canManage, String selectedSeriesId) {
     final scheduleAsync = ref.watch(examScheduleProvider((
       standardId: widget.standardId,
-      seriesId: _selectedSeriesId!,
+      seriesId: selectedSeriesId,
     )));
 
     return scheduleAsync.when(
@@ -91,6 +153,7 @@ class _ExamScheduleTableScreenState
         return _ScheduleBody(
           schedule: schedule,
           canManage: canManage,
+          standardId: widget.standardId,
           onPublish: () => _handlePublish(schedule.series),
           onCancelEntry: (entry) => _handleCancelEntry(entry),
           isPublishing: _isPublishing,
@@ -100,6 +163,7 @@ class _ExamScheduleTableScreenState
           ? _ScheduleBody(
               schedule: _cachedSchedule!,
               canManage: canManage,
+              standardId: widget.standardId,
               onPublish: () => _handlePublish(_cachedSchedule!.series),
               onCancelEntry: (entry) => _handleCancelEntry(entry),
               isPublishing: _isPublishing,
@@ -109,7 +173,7 @@ class _ExamScheduleTableScreenState
         message: e.toString(),
         onRetry: () => ref.invalidate(examScheduleProvider((
           standardId: widget.standardId,
-          seriesId: _selectedSeriesId!,
+          seriesId: selectedSeriesId,
         ))),
       ),
     );
@@ -138,7 +202,7 @@ class _ExamScheduleTableScreenState
       SnackbarUtils.showSuccess(context, 'Exam schedule published!');
       ref.invalidate(examScheduleProvider((
         standardId: widget.standardId,
-        seriesId: _selectedSeriesId!,
+        seriesId: series.id,
       )));
     } else {
       final err = ref.read(examSeriesNotifierProvider).error;
@@ -167,7 +231,7 @@ class _ExamScheduleTableScreenState
       SnackbarUtils.showSuccess(context, 'Entry cancelled');
       ref.invalidate(examScheduleProvider((
         standardId: widget.standardId,
-        seriesId: _selectedSeriesId!,
+        seriesId: entry.seriesId,
       )));
     } else {
       final err = ref.read(examEntryNotifierProvider).error;
@@ -182,6 +246,7 @@ class _ScheduleBody extends ConsumerWidget {
   const _ScheduleBody({
     required this.schedule,
     required this.canManage,
+    required this.standardId,
     required this.onPublish,
     required this.onCancelEntry,
     required this.isPublishing,
@@ -189,6 +254,7 @@ class _ScheduleBody extends ConsumerWidget {
 
   final ExamScheduleTable schedule;
   final bool canManage;
+  final String standardId;
   final VoidCallback onPublish;
   final ValueChanged<ExamEntryModel> onCancelEntry;
   final bool isPublishing;
@@ -198,17 +264,15 @@ class _ScheduleBody extends ConsumerWidget {
     final subjectsAsync =
         ref.watch(subjectsProvider(schedule.series.standardId));
 
-    final subjectMap = subjectsAsync.asData?.value
-            .fold<Map<String, String>>(
-              {},
-              (map, s) => map..putIfAbsent(s.id, () => s.name),
-            ) ??
+    final subjectMap = subjectsAsync.asData?.value.fold<Map<String, String>>(
+          {},
+          (map, s) => map..putIfAbsent(s.id, () => s.name),
+        ) ??
         {};
 
     final entries = schedule.entries;
     // Sort by date then start time
-    final sorted = [...entries]
-      ..sort((a, b) {
+    final sorted = [...entries]..sort((a, b) {
         final dateCmp = a.examDate.compareTo(b.examDate);
         if (dateCmp != 0) return dateCmp;
         return a.startTime.compareTo(b.startTime);
@@ -228,11 +292,28 @@ class _ScheduleBody extends ConsumerWidget {
               AppDimensions.space8,
             ),
             sliver: SliverToBoxAdapter(
-              child: SeriesHeader(
-                series: schedule.series,
-                entryCount: entries.length,
-                canPublish: canManage,
-                onPublish: isPublishing ? null : onPublish,
+              child: Column(
+                children: [
+                  SeriesHeader(
+                    series: schedule.series,
+                    entryCount: entries.length,
+                    canPublish: canManage,
+                    onPublish: isPublishing ? null : onPublish,
+                  ),
+                  if (canManage) ...[
+                    const SizedBox(height: AppDimensions.space12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push(
+                          '${RouteNames.uploadTimetable}?standard_id=$standardId&exam_mode=true',
+                        ),
+                        icon: const Icon(Icons.upload_file_outlined, size: 18),
+                        label: const Text('Upload PDF/DOC Schedule'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -282,68 +363,44 @@ class _ScheduleBody extends ConsumerWidget {
   }
 }
 
-// ── Series ID prompt (when navigated without a seriesId) ──────────────────────
+class _SeriesSelectorBar extends StatelessWidget {
+  const _SeriesSelectorBar({
+    required this.seriesList,
+    required this.selectedSeriesId,
+    required this.onChanged,
+  });
 
-class _SeriesIdPrompt extends StatefulWidget {
-  const _SeriesIdPrompt({required this.onSeriesIdEntered});
-  final ValueChanged<String> onSeriesIdEntered;
-
-  @override
-  State<_SeriesIdPrompt> createState() => _SeriesIdPromptState();
-}
-
-class _SeriesIdPromptState extends State<_SeriesIdPrompt> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final List<ExamSeriesModel> seriesList;
+  final String selectedSeriesId;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.space24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search, size: 64, color: AppColors.navyDeep.withOpacity(0.4)),
-          const SizedBox(height: AppDimensions.space16),
-          Text(
-            'Enter Series ID',
-            style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.space8),
-          Text(
-            'Enter the exam series ID to view its schedule',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.grey600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppDimensions.space24),
-          TextField(
-            controller: _controller,
-            decoration: const InputDecoration(
-              hintText: 'Exam series UUID',
-              prefixIcon: Icon(Icons.tag_outlined),
-            ),
-          ),
-          const SizedBox(height: AppDimensions.space16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                final id = _controller.text.trim();
-                if (id.isNotEmpty) widget.onSeriesIdEntered(id);
-              },
-              child: const Text('View Schedule'),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.space16,
+        AppDimensions.space12,
+        AppDimensions.space16,
+        AppDimensions.space8,
+      ),
+      child: DropdownButtonFormField<String>(
+        value: selectedSeriesId,
+        decoration: const InputDecoration(
+          labelText: 'Exam Series',
+          prefixIcon: Icon(Icons.event_note_outlined),
+        ),
+        items: seriesList
+            .map(
+              (series) => DropdownMenuItem<String>(
+                value: series.id,
+                child: Text(series.name),
+              ),
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value == null) return;
+          onChanged(value);
+        },
       ),
     );
   }
@@ -362,10 +419,13 @@ class _ScheduleLoading extends StatelessWidget {
         children: [
           AppLoading.card(),
           const SizedBox(height: AppDimensions.space12),
-          ...List.generate(4, (_) => Padding(
-                padding: const EdgeInsets.only(bottom: AppDimensions.space8),
-                child: AppLoading.listTile(),
-              )),
+          ...List.generate(
+              4,
+              (_) => Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppDimensions.space8),
+                    child: AppLoading.listTile(),
+                  )),
         ],
       ),
     );

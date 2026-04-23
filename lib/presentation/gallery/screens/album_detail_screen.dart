@@ -1,5 +1,3 @@
-import "dart:io";
-
 import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -69,7 +67,8 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
     final success = await ref
         .read(albumPhotoListProvider(widget.albumId).notifier)
         .uploadPhoto(
-          file: File(image.path),
+          fileBytes: await image.readAsBytes(),
+          fileName: image.name,
           caption: caption,
         );
 
@@ -90,7 +89,10 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
     for (final image in images) {
       final success = await ref
           .read(albumPhotoListProvider(widget.albumId).notifier)
-          .uploadPhoto(file: File(image.path));
+          .uploadPhoto(
+            fileBytes: await image.readAsBytes(),
+            fileName: image.name,
+          );
       if (success) uploadedCount += 1;
     }
 
@@ -109,7 +111,8 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text("Add caption"),
           content: TextField(
             controller: controller,
@@ -223,6 +226,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
   Widget build(BuildContext context) {
     final photosState = ref.watch(albumPhotoListProvider(widget.albumId));
     final canManage = ref.watch(galleryCanManageProvider);
+    final canInteract = ref.watch(galleryCanInteractProvider);
     final album = ref.watch(galleryAlbumByIdProvider(widget.albumId)) ??
         widget.initialAlbum;
 
@@ -324,12 +328,14 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
                                   builder: (_) => _FullScreenViewer(
                                     photos: photosState.items,
                                     initialIndex: index,
+                                    canInteract: canInteract,
                                   ),
                                 ),
                               );
                             },
-                            onLongPress:
-                                canManage ? () => _toggleFeature(photo.id) : null,
+                            onLongPress: canManage
+                                ? () => _toggleFeature(photo.id)
+                                : null,
                           );
                         },
                       ),
@@ -523,20 +529,22 @@ class _AlbumHeader extends StatelessWidget {
   }
 }
 
-class _FullScreenViewer extends StatefulWidget {
+class _FullScreenViewer extends ConsumerStatefulWidget {
   const _FullScreenViewer({
     required this.photos,
     required this.initialIndex,
+    required this.canInteract,
   });
 
   final List<PhotoModel> photos;
   final int initialIndex;
+  final bool canInteract;
 
   @override
-  State<_FullScreenViewer> createState() => _FullScreenViewerState();
+  ConsumerState<_FullScreenViewer> createState() => _FullScreenViewerState();
 }
 
-class _FullScreenViewerState extends State<_FullScreenViewer> {
+class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
   late final PageController _pageController;
   late int _currentIndex;
 
@@ -553,9 +561,212 @@ class _FullScreenViewerState extends State<_FullScreenViewer> {
     super.dispose();
   }
 
+  Future<void> _openInteractionsSheet(String photoId) async {
+    final commentController = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: Container(
+            height: MediaQuery.of(sheetContext).size.height * 0.72,
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final interactionState =
+                    ref.watch(photoInteractionProvider(photoId));
+
+                return Column(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface200,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          'Reactions & Comments',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: widget.canInteract &&
+                                  !interactionState.isSubmitting
+                              ? () => ref
+                                  .read(photoInteractionProvider(photoId)
+                                      .notifier)
+                                  .toggleReaction()
+                              : null,
+                          icon: Icon(
+                            interactionState.hasReacted
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: interactionState.hasReacted
+                                ? AppColors.errorRed
+                                : AppColors.grey600,
+                          ),
+                          label: Text('${interactionState.reactionsCount}'),
+                        ),
+                      ],
+                    ),
+                    if (interactionState.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          interactionState.error!,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.errorRed,
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: interactionState.isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator.adaptive())
+                          : interactionState.comments.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    'No comments yet',
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: AppColors.grey500,
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  itemCount: interactionState.comments.length,
+                                  separatorBuilder: (_, __) => const Divider(
+                                    height: 16,
+                                    color: AppColors.surface100,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final comment =
+                                        interactionState.comments[index];
+                                    final role =
+                                        _roleLabel(comment.commenterRole);
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              role,
+                                              style: AppTypography.labelMedium
+                                                  .copyWith(
+                                                color: AppColors.navyDeep,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              DateFormatter.formatRelative(
+                                                  comment.createdAt),
+                                              style: AppTypography.caption
+                                                  .copyWith(
+                                                color: AppColors.grey500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          comment.comment,
+                                          style:
+                                              AppTypography.bodyMedium.copyWith(
+                                            color: AppColors.grey700,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                    ),
+                    if (!widget.canInteract)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Only parents and students can react/comment.',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.grey500,
+                          ),
+                        ),
+                      ),
+                    if (widget.canInteract)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: commentController,
+                              minLines: 1,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: 'Write a comment',
+                                isDense: true,
+                                filled: true,
+                                fillColor: AppColors.surface50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: interactionState.isSubmitting
+                                ? null
+                                : () async {
+                                    final ok = await ref
+                                        .read(photoInteractionProvider(photoId)
+                                            .notifier)
+                                        .addComment(commentController.text);
+                                    if (ok) commentController.clear();
+                                  },
+                            icon: const Icon(Icons.send_rounded),
+                            color: AppColors.navyDeep,
+                          ),
+                        ],
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+
+    commentController.dispose();
+  }
+
+  String _roleLabel(String raw) {
+    final normalized = raw.trim().toUpperCase();
+    if (normalized == 'PARENT') return 'Parent';
+    if (normalized == 'STUDENT') return 'Student';
+    return 'User';
+  }
+
   @override
   Widget build(BuildContext context) {
     final photo = widget.photos[_currentIndex];
+    final interactionState = ref.watch(photoInteractionProvider(photo.id));
 
     return Scaffold(
       backgroundColor: AppColors.black,
@@ -592,6 +803,40 @@ class _FullScreenViewerState extends State<_FullScreenViewer> {
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: () => _openInteractionsSheet(photo.id),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.mode_comment_outlined, color: AppColors.white),
+                if (interactionState.totalComments > 0)
+                  Positioned(
+                    right: -7,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorRed,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${interactionState.totalComments}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         centerTitle: true,
       ),
       body: Stack(
@@ -611,8 +856,8 @@ class _FullScreenViewerState extends State<_FullScreenViewer> {
                     fit: BoxFit.contain,
                     placeholder: (_, __) => const Center(
                       child: CircularProgressIndicator.adaptive(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.white),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.white),
                       ),
                     ),
                     errorWidget: (_, __, ___) => const Icon(
@@ -624,6 +869,55 @@ class _FullScreenViewerState extends State<_FullScreenViewer> {
                 ),
               );
             },
+          ),
+          Positioned(
+            right: 14,
+            bottom: photo.caption != null &&
+                    photo.caption.toString().trim().isNotEmpty
+                ? 96
+                : 24,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    interactionState.hasReacted
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 14,
+                    color: interactionState.hasReacted
+                        ? AppColors.errorRed
+                        : AppColors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${interactionState.reactionsCount}',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.mode_comment_outlined,
+                      size: 14, color: AppColors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${interactionState.totalComments}',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (photo.caption != null &&
               photo.caption.toString().trim().isNotEmpty)

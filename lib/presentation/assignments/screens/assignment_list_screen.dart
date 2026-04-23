@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/router/route_names.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../providers/assignment_provider.dart';
@@ -22,7 +21,8 @@ class AssignmentListScreen extends ConsumerStatefulWidget {
   const AssignmentListScreen({super.key});
 
   @override
-  ConsumerState<AssignmentListScreen> createState() => _AssignmentListScreenState();
+  ConsumerState<AssignmentListScreen> createState() =>
+      _AssignmentListScreenState();
 }
 
 class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
@@ -36,7 +36,7 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _scrollCtrl.addListener(_onScroll);
     _autoRefreshTimer = Timer.periodic(
       const Duration(minutes: 1),
@@ -62,16 +62,19 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 200) {
       ref.read(assignmentsProvider.notifier).loadMore();
     }
   }
 
   void _applyTabFilter(int index) {
-    setState(() => _activeFilter = ['all', 'active', 'overdue'][index]);
+    setState(
+        () => _activeFilter = ['all', 'active', 'overdue', 'submitted'][index]);
     final filters = switch (index) {
       1 => const AssignmentFilters(isActive: true, isOverdue: false),
       2 => const AssignmentFilters(isActive: true, isOverdue: true),
+      3 => const AssignmentFilters(isSubmitted: true),
       _ => const AssignmentFilters(),
     };
     ref.read(assignmentsProvider.notifier).applyFilters(filters);
@@ -83,11 +86,13 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     final currentUser = ref.watch(currentUserProvider);
     final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
     final canGrade = currentUser?.hasPermission('submission:grade') ?? false;
-    final canViewSubmissions = canGrade || currentUser?.role == UserRole.teacher;
+    final canViewSubmissions =
+        canGrade || currentUser?.role == UserRole.teacher;
 
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Assignments',
+        showBack: currentUser?.role == UserRole.parent,
         bottom: TabBar(
           controller: _tabController,
           onTap: _applyTabFilter,
@@ -96,9 +101,15 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           indicatorColor: AppColors.goldPrimary,
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
-          labelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w600),
+          labelStyle:
+              AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w600),
           unselectedLabelStyle: AppTypography.labelMedium,
-          tabs: const [Tab(text: 'All'), Tab(text: 'Active'), Tab(text: 'Overdue')],
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Active'),
+            Tab(text: 'Overdue'),
+            Tab(text: 'Submitted'),
+          ],
         ),
       ),
       floatingActionButton: canCreate
@@ -118,8 +129,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
         ),
         data: (state) {
           final filtered = switch (_activeFilter) {
-            'active' => state.items.where((a) => a.isActive && !a.isOverdue).toList(),
-            'overdue' => state.items.where((a) => a.isActive && a.isOverdue).toList(),
+            'active' =>
+              state.items.where((a) => a.isActive && !a.isOverdue).toList(),
+            'overdue' =>
+              state.items.where((a) => a.isActive && a.isOverdue).toList(),
+            'submitted' => state.items,
             _ => state.items,
           };
 
@@ -129,9 +143,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
               title: 'No assignments',
               subtitle: _activeFilter == 'overdue'
                   ? "You're all caught up — no overdue assignments."
-                  : canCreate
-                      ? 'Tap + to create the first assignment.'
-                      : 'No assignments have been posted yet.',
+                  : _activeFilter == 'submitted'
+                      ? 'No submitted assignments found yet.'
+                      : canCreate
+                          ? 'Tap + to create the first assignment.'
+                          : 'No assignments have been posted yet.',
               actionLabel: canCreate ? 'Create Assignment' : null,
               onAction: canCreate
                   ? () async {
@@ -156,17 +172,20 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                   return const Padding(
                     padding: EdgeInsets.all(16),
                     child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navyDeep),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.navyDeep),
                     ),
                   );
                 }
                 final assignment = filtered[index];
                 return AssignmentCard(
                   assignment: assignment,
-                  onTap: () => context.push(RouteNames.assignmentDetailPath(assignment.id)),
+                  onTap: () => context
+                      .push(RouteNames.assignmentDetailPath(assignment.id)),
                   showSubmissionAction: canViewSubmissions,
                   onViewSubmissions: canViewSubmissions
-                      ? () => context.push(RouteNames.submissionListPath(assignment.id))
+                      ? () => context
+                          .push(RouteNames.submissionListPath(assignment.id))
                       : null,
                 );
               },
@@ -205,7 +224,8 @@ class _PremiumFabState extends State<_PremiumFab>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
   }
@@ -240,7 +260,8 @@ class _PremiumFabState extends State<_PremiumFab>
               ),
             ],
           ),
-          child: const Icon(Icons.add_rounded, color: AppColors.white, size: 24),
+          child:
+              const Icon(Icons.add_rounded, color: AppColors.white, size: 24),
         ),
       ),
     );

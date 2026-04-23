@@ -27,7 +27,8 @@ class AssignmentDetailScreen extends ConsumerStatefulWidget {
   const AssignmentDetailScreen({super.key, required this.assignmentId});
 
   @override
-  ConsumerState<AssignmentDetailScreen> createState() => _AssignmentDetailScreenState();
+  ConsumerState<AssignmentDetailScreen> createState() =>
+      _AssignmentDetailScreenState();
 }
 
 class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
@@ -42,7 +43,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _animCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 450));
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
@@ -71,16 +73,19 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
   Future<void> _submitAssignment(String studentId) async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty && _pickedFile == null) {
-      SnackbarUtils.showError(context, 'Provide text response or attach a file');
+      SnackbarUtils.showError(
+          context, 'Provide text response or attach a file');
       return;
     }
     setState(() => _isSubmitting = true);
     try {
       MultipartFile? multipartFile;
       if (_pickedFile != null && _pickedFile!.bytes != null) {
-        multipartFile = MultipartFile.fromBytes(_pickedFile!.bytes!, filename: _pickedFile!.name);
+        multipartFile = MultipartFile.fromBytes(_pickedFile!.bytes!,
+            filename: _pickedFile!.name);
       } else if (_pickedFile != null && _pickedFile!.path != null) {
-        multipartFile = await MultipartFile.fromFile(_pickedFile!.path!, filename: _pickedFile!.name);
+        multipartFile = await MultipartFile.fromFile(_pickedFile!.path!,
+            filename: _pickedFile!.name);
       }
       await ref.read(submissionCreateProvider.notifier).submit(
             assignmentId: widget.assignmentId,
@@ -89,11 +94,36 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
             file: multipartFile,
           );
       if (mounted) {
-        SnackbarUtils.showSuccess(context, 'Assignment submitted successfully!');
+        SnackbarUtils.showSuccess(
+            context, 'Assignment submitted successfully!');
+        ref.invalidate(
+          existingSubmissionProvider(
+            (assignmentId: widget.assignmentId, studentId: studentId),
+          ),
+        );
+        ref.invalidate(submissionsProvider(widget.assignmentId));
         ref.invalidate(assignmentDetailProvider(widget.assignmentId));
-        setState(() { _textCtrl.clear(); _pickedFile = null; });
+        setState(() {
+          _textCtrl.clear();
+          _pickedFile = null;
+        });
       }
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 409) {
+        if (mounted) {
+          ref.invalidate(
+            existingSubmissionProvider(
+              (assignmentId: widget.assignmentId, studentId: studentId),
+            ),
+          );
+          ref.invalidate(submissionsProvider(widget.assignmentId));
+          SnackbarUtils.showInfo(
+            context,
+            'Already submitted from linked account. Showing existing submission.',
+          );
+        }
+        return;
+      }
       if (mounted) SnackbarUtils.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -102,7 +132,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final assignmentAsync = ref.watch(assignmentDetailProvider(widget.assignmentId));
+    final assignmentAsync =
+        ref.watch(assignmentDetailProvider(widget.assignmentId));
     final currentUser = ref.watch(currentUserProvider);
     final canCreate = currentUser?.hasPermission('assignment:create') ?? false;
     final canSubmit = currentUser?.hasPermission('submission:create') ?? false;
@@ -124,7 +155,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                     color: AppColors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.edit_outlined, color: AppColors.white, size: 16),
+                  child: const Icon(Icons.edit_outlined,
+                      color: AppColors.white, size: 16),
                 ),
                 onPressed: () => context.push(
                   RouteNames.createAssignment,
@@ -138,7 +170,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
         loading: () => AppLoading.fullPage(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(assignmentDetailProvider(widget.assignmentId)),
+          onRetry: () =>
+              ref.invalidate(assignmentDetailProvider(widget.assignmentId)),
         ),
         data: (assignment) {
           return FadeTransition(
@@ -152,7 +185,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                   children: [
                     _AssignmentHero(assignment: assignment),
                     const SizedBox(height: 20),
-                    if (assignment.description != null && assignment.description!.isNotEmpty) ...[
+                    if (assignment.description != null &&
+                        assignment.description!.isNotEmpty) ...[
                       _SectionLabel('Description'),
                       const SizedBox(height: 8),
                       _ContentCard(
@@ -175,7 +209,8 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                     if (canGrade) ...[
                       AppButton.secondary(
                         label: 'View Student Solutions',
-                        onTap: () => context.push(RouteNames.submissionListPath(widget.assignmentId)),
+                        onTap: () => context.push(
+                            RouteNames.submissionListPath(widget.assignmentId)),
                         icon: Icons.fact_check_outlined,
                       ),
                     ],
@@ -257,20 +292,27 @@ class _AssignmentHero extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: (assignment.isActive ? AppColors.successGreen : AppColors.grey400)
+                  color: (assignment.isActive
+                          ? AppColors.successGreen
+                          : AppColors.grey400)
                       .withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: (assignment.isActive ? AppColors.successGreen : AppColors.grey400)
+                    color: (assignment.isActive
+                            ? AppColors.successGreen
+                            : AppColors.grey400)
                         .withValues(alpha: 0.35),
                   ),
                 ),
                 child: Text(
                   assignment.isActive ? 'Active' : 'Closed',
                   style: AppTypography.labelSmall.copyWith(
-                    color: assignment.isActive ? AppColors.successGreen : AppColors.grey400,
+                    color: assignment.isActive
+                        ? AppColors.successGreen
+                        : AppColors.grey400,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),
@@ -384,7 +426,8 @@ class _AttachmentButton extends StatelessWidget {
                 color: AppColors.infoBlue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.infoBlue, size: 20),
+              child: const Icon(Icons.picture_as_pdf_outlined,
+                  color: AppColors.infoBlue, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -392,14 +435,16 @@ class _AttachmentButton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Assignment File',
-                      style: AppTypography.titleSmall.copyWith(color: AppColors.infoBlue)),
+                      style: AppTypography.titleSmall
+                          .copyWith(color: AppColors.infoBlue)),
                   Text('Tap to view',
                       style: AppTypography.caption.copyWith(
                           color: AppColors.infoBlue.withValues(alpha: 0.65))),
                 ],
               ),
             ),
-            const Icon(Icons.open_in_new_rounded, color: AppColors.infoBlue, size: 16),
+            const Icon(Icons.open_in_new_rounded,
+                color: AppColors.infoBlue, size: 16),
           ],
         ),
       ),
@@ -435,11 +480,7 @@ class _SubmissionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef widgetRef) {
     final selectedChildId = widgetRef.watch(selectedChildIdProvider);
-    final submissionState = widgetRef.watch(submissionCreateProvider);
-
-    if (submissionState is AsyncData<SubmissionModel?> && submissionState.value != null) {
-      return _SubmittedCard(submission: submissionState.value!);
-    }
+    final currentStudentIdAsync = widgetRef.watch(currentStudentIdProvider);
 
     if (!assignment.isActive) {
       return Container(
@@ -457,13 +498,15 @@ class _SubmissionSection extends ConsumerWidget {
                 color: AppColors.surface200,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.lock_outline, color: AppColors.grey400, size: 18),
+              child: const Icon(Icons.lock_outline,
+                  color: AppColors.grey400, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'This assignment is closed for submissions.',
-                style: AppTypography.bodyMedium.copyWith(color: AppColors.grey600),
+                style:
+                    AppTypography.bodyMedium.copyWith(color: AppColors.grey600),
               ),
             ),
           ],
@@ -472,11 +515,40 @@ class _SubmissionSection extends ConsumerWidget {
     }
 
     String? studentId;
-    if (currentUser?.role == UserRole.parent ||
-        currentUser?.role == UserRole.student) {
+    if (currentUser?.role == UserRole.parent) {
       studentId = selectedChildId;
+    } else if (currentUser?.role == UserRole.student) {
+      studentId = currentStudentIdAsync.valueOrNull;
     }
 
+    if (studentId != null && studentId.isNotEmpty) {
+      final existingSubmissionAsync = widgetRef.watch(
+        existingSubmissionProvider(
+          (assignmentId: assignmentId, studentId: studentId),
+        ),
+      );
+      return existingSubmissionAsync.when(
+        loading: () => AppLoading.card(height: 116),
+        error: (_, __) => _buildSubmissionForm(context, studentId),
+        data: (submission) {
+          if (submission != null) {
+            return _SubmittedCard(submission: submission);
+          }
+          return _buildSubmissionForm(context, studentId);
+        },
+      );
+    }
+
+    if (currentUser?.role == UserRole.student &&
+        currentStudentIdAsync.isLoading) {
+      return AppLoading.card(height: 116);
+    }
+
+    return _buildSubmissionForm(context, studentId);
+  }
+
+  Widget _buildSubmissionForm(BuildContext context, String? studentId) {
+    final resolvedStudentId = studentId;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -500,7 +572,9 @@ class _SubmissionSection extends ConsumerWidget {
                   : AppColors.surface50,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: pickedFile != null ? AppColors.navyMedium.withValues(alpha: 0.4) : AppColors.surface200,
+                color: pickedFile != null
+                    ? AppColors.navyMedium.withValues(alpha: 0.4)
+                    : AppColors.surface200,
                 width: pickedFile != null ? 1.5 : 1,
               ),
             ),
@@ -508,11 +582,13 @@ class _SubmissionSection extends ConsumerWidget {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.attach_file_rounded, color: AppColors.navyMedium, size: 18),
+                      const Icon(Icons.attach_file_rounded,
+                          color: AppColors.navyMedium, size: 18),
                       const SizedBox(width: 8),
                       Text(
                         'Tap to attach file (PDF, image, doc)',
-                        style: AppTypography.bodyMedium.copyWith(color: AppColors.navyMedium),
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: AppColors.navyMedium),
                       ),
                     ],
                   )
@@ -531,11 +607,13 @@ class _SubmissionSection extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(pickedFile!.name,
-                            style: AppTypography.titleSmall, overflow: TextOverflow.ellipsis),
+                            style: AppTypography.titleSmall,
+                            overflow: TextOverflow.ellipsis),
                       ),
                       GestureDetector(
                         onTap: onRemoveFile,
-                        child: const Icon(Icons.close_rounded, size: 18, color: AppColors.grey400),
+                        child: const Icon(Icons.close_rounded,
+                            size: 18, color: AppColors.grey400),
                       ),
                     ],
                   ),
@@ -544,12 +622,14 @@ class _SubmissionSection extends ConsumerWidget {
         const SizedBox(height: 20),
         AppButton.primary(
           label: 'Submit Assignment',
-          onTap: studentId != null ? () => onSubmit(studentId!) : null,
+          onTap: resolvedStudentId != null
+              ? () => onSubmit(resolvedStudentId)
+              : null,
           isLoading: isSubmitting,
-          isDisabled: studentId == null,
+          isDisabled: resolvedStudentId == null,
           icon: Icons.upload_rounded,
         ),
-        if (studentId == null) ...[
+        if (resolvedStudentId == null) ...[
           const SizedBox(height: 8),
           Text(
             'Select a student to submit the assignment.',
@@ -572,7 +652,8 @@ class _SubmittedCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.successLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.successGreen.withValues(alpha: 0.25)),
+        border:
+            Border.all(color: AppColors.successGreen.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,22 +667,27 @@ class _SubmittedCard extends StatelessWidget {
                   color: AppColors.successGreen.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.check_rounded, color: AppColors.successGreen, size: 18),
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.successGreen, size: 18),
               ),
               const SizedBox(width: 10),
               Text('Submitted',
-                  style: AppTypography.titleSmall.copyWith(color: AppColors.successGreen)),
+                  style: AppTypography.titleSmall
+                      .copyWith(color: AppColors.successGreen)),
               if (submission.isLate) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.errorLight,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text('Late',
                       style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.errorRed, fontWeight: FontWeight.w600, fontSize: 10)),
+                          color: AppColors.errorRed,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10)),
                 ),
               ],
             ],
@@ -611,21 +697,26 @@ class _SubmittedCard extends StatelessWidget {
             Row(
               children: [
                 Text('Grade: ',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.grey600)),
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.grey600)),
                 Text(submission.grade!,
                     style: AppTypography.titleSmall.copyWith(
-                        color: AppColors.navyDeep, fontWeight: FontWeight.w700)),
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w700)),
               ],
             ),
-            if (submission.feedback != null && submission.feedback!.isNotEmpty) ...[
+            if (submission.feedback != null &&
+                submission.feedback!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text('Feedback: ${submission.feedback!}',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.grey600)),
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.grey600)),
             ],
           ] else ...[
             const SizedBox(height: 8),
             Text('Awaiting grade',
-                style: AppTypography.caption.copyWith(color: AppColors.grey500)),
+                style:
+                    AppTypography.caption.copyWith(color: AppColors.grey500)),
           ],
         ],
       ),

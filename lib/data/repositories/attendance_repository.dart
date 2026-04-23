@@ -35,6 +35,7 @@ class AttendanceRepository {
     int? month,
     int? year,
     String? subjectId,
+    int? lectureNumber,
   }) async {
     final response = await _dio.get(
       ApiConstants.attendance,
@@ -47,6 +48,7 @@ class AttendanceRepository {
         if (month != null) 'month': month,
         if (year != null) 'year': year,
         if (subjectId != null) 'subject_id': subjectId,
+        if (lectureNumber != null) 'lecture_number': lectureNumber,
       },
     );
     final data = response.data as Map<String, dynamic>;

@@ -80,3 +80,67 @@ class PhotoListResponse {
     );
   }
 }
+
+class PhotoCommentModel {
+  const PhotoCommentModel({
+    required this.id,
+    required this.photoId,
+    required this.comment,
+    required this.commentedBy,
+    required this.commenterRole,
+    required this.schoolId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String photoId;
+  final String comment;
+  final String commentedBy;
+  final String commenterRole;
+  final String schoolId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory PhotoCommentModel.fromJson(Map<String, dynamic> json) {
+    return PhotoCommentModel(
+      id: json['id'] as String,
+      photoId: json['photo_id'] as String,
+      comment: json['comment'] as String? ?? '',
+      commentedBy: json['commented_by'] as String? ?? '',
+      commenterRole: json['commenter_role'] as String? ?? '',
+      schoolId: json['school_id'] as String? ?? '',
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+}
+
+class PhotoInteractionModel {
+  const PhotoInteractionModel({
+    required this.photoId,
+    required this.reactionsCount,
+    required this.hasReacted,
+    required this.comments,
+    required this.totalComments,
+  });
+
+  final String photoId;
+  final int reactionsCount;
+  final bool hasReacted;
+  final List<PhotoCommentModel> comments;
+  final int totalComments;
+
+  factory PhotoInteractionModel.fromJson(Map<String, dynamic> json) {
+    final commentItems = json['comments'] as List<dynamic>? ?? [];
+    return PhotoInteractionModel(
+      photoId: json['photo_id'] as String,
+      reactionsCount: json['reactions_count'] as int? ?? 0,
+      hasReacted: json['has_reacted'] as bool? ?? false,
+      comments: commentItems
+          .map((e) => PhotoCommentModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      totalComments: json['total_comments'] as int? ?? commentItems.length,
+    );
+  }
+}

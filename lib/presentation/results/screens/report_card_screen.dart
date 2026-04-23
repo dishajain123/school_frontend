@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/router/route_names.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../providers/auth_provider.dart';
@@ -72,6 +74,9 @@ class ReportCardScreen extends ConsumerWidget {
       appBar: AppAppBar(
         title: 'Report Card',
         showBack: true,
+        onBackPressed: user?.role == UserRole.parent
+            ? () => context.go(RouteNames.dashboard)
+            : null,
         actions: [
           if (canUpload)
             TextButton.icon(
