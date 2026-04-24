@@ -98,6 +98,12 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.principalResultsDistribution),
       ),
       QuickActionItem(
+        icon: Icons.fact_check_outlined,
+        label: 'Behaviour',
+        color: AppColors.subjectHistory,
+        onTap: () => context.go(RouteNames.behaviourLogs),
+      ),
+      QuickActionItem(
         icon: Icons.photo_library_outlined,
         label: 'Gallery',
         color: AppColors.subjectPhysics,

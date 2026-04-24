@@ -9,6 +9,8 @@ class DiaryModel {
   final String teacherId;
   final String standardId;
   final String subjectId;
+  final String? subjectName;
+  final String? createdByName;
   final String academicYearId;
   final String schoolId;
   final DateTime createdAt;
@@ -22,6 +24,8 @@ class DiaryModel {
     required this.teacherId,
     required this.standardId,
     required this.subjectId,
+    this.subjectName,
+    this.createdByName,
     required this.academicYearId,
     required this.schoolId,
     required this.createdAt,
@@ -37,6 +41,8 @@ class DiaryModel {
       teacherId: json['teacher_id'] as String,
       standardId: json['standard_id'] as String,
       subjectId: json['subject_id'] as String,
+      subjectName: json['subject_name'] as String?,
+      createdByName: json['created_by_name'] as String?,
       academicYearId: json['academic_year_id'] as String,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
@@ -52,6 +58,8 @@ class DiaryModel {
     String? teacherId,
     String? standardId,
     String? subjectId,
+    String? subjectName,
+    String? createdByName,
     String? academicYearId,
     String? schoolId,
     DateTime? createdAt,
@@ -65,6 +73,8 @@ class DiaryModel {
       teacherId: teacherId ?? this.teacherId,
       standardId: standardId ?? this.standardId,
       subjectId: subjectId ?? this.subjectId,
+      subjectName: subjectName ?? this.subjectName,
+      createdByName: createdByName ?? this.createdByName,
       academicYearId: academicYearId ?? this.academicYearId,
       schoolId: schoolId ?? this.schoolId,
       createdAt: createdAt ?? this.createdAt,

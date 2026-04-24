@@ -24,8 +24,10 @@ class GreetingHeader extends ConsumerWidget {
     return 'Good evening';
   }
 
-  static String _firstName(CurrentUser? user) {
+  static String _displayName(CurrentUser? user) {
     if (user == null) return '';
+    final fullName = user.fullName?.trim() ?? '';
+    if (fullName.isNotEmpty) return fullName;
     if (user.email != null && user.email!.isNotEmpty) {
       return user.email!.split('@').first.split('.').first.capitalize();
     }
@@ -85,15 +87,23 @@ class GreetingHeader extends ConsumerWidget {
             ),
             const SizedBox(height: AppDimensions.space12),
           ],
-          Text(
-            dayStr,
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.white.withValues(alpha: 0.6),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  dayStr,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppDimensions.space4),
           Text(
-            '${_greeting()}, ${_firstName(user)} 👋',
+            _displayName(user).isEmpty
+                ? '${_greeting()} 👋'
+                : '${_greeting()}, ${_displayName(user)} 👋',
             style: AppTypography.headlineMedium.copyWith(
               color: AppColors.white,
               fontWeight: FontWeight.w700,
@@ -119,16 +129,31 @@ class GreetingHeader extends ConsumerWidget {
 
   static String _dayName(int weekday) {
     const days = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-      'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return days[(weekday - 1).clamp(0, 6)];
   }
 
   static String _monthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[(month - 1).clamp(0, 11)];
   }

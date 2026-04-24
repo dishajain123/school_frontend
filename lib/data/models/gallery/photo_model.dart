@@ -1,3 +1,5 @@
+import '../../../core/utils/media_url_resolver.dart';
+
 class PhotoModel {
   const PhotoModel({
     required this.id,
@@ -30,7 +32,7 @@ class PhotoModel {
       id: json['id'] as String,
       albumId: json['album_id'] as String,
       photoKey: json['photo_key'] as String,
-      photoUrl: json['photo_url'] as String?,
+      photoUrl: MediaUrlResolver.resolveNullable(json['photo_url'] as String?),
       caption: json['caption'] as String?,
       uploadedBy: json['uploaded_by'] as String?,
       isFeatured: json['is_featured'] as bool? ?? false,

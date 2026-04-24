@@ -9,6 +9,7 @@ import '../../presentation/auth/screens/verify_otp_screen.dart';
 import '../../presentation/auth/screens/reset_password_screen.dart';
 import '../../presentation/common/shell/main_shell.dart';
 import '../../presentation/dashboard/screens/dashboard_screen.dart';
+import '../../presentation/teachers/screens/teacher_analytics_screen.dart';
 import '../../presentation/profile/screens/profile_screen.dart';
 import '../../presentation/profile/screens/change_password_screen.dart';
 import '../../presentation/notifications/screens/notification_inbox_screen.dart';
@@ -425,10 +426,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (_, __) => const MarkAttendanceScreen(),
               ),
               GoRoute(
-                path: 'snapshot',
-                builder: (_, __) => const ClassSnapshotScreen(),
-              ),
-              GoRoute(
                 path: 'below-threshold',
                 builder: (_, __) => const BelowThresholdScreen(),
               ),
@@ -440,6 +437,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: RouteNames.teacherAnalytics,
+            builder: (_, __) => const TeacherAnalyticsScreen(),
           ),
 
           // ── Assignments ────────────────────────────────────────────────
@@ -660,7 +661,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.principalResultsDistribution,
-            builder: (_, __) => const PrincipalResultsDistributionScreen(),
+            builder: (context, state) => PrincipalResultsDistributionScreen(
+              initialStandardId: state.uri.queryParameters["standard_id"],
+              initialSection: state.uri.queryParameters["section"],
+              initialExamId: state.uri.queryParameters["exam_id"],
+            ),
           ),
           GoRoute(
             path: RouteNames.principalReportDetails,

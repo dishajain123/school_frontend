@@ -112,3 +112,57 @@ final timetableUploadProvider =
     NotifierProvider<TimetableUploadNotifier, TimetableUploadState>(
   TimetableUploadNotifier.new,
 );
+
+class TimetableDeleteState {
+  const TimetableDeleteState({
+    this.isDeleting = false,
+    this.error,
+  });
+
+  final bool isDeleting;
+  final String? error;
+
+  TimetableDeleteState copyWith({
+    bool? isDeleting,
+    String? error,
+    bool clearError = false,
+  }) {
+    return TimetableDeleteState(
+      isDeleting: isDeleting ?? this.isDeleting,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+class TimetableDeleteNotifier extends Notifier<TimetableDeleteState> {
+  @override
+  TimetableDeleteState build() => const TimetableDeleteState();
+
+  Future<bool> delete({
+    required String standardId,
+    String? academicYearId,
+    String? section,
+  }) async {
+    state = state.copyWith(isDeleting: true, clearError: true);
+    try {
+      final repo = ref.read(timetableRepositoryProvider);
+      await repo.deleteTimetable(
+        standardId: standardId,
+        academicYearId: academicYearId,
+        section: section,
+      );
+      state = state.copyWith(isDeleting: false);
+      ref.invalidate(timetableProvider);
+      ref.invalidate(timetableSectionsProvider);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isDeleting: false, error: e.toString());
+      return false;
+    }
+  }
+}
+
+final timetableDeleteProvider =
+    NotifierProvider<TimetableDeleteNotifier, TimetableDeleteState>(
+  TimetableDeleteNotifier.new,
+);

@@ -61,6 +61,239 @@ class TeacherDashboardStats {
   final double teacherAttendancePercentage;
 }
 
+class TeacherAnalyticsAssignmentItem {
+  const TeacherAnalyticsAssignmentItem({
+    required this.standardId,
+    required this.standardName,
+    required this.section,
+    required this.subjectId,
+    required this.subjectName,
+    required this.academicYearId,
+  });
+
+  final String standardId;
+  final String standardName;
+  final String section;
+  final String subjectId;
+  final String subjectName;
+  final String academicYearId;
+
+  factory TeacherAnalyticsAssignmentItem.fromJson(Map<String, dynamic> json) {
+    return TeacherAnalyticsAssignmentItem(
+      standardId: json['standard_id'] as String? ?? '',
+      standardName: json['standard_name'] as String? ?? '',
+      section: json['section'] as String? ?? '',
+      subjectId: json['subject_id'] as String? ?? '',
+      subjectName: json['subject_name'] as String? ?? '',
+      academicYearId: json['academic_year_id'] as String? ?? '',
+    );
+  }
+}
+
+class TeacherAssignmentSubmissionAnalyticsModel {
+  const TeacherAssignmentSubmissionAnalyticsModel({
+    required this.totalAssignments,
+    required this.overdueAssignments,
+    required this.totalSubmissions,
+    required this.onTimeSubmissions,
+    required this.lateSubmissions,
+    required this.pendingReviewSubmissions,
+  });
+
+  final int totalAssignments;
+  final int overdueAssignments;
+  final int totalSubmissions;
+  final int onTimeSubmissions;
+  final int lateSubmissions;
+  final int pendingReviewSubmissions;
+
+  factory TeacherAssignmentSubmissionAnalyticsModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return TeacherAssignmentSubmissionAnalyticsModel(
+      totalAssignments: _asInt(json['total_assignments']),
+      overdueAssignments: _asInt(json['overdue_assignments']),
+      totalSubmissions: _asInt(json['total_submissions']),
+      onTimeSubmissions: _asInt(json['on_time_submissions']),
+      lateSubmissions: _asInt(json['late_submissions']),
+      pendingReviewSubmissions: _asInt(json['pending_review_submissions']),
+    );
+  }
+}
+
+class TeacherAttendanceBySubjectAnalyticsModel {
+  const TeacherAttendanceBySubjectAnalyticsModel({
+    required this.subjectId,
+    required this.subjectName,
+    required this.total,
+    required this.present,
+    required this.absent,
+    required this.late,
+    required this.attendancePercentage,
+  });
+
+  final String subjectId;
+  final String subjectName;
+  final int total;
+  final int present;
+  final int absent;
+  final int late;
+  final double attendancePercentage;
+
+  factory TeacherAttendanceBySubjectAnalyticsModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return TeacherAttendanceBySubjectAnalyticsModel(
+      subjectId: json['subject_id'] as String? ?? '',
+      subjectName: json['subject_name'] as String? ?? '',
+      total: _asInt(json['total']),
+      present: _asInt(json['present']),
+      absent: _asInt(json['absent']),
+      late: _asInt(json['late']),
+      attendancePercentage: _asDouble(json['attendance_percentage']),
+    );
+  }
+}
+
+class TeacherAttendanceAnalyticsModel {
+  const TeacherAttendanceAnalyticsModel({
+    required this.totalRecords,
+    required this.presentCount,
+    required this.absentCount,
+    required this.lateCount,
+    required this.attendancePercentage,
+    required this.bySubject,
+  });
+
+  final int totalRecords;
+  final int presentCount;
+  final int absentCount;
+  final int lateCount;
+  final double attendancePercentage;
+  final List<TeacherAttendanceBySubjectAnalyticsModel> bySubject;
+
+  factory TeacherAttendanceAnalyticsModel.fromJson(Map<String, dynamic> json) {
+    final raw = json['by_subject'] as List<dynamic>? ?? const [];
+    return TeacherAttendanceAnalyticsModel(
+      totalRecords: _asInt(json['total_records']),
+      presentCount: _asInt(json['present_count']),
+      absentCount: _asInt(json['absent_count']),
+      lateCount: _asInt(json['late_count']),
+      attendancePercentage: _asDouble(json['attendance_percentage']),
+      bySubject: raw
+          .whereType<Map>()
+          .map(
+            (e) => TeacherAttendanceBySubjectAnalyticsModel.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class TeacherMarksBySubjectAnalyticsModel {
+  const TeacherMarksBySubjectAnalyticsModel({
+    required this.subjectId,
+    required this.subjectName,
+    required this.entries,
+    required this.averagePercentage,
+  });
+
+  final String subjectId;
+  final String subjectName;
+  final int entries;
+  final double averagePercentage;
+
+  factory TeacherMarksBySubjectAnalyticsModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return TeacherMarksBySubjectAnalyticsModel(
+      subjectId: json['subject_id'] as String? ?? '',
+      subjectName: json['subject_name'] as String? ?? '',
+      entries: _asInt(json['entries']),
+      averagePercentage: _asDouble(json['average_percentage']),
+    );
+  }
+}
+
+class TeacherMarksAnalyticsModel {
+  const TeacherMarksAnalyticsModel({
+    required this.totalEntries,
+    required this.averagePercentage,
+    required this.aboveAverageCount,
+    required this.moderateCount,
+    required this.belowAverageCount,
+    required this.bySubject,
+  });
+
+  final int totalEntries;
+  final double averagePercentage;
+  final int aboveAverageCount;
+  final int moderateCount;
+  final int belowAverageCount;
+  final List<TeacherMarksBySubjectAnalyticsModel> bySubject;
+
+  factory TeacherMarksAnalyticsModel.fromJson(Map<String, dynamic> json) {
+    final raw = json['by_subject'] as List<dynamic>? ?? const [];
+    return TeacherMarksAnalyticsModel(
+      totalEntries: _asInt(json['total_entries']),
+      averagePercentage: _asDouble(json['average_percentage']),
+      aboveAverageCount: _asInt(json['above_average_count']),
+      moderateCount: _asInt(json['moderate_count']),
+      belowAverageCount: _asInt(json['below_average_count']),
+      bySubject: raw
+          .whereType<Map>()
+          .map(
+            (e) => TeacherMarksBySubjectAnalyticsModel.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class TeacherAnalyticsData {
+  const TeacherAnalyticsData({
+    required this.teacherId,
+    required this.assignments,
+    required this.assignmentSubmission,
+    required this.attendance,
+    required this.marks,
+  });
+
+  final String teacherId;
+  final List<TeacherAnalyticsAssignmentItem> assignments;
+  final TeacherAssignmentSubmissionAnalyticsModel assignmentSubmission;
+  final TeacherAttendanceAnalyticsModel attendance;
+  final TeacherMarksAnalyticsModel marks;
+
+  factory TeacherAnalyticsData.fromJson(Map<String, dynamic> json) {
+    final assignmentRaw = json['assignments'] as List<dynamic>? ?? const [];
+    final assignmentSubmission = Map<String, dynamic>.from(
+        (json['assignment_submission'] as Map?) ?? {});
+    final attendance =
+        Map<String, dynamic>.from((json['attendance'] as Map?) ?? {});
+    final marks = Map<String, dynamic>.from((json['marks'] as Map?) ?? {});
+    return TeacherAnalyticsData(
+      teacherId: json['teacher_id'] as String? ?? '',
+      assignments: assignmentRaw
+          .whereType<Map>()
+          .map(
+            (e) => TeacherAnalyticsAssignmentItem.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+      assignmentSubmission: TeacherAssignmentSubmissionAnalyticsModel.fromJson(
+          assignmentSubmission),
+      attendance: TeacherAttendanceAnalyticsModel.fromJson(attendance),
+      marks: TeacherMarksAnalyticsModel.fromJson(marks),
+    );
+  }
+}
+
 class ParentDashboardStats {
   const ParentDashboardStats({
     required this.linkedChildren,
@@ -111,6 +344,13 @@ double _asDouble(dynamic value) {
   if (value is num) return value.toDouble();
   if (value is String) return double.tryParse(value) ?? 0.0;
   return 0.0;
+}
+
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
 }
 
 final principalDashboardStatsProvider =
@@ -261,6 +501,34 @@ final teacherDashboardStatsProvider =
   );
 });
 
+typedef TeacherAnalyticsParams = ({
+  String? academicYearId,
+  String? standardId,
+  String? section,
+  String? subjectId,
+});
+
+final teacherAnalyticsProvider =
+    FutureProvider.family<TeacherAnalyticsData, TeacherAnalyticsParams>(
+  (ref, params) async {
+    final dio = ref.read(dioClientProvider);
+    final response = await dio.get(
+      '/teachers/me/analytics',
+      queryParameters: {
+        if (params.academicYearId != null)
+          'academic_year_id': params.academicYearId,
+        if (params.standardId != null) 'standard_id': params.standardId,
+        if (params.section != null && params.section!.trim().isNotEmpty)
+          'section': params.section,
+        if (params.subjectId != null) 'subject_id': params.subjectId,
+      },
+    );
+    return TeacherAnalyticsData.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  },
+);
+
 final parentDashboardStatsProvider =
     FutureProvider<ParentDashboardStats>((ref) async {
   final parentRepo = ref.read(parentRepositoryProvider);
@@ -352,47 +620,54 @@ final studentDashboardStatsProvider =
   final resultRepo = ref.read(resultRepositoryProvider);
 
   final me = await studentRepo.getMyProfile();
+  StudentAttendanceAnalytics? analytics;
+  AssignmentListResponse? activeAssignments;
+  AssignmentListResponse? overdueAssignments;
+  ComplaintListResponse? openComplaints;
+  List<ExamModel> exams = const [];
 
-  final responses = await Future.wait([
-    attendanceRepo.getStudentAnalytics(me.id),
-    assignmentRepo.listAssignments(
+  try {
+    analytics = await attendanceRepo.getStudentAnalytics(me.id);
+  } catch (_) {}
+  try {
+    activeAssignments = await assignmentRepo.listAssignments(
       standardId: me.standardId,
       academicYearId: me.academicYearId,
       isActive: true,
       page: 1,
       pageSize: 1,
-    ),
-    assignmentRepo.listAssignments(
+    );
+  } catch (_) {}
+  try {
+    overdueAssignments = await assignmentRepo.listAssignments(
       standardId: me.standardId,
       academicYearId: me.academicYearId,
       isOverdue: true,
       page: 1,
       pageSize: 1,
-    ),
-    complaintRepo.list(status: ComplaintStatus.open),
-    resultRepo.listExams(
+    );
+  } catch (_) {}
+  try {
+    openComplaints = await complaintRepo.list(status: ComplaintStatus.open);
+  } catch (_) {}
+  try {
+    exams = await resultRepo.listExams(
       studentId: me.id,
       academicYearId: me.academicYearId,
       standardId: me.standardId,
-    ),
-  ]);
-
-  final analytics = responses[0] as StudentAttendanceAnalytics;
-  final activeAssignments = responses[1] as AssignmentListResponse;
-  final overdueAssignments = responses[2] as AssignmentListResponse;
-  final openComplaints = responses[3] as ComplaintListResponse;
-  final exams = responses[4] as List<ExamModel>;
+    );
+  } catch (_) {}
 
   final now = DateTime.now();
   final upcomingExams =
       exams.where((exam) => !exam.startDate.isBefore(now)).length;
 
   return StudentDashboardStats(
-    attendancePercentage: analytics.overallPercentage,
-    activeAssignments: activeAssignments.total,
-    overdueAssignments: overdueAssignments.total,
+    attendancePercentage: analytics?.overallPercentage ?? 0,
+    activeAssignments: activeAssignments?.total ?? 0,
+    overdueAssignments: overdueAssignments?.total ?? 0,
     upcomingExams: upcomingExams,
-    openComplaints: openComplaints.total,
+    openComplaints: openComplaints?.total ?? 0,
   );
 });
 
@@ -458,11 +733,42 @@ final classTeachersProvider =
     FutureProvider.family<List<TeacherClassSubjectModel>, ClassTeachersParams>(
   (ref, params) async {
     final repo = ref.read(teacherClassSubjectRepositoryProvider);
-    return repo.listByClass(
+    final scoped = await repo.listByClass(
       standardId: params.standardId,
       section: params.section,
       academicYearId: params.academicYearId,
     );
+    if (scoped.isNotEmpty || params.academicYearId == null) {
+      return scoped;
+    }
+    // Fallback for legacy/mismatched academic-year mapping:
+    // if no rows found for current year, try same class+section without year.
+    return repo.listByClass(
+      standardId: params.standardId,
+      section: params.section,
+      academicYearId: null,
+    );
+  },
+);
+
+typedef TeacherDirectoryParams = ({
+  String standardId,
+  String? academicYearId,
+});
+
+final teacherDirectoryByStandardProvider =
+    FutureProvider.family<Map<String, String>, TeacherDirectoryParams>(
+  (ref, params) async {
+    final repo = ref.read(teacherRepositoryProvider);
+    final response = await repo.list(
+      standardId: params.standardId,
+      academicYearId: params.academicYearId,
+      page: 1,
+      pageSize: 200,
+    );
+    return {
+      for (final teacher in response.items) teacher.id: teacher.displayName,
+    };
   },
 );
 

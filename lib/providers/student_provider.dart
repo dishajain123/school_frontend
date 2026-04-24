@@ -197,6 +197,8 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
         items: current.items.map((s) => s.id == id ? updated : s).toList(),
       ),
     );
+    ref.invalidate(timetableProvider);
+    ref.invalidate(timetableSectionsProvider);
     return updated;
   }
 
@@ -221,6 +223,7 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     );
     ref.invalidate(studentSectionsProvider);
     ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableProvider);
     ref.invalidate(timetableSectionsProvider);
     return updatedItems;
   }
@@ -252,6 +255,7 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     );
     ref.invalidate(studentSectionsProvider);
     ref.invalidate(sectionsByStandardProvider);
+    ref.invalidate(timetableProvider);
     ref.invalidate(timetableSectionsProvider);
     return updatedItems;
   }

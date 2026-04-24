@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../core/utils/media_url_resolver.dart';
 
 enum ExamType {
   unitTest,
@@ -205,10 +206,17 @@ class ResultEntryModel {
 }
 
 class ResultListResponse {
-  const ResultListResponse({required this.items, required this.total});
+  const ResultListResponse({
+    required this.items,
+    required this.total,
+    this.reportCardUrl,
+    this.hasReportCard = false,
+  });
 
   final List<ResultEntryModel> items;
   final int total;
+  final String? reportCardUrl;
+  final bool hasReportCard;
 
   factory ResultListResponse.fromJson(Map<String, dynamic> json) {
     return ResultListResponse(
@@ -216,6 +224,9 @@ class ResultListResponse {
           .map((e) => ResultEntryModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       total: json['total'] as int,
+      reportCardUrl:
+          MediaUrlResolver.resolveNullable(json['report_card_url'] as String?),
+      hasReportCard: json['has_report_card'] as bool? ?? false,
     );
   }
 }
@@ -226,7 +237,9 @@ class ReportCardModel {
   final String url;
 
   factory ReportCardModel.fromJson(Map<String, dynamic> json) {
-    return ReportCardModel(url: json['url'] as String);
+    return ReportCardModel(
+      url: MediaUrlResolver.resolve((json['url'] as String?) ?? ''),
+    );
   }
 }
 
@@ -327,6 +340,30 @@ class ResultDistributionModel {
           .map((e) => ResultDistributionStudentModel.fromJson(
               e as Map<String, dynamic>))
           .toList(),
+    );
+  }
+}
+
+@immutable
+class ExamBulkCreateResponseModel {
+  const ExamBulkCreateResponseModel({
+    required this.created,
+    required this.createdCount,
+    required this.skippedCount,
+  });
+
+  final List<ExamModel> created;
+  final int createdCount;
+  final int skippedCount;
+
+  factory ExamBulkCreateResponseModel.fromJson(Map<String, dynamic> json) {
+    final rawCreated = json['created'] as List<dynamic>? ?? const [];
+    return ExamBulkCreateResponseModel(
+      created: rawCreated
+          .map((e) => ExamModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      createdCount: json['created_count'] as int? ?? rawCreated.length,
+      skippedCount: json['skipped_count'] as int? ?? 0,
     );
   }
 }

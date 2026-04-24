@@ -72,6 +72,20 @@ class TimetableRepository {
     return TimetableModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<void> deleteTimetable({
+    required String standardId,
+    String? academicYearId,
+    String? section,
+  }) async {
+    await _dio.delete(
+      '$_base/$standardId',
+      queryParameters: {
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+        if (section != null) 'section': section,
+      },
+    );
+  }
+
   Future<List<String>> listSections({
     required String standardId,
     String? academicYearId,

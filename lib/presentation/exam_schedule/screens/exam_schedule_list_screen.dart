@@ -7,9 +7,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/attendance_provider.dart';
+import '../../../providers/academic_year_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../data/repositories/student_repository.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
@@ -79,8 +82,14 @@ class _ExamScheduleListScreenState
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
+    final activeYear = ref.watch(activeYearProvider);
     final selectedChildId = ref.watch(selectedChildIdProvider);
-    final standardsAsync = ref.watch(standardsProvider(null));
+    final standardsAsync = ref.watch(standardsProvider(activeYear?.id));
+    final teacherAssignmentsAsync = (currentUser?.role == UserRole.teacher)
+        ? ref.watch(myTeacherAssignmentsProvider(activeYear?.id))
+        : const AsyncData<List<TeacherClassSubjectModel>>(
+            <TeacherClassSubjectModel>[],
+          );
     final canCreate =
         currentUser?.hasPermission('exam_schedule:create') ?? false;
     final isScopedRole = currentUser?.role == UserRole.parent ||
@@ -93,7 +102,21 @@ class _ExamScheduleListScreenState
         builder: (context, snapshot) {
           final standardId = snapshot.data;
           return AppScaffold(
-            appBar: const AppAppBar(title: 'Exam Schedules'),
+            appBar: AppAppBar(
+              title: 'Exam Schedules',
+              showBack: true,
+              onBackPressed: () => context.go(RouteNames.dashboard),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Refresh',
+                  onPressed: () {
+                    _refreshScoped(currentUser);
+                    ref.invalidate(standardsProvider(activeYear?.id));
+                  },
+                ),
+              ],
+            ),
             body: snapshot.connectionState == ConnectionState.waiting
                 ? AppLoading.fullPage()
                 : (standardId == null || standardId.isEmpty)
@@ -164,20 +187,31 @@ class _ExamScheduleListScreenState
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Exam Schedules',
-        actions: canCreate
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Create Series',
-                  onPressed: _selectedStandardId != null
-                      ? () => context.push(
-                            RouteNames.createExamSeries,
-                            extra: {'standard_id': _selectedStandardId},
-                          )
-                      : null,
-                ),
-              ]
-            : const [],
+        showBack: true,
+        onBackPressed: () => context.go(RouteNames.dashboard),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh',
+            onPressed: () {
+              ref.invalidate(standardsProvider(activeYear?.id));
+              if (currentUser?.role == UserRole.teacher) {
+                ref.invalidate(myTeacherAssignmentsProvider(activeYear?.id));
+              }
+            },
+          ),
+          if (canCreate)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Create Series',
+              onPressed: _selectedStandardId != null
+                  ? () => context.push(
+                        RouteNames.createExamSeries,
+                        extra: {'standard_id': _selectedStandardId},
+                      )
+                  : null,
+            ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,13 +233,66 @@ class _ExamScheduleListScreenState
             ),
           ),
           standardsAsync.when(
-            data: (standards) => _StandardChips(
-              standards: standards
-                  .map((s) => _StandardItem(id: s.id, name: s.name))
-                  .toList(),
-              selectedId: _selectedStandardId,
-              onSelect: (id) => setState(() => _selectedStandardId = id),
-            ),
+            data: (standards) {
+              if (currentUser?.role == UserRole.teacher) {
+                return teacherAssignmentsAsync.when(
+                  loading: () => Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.space16),
+                    child: AppLoading.fullPage(),
+                  ),
+                  error: (e, _) => AppErrorState(
+                    message: e.toString(),
+                    onRetry: () => ref.invalidate(
+                        myTeacherAssignmentsProvider(activeYear?.id)),
+                  ),
+                  data: (assignments) {
+                    final allowedStandardIds =
+                        assignments.map((a) => a.standardId).toSet();
+                    final allowedStandards = standards
+                        .where((s) => allowedStandardIds.contains(s.id))
+                        .map((s) => _StandardItem(id: s.id, name: s.name))
+                        .toList();
+                    final safeSelectedId =
+                        allowedStandardIds.contains(_selectedStandardId)
+                            ? _selectedStandardId
+                            : null;
+                    if (safeSelectedId != _selectedStandardId) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() => _selectedStandardId = safeSelectedId);
+                      });
+                    }
+                    if (allowedStandards.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppDimensions.space16,
+                        ),
+                        child: AppEmptyState(
+                          icon: Icons.school_outlined,
+                          title: 'No assigned classes',
+                          subtitle:
+                              'Your exam schedule classes will appear after principal assignment.',
+                        ),
+                      );
+                    }
+                    return _StandardChips(
+                      standards: allowedStandards,
+                      selectedId: safeSelectedId,
+                      onSelect: (id) =>
+                          setState(() => _selectedStandardId = id),
+                    );
+                  },
+                );
+              }
+              return _StandardChips(
+                standards: standards
+                    .map((s) => _StandardItem(id: s.id, name: s.name))
+                    .toList(),
+                selectedId: _selectedStandardId,
+                onSelect: (id) => setState(() => _selectedStandardId = id),
+              );
+            },
             loading: () => Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
@@ -213,7 +300,7 @@ class _ExamScheduleListScreenState
             ),
             error: (e, _) => AppErrorState(
               message: e.toString(),
-              onRetry: () => ref.invalidate(standardsProvider(null)),
+              onRetry: () => ref.invalidate(standardsProvider(activeYear?.id)),
             ),
           ),
           const SizedBox(height: AppDimensions.space16),

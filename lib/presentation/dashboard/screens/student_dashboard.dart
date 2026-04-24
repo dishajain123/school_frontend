@@ -259,7 +259,8 @@ class _StudentClassTeachersCard extends ConsumerWidget {
       ),
       data: (me) {
         final standardId = me.standardId;
-        final section = me.section?.trim();
+        final rawSection = me.section?.trim();
+        final normalizedSection = rawSection?.toUpperCase();
         final yearId = me.academicYearId;
 
         if (standardId == null || standardId.isEmpty) {
@@ -271,8 +272,10 @@ class _StudentClassTeachersCard extends ConsumerWidget {
           );
         }
 
-        final hasSection = section != null && section.isNotEmpty;
-        final classLabel = hasSection ? 'Section $section' : 'Section not set';
+        final hasSection =
+            normalizedSection != null && normalizedSection.isNotEmpty;
+        final classLabel =
+            hasSection ? 'Section $normalizedSection' : 'Section not set';
 
         if (!hasSection) {
           return _ClassTeachersShell(
@@ -286,7 +289,12 @@ class _StudentClassTeachersCard extends ConsumerWidget {
 
         final teachersAsync = ref.watch(classTeachersProvider((
           standardId: standardId,
-          section: section,
+          section: normalizedSection,
+          academicYearId: yearId,
+        )));
+        final teacherDirectoryAsync =
+            ref.watch(teacherDirectoryByStandardProvider((
+          standardId: standardId,
           academicYearId: yearId,
         )));
 
@@ -299,7 +307,10 @@ class _StudentClassTeachersCard extends ConsumerWidget {
             error: (e, _) => Text('Could not load teachers.',
                 style: AppTypography.bodySmall
                     .copyWith(color: AppColors.errorRed)),
-            data: (rows) => _TeachersList(rows: rows),
+            data: (rows) => _TeachersList(
+              rows: rows,
+              teacherNameById: teacherDirectoryAsync.valueOrNull ?? const {},
+            ),
           ),
         );
       },
@@ -369,8 +380,12 @@ class _ClassTeachersShell extends StatelessWidget {
 }
 
 class _TeachersList extends StatelessWidget {
-  const _TeachersList({required this.rows});
+  const _TeachersList({
+    required this.rows,
+    required this.teacherNameById,
+  });
   final List<TeacherClassSubjectModel> rows;
+  final Map<String, String> teacherNameById;
 
   @override
   Widget build(BuildContext context) {
@@ -381,8 +396,7 @@ class _TeachersList extends StatelessWidget {
 
     final byTeacher = <String, List<TeacherClassSubjectModel>>{};
     for (final r in rows) {
-      final code = r.teacherEmployeeCode ?? 'Teacher';
-      final key = '${r.teacherId}|$code';
+      final key = r.teacherId;
       byTeacher.putIfAbsent(key, () => []).add(r);
     }
 
@@ -394,6 +408,7 @@ class _TeachersList extends StatelessWidget {
             (first.teacherEmployeeCode?.trim().isNotEmpty ?? false)
                 ? first.teacherEmployeeCode!
                 : 'Teacher';
+        final teacherName = teacherNameById[first.teacherId] ?? teacherCode;
         final subjects = teacherRows.map((r) => r.subjectLabel).toSet().toList()
           ..sort();
 
@@ -417,10 +432,14 @@ class _TeachersList extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(teacherCode,
+                    Text(teacherName,
                         style: AppTypography.labelMedium.copyWith(
                             color: AppColors.grey800,
                             fontWeight: FontWeight.w600)),
+                    Text(teacherCode,
+                        style: AppTypography.caption.copyWith(
+                            color: AppColors.grey500,
+                            fontWeight: FontWeight.w500)),
                     Text(subjects.join(', '),
                         style: AppTypography.caption
                             .copyWith(color: AppColors.grey500)),

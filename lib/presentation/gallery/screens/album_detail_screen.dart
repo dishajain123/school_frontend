@@ -9,6 +9,7 @@ import "../../../core/utils/date_formatter.dart";
 import "../../../core/utils/snackbar_utils.dart";
 import "../../../data/models/gallery/album_model.dart";
 import "../../../data/models/gallery/photo_model.dart";
+import "../../../providers/auth_provider.dart";
 import "../../../providers/gallery_provider.dart";
 import "../../common/widgets/app_app_bar.dart";
 import "../../common/widgets/app_empty_state.dart";
@@ -222,10 +223,158 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
     );
   }
 
+  Future<void> _deleteAlbum(AlbumModel album) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete album?'),
+        content: Text(
+          'This will remove "${album.eventName}" and all its photos. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.errorRed),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await ref
+        .read(galleryAlbumListNotifierProvider.notifier)
+        .deleteAlbum(album.id);
+    if (!mounted) return;
+
+    if (success) {
+      SnackbarUtils.showSuccess(context, 'Album deleted successfully');
+      Navigator.of(context).maybePop();
+    } else {
+      final error =
+          ref.read(galleryAlbumListNotifierProvider).valueOrNull?.error;
+      SnackbarUtils.showError(context, error ?? 'Failed to delete album');
+    }
+  }
+
+  Future<void> _editAlbum(AlbumModel album) async {
+    final nameController = TextEditingController(text: album.eventName);
+    final descriptionController =
+        TextEditingController(text: album.description ?? '');
+    DateTime selectedDate = album.eventDate;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text('Edit Album'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Event Name',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Optional)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.event_outlined),
+                      title: const Text('Event Date'),
+                      subtitle: Text(DateFormatter.formatDate(selectedDate)),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(DateTime.now().year - 10),
+                          lastDate: DateTime(DateTime.now().year + 5),
+                        );
+                        if (picked != null) {
+                          setModalState(() => selectedDate = picked);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (saved != true) {
+      nameController.dispose();
+      descriptionController.dispose();
+      return;
+    }
+
+    final eventName = nameController.text.trim();
+    final description = descriptionController.text.trim();
+    nameController.dispose();
+    descriptionController.dispose();
+
+    if (eventName.isEmpty) {
+      if (!mounted) return;
+      SnackbarUtils.showError(context, 'Event name is required');
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      'event_name': eventName,
+      'event_date': DateFormatter.formatDateForApi(selectedDate),
+      'description': description.isEmpty ? null : description,
+    };
+
+    final updated = await ref
+        .read(galleryAlbumListNotifierProvider.notifier)
+        .updateAlbum(albumId: album.id, payload: payload);
+    if (!mounted) return;
+    if (updated != null) {
+      SnackbarUtils.showSuccess(context, 'Album updated successfully');
+    } else {
+      final error =
+          ref.read(galleryAlbumListNotifierProvider).valueOrNull?.error;
+      SnackbarUtils.showError(context, error ?? 'Failed to update album');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final photosState = ref.watch(albumPhotoListProvider(widget.albumId));
     final canManage = ref.watch(galleryCanManageProvider);
+    final canDeleteAlbum = ref.watch(galleryCanDeleteAlbumProvider);
     final canInteract = ref.watch(galleryCanInteractProvider);
     final album = ref.watch(galleryAlbumByIdProvider(widget.albumId)) ??
         widget.initialAlbum;
@@ -235,6 +384,40 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
         title: album?.eventName ?? "Album",
         showBack: true,
         actions: [
+          if (canManage && album != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () => _editAlbum(album),
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.edit_outlined,
+                      color: AppColors.white, size: 18),
+                ),
+              ),
+            ),
+          if (canDeleteAlbum && album != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () => _deleteAlbum(album),
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.errorRed.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.delete_outline,
+                      color: AppColors.white, size: 18),
+                ),
+              ),
+            ),
           if (canManage)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -322,6 +505,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
                           return PhotoGridItem(
                             photo: photo,
                             canToggleFeature: canManage,
+                            canInteract: canInteract,
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
@@ -333,7 +517,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen>
                                 ),
                               );
                             },
-                            onLongPress: canManage
+                            onFeatureTap: canManage
                                 ? () => _toggleFeature(photo.id)
                                 : null,
                           );
@@ -584,6 +768,7 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
               builder: (context, ref, _) {
                 final interactionState =
                     ref.watch(photoInteractionProvider(photoId));
+                final currentUser = ref.watch(currentUserProvider);
 
                 return Column(
                   children: [
@@ -659,6 +844,8 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
                                         interactionState.comments[index];
                                     final role =
                                         _roleLabel(comment.commenterRole);
+                                    final canDeleteComment =
+                                        currentUser?.id == comment.commentedBy;
                                     return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -682,6 +869,48 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
                                                 color: AppColors.grey500,
                                               ),
                                             ),
+                                            const Spacer(),
+                                            if (canDeleteComment)
+                                              IconButton(
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                tooltip: 'Delete comment',
+                                                onPressed:
+                                                    interactionState.isSubmitting
+                                                        ? null
+                                                        : () async {
+                                                            final ok = await ref
+                                                                .read(photoInteractionProvider(
+                                                                        photoId)
+                                                                    .notifier)
+                                                                .deleteComment(
+                                                                    comment.id);
+                                                            if (!context.mounted) {
+                                                              return;
+                                                            }
+                                                            if (ok) {
+                                                              SnackbarUtils
+                                                                  .showSuccess(
+                                                                context,
+                                                                'Comment deleted',
+                                                              );
+                                                            } else {
+                                                              SnackbarUtils
+                                                                  .showError(
+                                                                context,
+                                                                'Failed to delete comment',
+                                                              );
+                                                            }
+                                                          },
+                                                icon: const Icon(
+                                                  Icons.delete_outline_rounded,
+                                                  size: 18,
+                                                  color: AppColors.grey500,
+                                                ),
+                                              ),
                                           ],
                                         ),
                                         const SizedBox(height: 4),
@@ -702,7 +931,7 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Only parents and students can react/comment.',
+                          'Only parents, students, teachers, and trustees can react/comment.',
                           style: AppTypography.bodySmall.copyWith(
                             color: AppColors.grey500,
                           ),
@@ -760,6 +989,9 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
     final normalized = raw.trim().toUpperCase();
     if (normalized == 'PARENT') return 'Parent';
     if (normalized == 'STUDENT') return 'Student';
+    if (normalized == 'TEACHER') return 'Teacher';
+    if (normalized == 'TRUSTEE') return 'Trustee';
+    if (normalized == 'PRINCIPAL') return 'Principal';
     return 'User';
   }
 
@@ -876,46 +1108,56 @@ class _FullScreenViewerState extends ConsumerState<_FullScreenViewer> {
                     photo.caption.toString().trim().isNotEmpty
                 ? 96
                 : 24,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    interactionState.hasReacted
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: 14,
-                    color: interactionState.hasReacted
-                        ? AppColors.errorRed
-                        : AppColors.white,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${interactionState.reactionsCount}',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+            child: GestureDetector(
+              onTap: widget.canInteract && !interactionState.isSubmitting
+                  ? () {
+                      ref
+                          .read(photoInteractionProvider(photo.id).notifier)
+                          .toggleReaction();
+                    }
+                  : null,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      interactionState.hasReacted
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      size: 14,
+                      color: interactionState.hasReacted
+                          ? AppColors.errorRed
+                          : AppColors.white,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.mode_comment_outlined,
-                      size: 14, color: AppColors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${interactionState.totalComments}',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 4),
+                    Text(
+                      '${interactionState.reactionsCount}',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    const Icon(Icons.mode_comment_outlined,
+                        size: 14, color: AppColors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${interactionState.totalComments}',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

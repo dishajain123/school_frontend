@@ -4,12 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_dimensions.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/exam/exam_entry_model.dart';
 import '../../../data/models/exam/exam_series_model.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
+import '../../../data/models/timetable/timetable_model.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/attendance_provider.dart';
 import '../../../providers/exam_provider.dart';
 import '../../../providers/masters_provider.dart';
+import '../../../providers/timetable_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
@@ -61,6 +67,8 @@ class _ExamScheduleTableScreenState
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Exam Schedule',
+        showBack: true,
+        onBackPressed: () => context.go(RouteNames.dashboard),
         actions: canManage
             ? [
                 IconButton(
@@ -142,6 +150,27 @@ class _ExamScheduleTableScreenState
   }
 
   Widget _buildScheduleContent(bool canManage, String selectedSeriesId) {
+    final currentUser = ref.watch(currentUserProvider);
+    final activeYear = ref.watch(activeYearProvider);
+    final teacherAssignments = (currentUser?.role == UserRole.teacher)
+        ? ref.watch(myTeacherAssignmentsProvider(activeYear?.id)).valueOrNull ??
+            const <TeacherClassSubjectModel>[]
+        : const <TeacherClassSubjectModel>[];
+    final standardAssignments = teacherAssignments
+        .where((a) => a.standardId == widget.standardId)
+        .toList();
+    final uniqueSections = {
+      for (final a in standardAssignments)
+        if (a.section.trim().isNotEmpty) a.section.trim().toUpperCase(),
+    };
+    final fallbackSection =
+        uniqueSections.length == 1 ? uniqueSections.first : null;
+    final existingPdfAsync = ref.watch(timetableProvider((
+      standardId: widget.standardId,
+      academicYearId: activeYear?.id,
+      section: fallbackSection,
+    )));
+
     final scheduleAsync = ref.watch(examScheduleProvider((
       standardId: widget.standardId,
       seriesId: selectedSeriesId,
@@ -154,6 +183,7 @@ class _ExamScheduleTableScreenState
           schedule: schedule,
           canManage: canManage,
           standardId: widget.standardId,
+          existingPdfAsync: existingPdfAsync,
           onPublish: () => _handlePublish(schedule.series),
           onCancelEntry: (entry) => _handleCancelEntry(entry),
           isPublishing: _isPublishing,
@@ -164,6 +194,7 @@ class _ExamScheduleTableScreenState
               schedule: _cachedSchedule!,
               canManage: canManage,
               standardId: widget.standardId,
+              existingPdfAsync: existingPdfAsync,
               onPublish: () => _handlePublish(_cachedSchedule!.series),
               onCancelEntry: (entry) => _handleCancelEntry(entry),
               isPublishing: _isPublishing,
@@ -247,6 +278,7 @@ class _ScheduleBody extends ConsumerWidget {
     required this.schedule,
     required this.canManage,
     required this.standardId,
+    required this.existingPdfAsync,
     required this.onPublish,
     required this.onCancelEntry,
     required this.isPublishing,
@@ -255,6 +287,7 @@ class _ScheduleBody extends ConsumerWidget {
   final ExamScheduleTable schedule;
   final bool canManage;
   final String standardId;
+  final AsyncValue<TimetableModel> existingPdfAsync;
   final VoidCallback onPublish;
   final ValueChanged<ExamEntryModel> onCancelEntry;
   final bool isPublishing;
@@ -313,6 +346,59 @@ class _ScheduleBody extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  existingPdfAsync.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (timetable) {
+                      final url = timetable.fileUrl;
+                      if (url == null || url.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding:
+                            const EdgeInsets.only(top: AppDimensions.space12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppDimensions.space12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Exam schedule file already uploaded for this class.',
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Open it before uploading again to avoid duplicates.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Uploaded by ${timetable.uploadedByName?.trim().isNotEmpty == true ? timetable.uploadedByName!.trim() : 'Staff'} on ${DateFormatter.formatDateTime(timetable.updatedAt)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () =>
+                                      _showOpenDialog(context, url),
+                                  icon: const Icon(Icons.open_in_new_rounded),
+                                  label: const Text('Open Uploaded File'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -430,4 +516,28 @@ class _ScheduleLoading extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showOpenDialog(BuildContext context, String url) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Open Uploaded Schedule'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Copy and open this link in your browser:'),
+          const SizedBox(height: 8),
+          SelectableText(url),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
 }

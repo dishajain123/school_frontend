@@ -89,19 +89,24 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return docs.where((d) => d.status == _statusFilter).toList();
   }
 
+  bool _isVerifiable(DocumentModel doc) {
+    final hasFile = (doc.fileKey ?? '').trim().isNotEmpty;
+    return doc.status == DocumentStatus.processing && hasFile;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final canGenerate = user?.hasPermission('document:generate') ?? false;
     final canManage = user?.hasPermission('document:manage') ?? false;
     final canUpload = _resolvedStudentId != null &&
-        (canGenerate || canManage) &&
         user != null &&
-        user.role != UserRole.trustee;
-    final canRequest = _resolvedStudentId != null &&
-        canGenerate &&
-        user != null &&
-        user.role != UserRole.trustee;
+        (user.role == UserRole.student ||
+            user.role == UserRole.parent ||
+            user.role == UserRole.teacher) &&
+        (canGenerate || canManage);
+    // In this workflow, documents are uploaded by student/parent and verified by principal.
+    const canRequest = false;
     final canVerify = user != null &&
         canManage &&
         (user.role == UserRole.principal || user.role == UserRole.superadmin);
@@ -109,11 +114,12 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
 
     final state = ref.watch(documentProvider);
     final filtered = _filtered(state.documents);
-    final hasPollable = state.documents.any((d) => d.isPollable);
+    final hasPendingVerification =
+        state.documents.any((d) => d.status == DocumentStatus.processing);
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: _buildAppBar(hasPollable),
+      appBar: _buildAppBar(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: (canRequest || canUpload)
           ? _buildFab(context, state, canRequest, canUpload)
@@ -125,10 +131,12 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            if (hasPollable)
+            if (hasPendingVerification)
               SliverToBoxAdapter(
                 child: _ProcessingBanner(
-                  count: state.documents.where((d) => d.isPollable).length,
+                  count: state.documents
+                      .where((d) => d.status == DocumentStatus.processing)
+                      .length,
                 ),
               ),
             SliverToBoxAdapter(
@@ -194,7 +202,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                   AppDimensions.pageHorizontal,
                   AppDimensions.space8,
                   AppDimensions.pageHorizontal,
-                  AppDimensions.space64,
+                  120,
                 ),
                 sliver: SliverList.separated(
                   itemCount: filtered.length,
@@ -211,8 +219,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                               ? () => _handleDownload(context, doc)
                               : null,
                         ),
-                        if (canVerify &&
-                            doc.status == DocumentStatus.processing)
+                        if (canVerify && _isVerifiable(doc))
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Row(
@@ -220,7 +227,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () =>
-                                        _rejectDocumentWithReason(context, doc.id),
+                                        _rejectDocumentWithReason(context, doc),
                                     icon: const Icon(Icons.close_rounded,
                                         size: 16),
                                     label: const Text('Reject'),
@@ -232,8 +239,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () =>
-                                        _verifyDocument(doc.id, true),
+                                    onPressed: () => _verifyDocument(doc, true),
                                     icon: const Icon(Icons.check_rounded,
                                         size: 16),
                                     label: const Text('Verify'),
@@ -244,6 +250,18 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                        if (canVerify &&
+                            doc.status == DocumentStatus.processing &&
+                            !_isVerifiable(doc))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Awaiting uploaded file before verification.',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.grey600,
+                              ),
                             ),
                           ),
                       ],
@@ -257,7 +275,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     );
   }
 
-  AppBar _buildAppBar(bool hasPollable) {
+  AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: AppColors.navyDeep,
       foregroundColor: AppColors.white,
@@ -277,14 +295,6 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Documents', style: AppTypography.titleLargeOnDark),
-          if (hasPollable)
-            Text(
-              'Generating in background…',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.goldPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
         ],
       ),
     );
@@ -296,7 +306,9 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     bool canRequest,
     bool canUpload,
   ) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom +
+        kBottomNavigationBarHeight +
+        8;
     final maxWidth =
         MediaQuery.sizeOf(context).width - (AppDimensions.space16 * 2);
 
@@ -536,7 +548,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result?.status == DocumentStatus.processing
-              ? 'Document is still being generated. Please wait.'
+              ? 'Document is still under verification. Please wait.'
               : 'Download link not available. Please try again.'),
           backgroundColor: AppColors.warningAmber,
           behavior: SnackBarBehavior.floating,
@@ -670,11 +682,11 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     final baseAllowed = DocumentType.values
         .where((type) => _canUploadTypeForRole(user.role, type))
         .toList(growable: false);
-    final allowedTypes = (user.role == UserRole.parent ||
-            user.role == UserRole.student) &&
-        requiredTypes.isNotEmpty
-        ? baseAllowed.where((t) => requiredTypes.contains(t)).toList()
-        : baseAllowed;
+    final allowedTypes =
+        (user.role == UserRole.parent || user.role == UserRole.student) &&
+                requiredTypes.isNotEmpty
+            ? baseAllowed.where((t) => requiredTypes.contains(t)).toList()
+            : baseAllowed;
     if (allowedTypes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -749,10 +761,23 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     );
   }
 
-  Future<void> _verifyDocument(String documentId, bool approve) async {
+  Future<void> _verifyDocument(DocumentModel document, bool approve) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final hasFile = (document.fileKey ?? '').trim().isNotEmpty;
+    if (!hasFile) {
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cannot verify yet. Uploaded file is missing for this document.',
+          ),
+          backgroundColor: AppColors.warningAmber,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     final ok = await ref.read(documentProvider.notifier).verifyDocument(
-          documentId: documentId,
+          documentId: document.id,
           approve: approve,
         );
     if (!mounted) return;
@@ -770,7 +795,21 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   }
 
   Future<void> _rejectDocumentWithReason(
-      BuildContext context, String documentId) async {
+      BuildContext context, DocumentModel document) async {
+    final hasFile = (document.fileKey ?? '').trim().isNotEmpty;
+    if (!hasFile) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cannot review yet. Uploaded file is missing for this document.',
+          ),
+          backgroundColor: AppColors.warningAmber,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     final reasonController = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
@@ -789,7 +828,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.of(ctx).pop(reasonController.text.trim()),
             child: const Text('Reject'),
           ),
         ],
@@ -799,7 +839,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     if (reason == null) return;
 
     final ok = await ref.read(documentProvider.notifier).verifyDocument(
-          documentId: documentId,
+          documentId: document.id,
           approve: false,
           reason: reason,
         );
@@ -821,10 +861,12 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     final notesByType = <DocumentType, TextEditingController>{
       for (final t in DocumentType.values)
         t: TextEditingController(
-          text: current.firstWhere(
-            (e) => e.documentType == t,
-            orElse: () => RequiredDocumentModel(documentType: t),
-          ).note ??
+          text: current
+                  .firstWhere(
+                    (e) => e.documentType == t,
+                    orElse: () => RequiredDocumentModel(documentType: t),
+                  )
+                  .note ??
               '',
         ),
     };
@@ -916,14 +958,16 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     if (!context.mounted) return;
 
     final messenger = ScaffoldMessenger.maybeOf(context);
-    final ok =
-        await ref.read(documentProvider.notifier).saveRequiredDocuments(payload);
+    final ok = await ref
+        .read(documentProvider.notifier)
+        .saveRequiredDocuments(payload);
     if (!mounted) return;
     messenger?.showSnackBar(
       SnackBar(
         content: Text(ok
             ? 'Required documents updated.'
-            : (ref.read(documentProvider).error ?? 'Failed to save requirements')),
+            : (ref.read(documentProvider).error ??
+                'Failed to save requirements')),
         backgroundColor: ok ? AppColors.successGreen : AppColors.errorRed,
         behavior: SnackBarBehavior.floating,
       ),
@@ -991,7 +1035,8 @@ class _RequiredDocsPanel extends StatelessWidget {
                       : AppColors.warningAmber;
               return ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(item.documentType.icon, color: item.documentType.color),
+                leading: Icon(item.documentType.icon,
+                    color: item.documentType.color),
                 title: Text(item.documentType.label),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,8 +1137,8 @@ class _ProcessingBanner extends StatelessWidget {
           Expanded(
             child: Text(
               count == 1
-                  ? '1 document is being generated…'
-                  : '$count documents are being generated…',
+                  ? '1 document is pending principal verification.'
+                  : '$count documents are pending principal verification.',
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.infoDark,
                 fontWeight: FontWeight.w500,
@@ -1110,7 +1155,7 @@ class _ProcessingBanner extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             child: Text(
-              'Auto-refreshing',
+              'Pending Review',
               style: AppTypography.caption.copyWith(
                 color: AppColors.infoBlue,
                 fontWeight: FontWeight.w600,

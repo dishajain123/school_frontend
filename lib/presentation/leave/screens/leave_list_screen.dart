@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,26 +28,64 @@ class LeaveListScreen extends ConsumerStatefulWidget {
 }
 
 class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _principalTabController;
   late TabController _teacherTabController;
+  Timer? _autoRefreshTimer;
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _principalTabController = TabController(length: 4, vsync: this);
     _teacherTabController = TabController(length: 4, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
+    _autoRefreshTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refreshIfAllowed(),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     _principalTabController.dispose();
     _teacherTabController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshIfAllowed();
+    }
+  }
+
+  bool _canAccessLeave(CurrentUser? user) {
+    if (user == null) return false;
+    return user.hasPermission('leave:read') ||
+        user.hasPermission('leave:apply') ||
+        user.hasPermission('leave:approve') ||
+        user.role == UserRole.teacher ||
+        user.role == UserRole.principal ||
+        user.role == UserRole.trustee;
+  }
+
   void _initLoad() {
+    final user = ref.read(currentUserProvider);
+    if (!_canAccessLeave(user)) return;
+    _initialLoadDone = true;
+    ref.read(leaveNotifierProvider.notifier).load(
+          statusFilter: null,
+          refresh: true,
+        );
+  }
+
+  void _refreshIfAllowed() {
+    if (!mounted) return;
+    final user = ref.read(currentUserProvider);
+    if (!_canAccessLeave(user)) return;
     ref.read(leaveNotifierProvider.notifier).load(
           statusFilter: null,
           refresh: true,
@@ -55,15 +95,38 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final canAccessLeave = _canAccessLeave(user);
+    if (canAccessLeave && !_initialLoadDone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
+    }
+
+    if (!canAccessLeave) {
+      return const AppScaffold(
+        appBar: AppAppBar(
+          title: 'Leave Requests',
+          showBack: true,
+        ),
+        body: AppEmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'Access Restricted',
+          subtitle: 'Your role does not have access to leave requests.',
+          iconColor: AppColors.grey400,
+        ),
+      );
+    }
+
     final isPrincipal =
-        user?.role == UserRole.principal || user?.role == UserRole.trustee;
+        (user?.role == UserRole.principal || user?.role == UserRole.trustee) ||
+            (user?.hasPermission('leave:approve') ?? false);
+    final isTeacher = (user?.role == UserRole.teacher) ||
+        ((user?.hasPermission('leave:apply') ?? false) && !isPrincipal);
 
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Leave Requests',
         showBack: true,
         actions: [
-          if (!isPrincipal)
+          if (isTeacher)
             IconButton(
               icon: const Icon(
                 Icons.account_balance_wallet_outlined,
@@ -94,7 +157,7 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
                 ],
               ),
       ),
-      floatingActionButton: !isPrincipal
+      floatingActionButton: isTeacher
           ? FloatingActionButton(
               onPressed: () => context.push(RouteNames.applyLeave),
               tooltip: 'Apply Leave',

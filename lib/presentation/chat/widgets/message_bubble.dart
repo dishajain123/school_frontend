@@ -12,12 +12,14 @@ class MessageBubble extends StatelessWidget {
     required this.isMine,
     this.showSenderLabel = false,
     this.previousMessage,
+    this.onDoubleTap,
   });
 
   final MessageModel message;
   final bool isMine;
   final bool showSenderLabel;
   final MessageModel? previousMessage;
+  final VoidCallback? onDoubleTap;
 
   bool get _isSameMinute {
     if (previousMessage == null) return false;
@@ -47,7 +49,20 @@ class MessageBubble extends StatelessWidget {
               isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _BubbleBody(message: message, isMine: isMine),
+            _BubbleBody(
+              message: message,
+              isMine: isMine,
+              onDoubleTap: onDoubleTap,
+            ),
+            if (message.reactions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: _ReactionRow(
+                  reactions: message.reactions,
+                  isMine: isMine,
+                  myReaction: message.myReaction,
+                ),
+              ),
             if (!_isSameMinute)
               Padding(
                 padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
@@ -67,9 +82,14 @@ class MessageBubble extends StatelessWidget {
 }
 
 class _BubbleBody extends StatelessWidget {
-  const _BubbleBody({required this.message, required this.isMine});
+  const _BubbleBody({
+    required this.message,
+    required this.isMine,
+    this.onDoubleTap,
+  });
   final MessageModel message;
   final bool isMine;
+  final VoidCallback? onDoubleTap;
 
   Color get _bgColor => isMine ? AppColors.navyMedium : AppColors.white;
 
@@ -77,28 +97,31 @@ class _BubbleBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.72,
-      ),
-      decoration: BoxDecoration(
-        color: _bgColor,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMine ? 18 : 4),
-          bottomRight: Radius.circular(isMine ? 4 : 18),
+    return GestureDetector(
+      onDoubleTap: onDoubleTap,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.72,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: isMine ? 0.15 : 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        decoration: BoxDecoration(
+          color: _bgColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isMine ? 18 : 4),
+            bottomRight: Radius.circular(isMine ? 4 : 18),
           ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep.withValues(alpha: isMine ? 0.15 : 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: _buildContent(),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: _buildContent(),
     );
   }
 
@@ -117,6 +140,56 @@ class _BubbleBody extends StatelessWidget {
         fontSize: 14,
       ),
     );
+  }
+}
+
+class _ReactionRow extends StatelessWidget {
+  const _ReactionRow({
+    required this.reactions,
+    required this.isMine,
+    required this.myReaction,
+  });
+
+  final List<MessageReactionSummary> reactions;
+  final bool isMine;
+  final String? myReaction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: isMine ? WrapAlignment.end : WrapAlignment.start,
+      spacing: 6,
+      runSpacing: 4,
+      children: reactions.map((reaction) {
+        final isMineReaction =
+            myReaction != null && myReaction == reaction.emoji;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: isMineReaction
+                ? AppColors.infoBlue.withValues(alpha: 0.15)
+                : AppColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isMineReaction ? AppColors.infoBlue : AppColors.surface200,
+            ),
+          ),
+          child: Text(
+            '${reaction.emoji} ${reaction.count}',
+            style: AppTypography.caption.copyWith(
+              color: _labelColor(reaction.emoji),
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Color _labelColor(String emoji) {
+    if (emoji == '❤️') return AppColors.errorRed;
+    return AppColors.grey700;
   }
 }
 

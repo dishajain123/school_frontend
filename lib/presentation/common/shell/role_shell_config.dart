@@ -162,12 +162,6 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.attendance,
     ),
     ShellTabItem(
-      icon: Icons.assignment_outlined,
-      activeIcon: Icons.assignment,
-      label: 'Assignments',
-      rootPath: RouteNames.assignments,
-    ),
-    ShellTabItem(
       icon: Icons.menu_book_outlined,
       activeIcon: Icons.menu_book,
       label: 'Diary',

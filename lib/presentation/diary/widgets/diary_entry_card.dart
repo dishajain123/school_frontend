@@ -24,19 +24,50 @@ class DiaryEntryCard extends StatelessWidget {
   final String? subjectName;
   final VoidCallback? onTap;
 
+  static String _formatDisplayName(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'Teacher';
+    if (!trimmed.contains('@')) return trimmed;
+
+    final local = trimmed.split('@').first;
+    final parts = local
+        .split(RegExp(r'[._-]+'))
+        .where((p) => p.trim().isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'Teacher';
+    return parts
+        .map(
+          (part) =>
+              '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+        )
+        .join(' ');
+  }
+
   // ── Colour helpers ──────────────────────────────────────────────────────────
 
   static Color _colorFromName(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('math')) return _SubjectColors.subjectMath;
-    if (lower.contains('science') || lower.contains('bio'))
+    if (lower.contains('math')) {
+      return _SubjectColors.subjectMath;
+    }
+    if (lower.contains('science') || lower.contains('bio')) {
       return _SubjectColors.subjectScience;
-    if (lower.contains('english')) return _SubjectColors.subjectEnglish;
-    if (lower.contains('hindi')) return _SubjectColors.subjectHindi;
-    if (lower.contains('history') || lower.contains('social'))
+    }
+    if (lower.contains('english')) {
+      return _SubjectColors.subjectEnglish;
+    }
+    if (lower.contains('hindi')) {
+      return _SubjectColors.subjectHindi;
+    }
+    if (lower.contains('history') || lower.contains('social')) {
       return _SubjectColors.subjectHistory;
-    if (lower.contains('physics')) return _SubjectColors.subjectPhysics;
-    if (lower.contains('chem')) return _SubjectColors.subjectChem;
+    }
+    if (lower.contains('physics')) {
+      return _SubjectColors.subjectPhysics;
+    }
+    if (lower.contains('chem')) {
+      return _SubjectColors.subjectChem;
+    }
     return _SubjectColors.subjectDefault;
   }
 
@@ -51,8 +82,7 @@ class DiaryEntryCard extends StatelessWidget {
       _SubjectColors.subjectChem,
       _SubjectColors.subjectDefault,
     ];
-    final index =
-        id.codeUnits.fold(0, (acc, x) => acc + x) % palette.length;
+    final index = id.codeUnits.fold(0, (acc, x) => acc + x) % palette.length;
     return palette[index];
   }
 
@@ -65,6 +95,14 @@ class DiaryEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _accentColor;
+    final resolvedSubjectName = (subjectName?.trim().isNotEmpty ?? false)
+        ? subjectName!.trim()
+        : ((diary.subjectName?.trim().isNotEmpty ?? false)
+            ? diary.subjectName!.trim()
+            : null);
+    final createdByName = (diary.createdByName?.trim().isNotEmpty ?? false)
+        ? _formatDisplayName(diary.createdByName!)
+        : null;
     final hasHomeworkNote =
         diary.homeworkNote != null && diary.homeworkNote!.isNotEmpty;
 
@@ -83,12 +121,11 @@ class DiaryEntryCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius:
-                  BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               border: Border.all(color: AppColors.surface200),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.navyDeep.withOpacity(0.04),
+                  color: AppColors.navyDeep.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -105,8 +142,7 @@ class DiaryEntryCard extends StatelessWidget {
                       color: color,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(AppDimensions.radiusMedium),
-                        bottomLeft:
-                            Radius.circular(AppDimensions.radiusMedium),
+                        bottomLeft: Radius.circular(AppDimensions.radiusMedium),
                       ),
                     ),
                   ),
@@ -122,11 +158,10 @@ class DiaryEntryCard extends StatelessWidget {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              if (subjectName != null) ...[
+                              if (resolvedSubjectName != null) ...[
                                 _SubjectChip(
-                                    name: subjectName!, color: color),
-                                const SizedBox(
-                                    width: AppDimensions.space8),
+                                    name: resolvedSubjectName, color: color),
+                                const SizedBox(width: AppDimensions.space8),
                               ],
                               const Spacer(),
                               _DateLabel(date: diary.date),
@@ -154,6 +189,16 @@ class DiaryEntryCard extends StatelessWidget {
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (createdByName != null) ...[
+                            const SizedBox(height: AppDimensions.space6),
+                            Text(
+                              'By $createdByName',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.grey500,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
 
                           // Homework note section (optional)
                           if (hasHomeworkNote) ...[
@@ -166,7 +211,7 @@ class DiaryEntryCard extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: color.withOpacity(0.10),
+                                    color: color.withValues(alpha: 0.10),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Icon(
@@ -193,8 +238,7 @@ class DiaryEntryCard extends StatelessWidget {
                                       const SizedBox(height: 2),
                                       Text(
                                         diary.homeworkNote!,
-                                        style:
-                                            AppTypography.bodySmall.copyWith(
+                                        style: AppTypography.bodySmall.copyWith(
                                           color: AppColors.grey600,
                                           height: 1.5,
                                         ),
@@ -234,7 +278,7 @@ class _SubjectChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
       ),
       child: Text(
@@ -258,7 +302,7 @@ class _DateLabel extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.calendar_today_outlined,
+        const Icon(Icons.calendar_today_outlined,
             size: 11, color: AppColors.grey400),
         const SizedBox(width: 4),
         Text(

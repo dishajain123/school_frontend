@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/leave/leave_balance_model.dart';
 import '../data/models/leave/leave_model.dart';
 import '../data/repositories/leave_repository.dart';
+import 'dashboard_provider.dart';
 
 // ── Leave List State ──────────────────────────────────────────────────────────
 
@@ -151,6 +152,8 @@ class LeaveNotifier extends AsyncNotifier<LeaveListState> {
 
       // Invalidate balance cache since applying uses balance
       ref.invalidate(leaveBalanceProvider);
+      ref.invalidate(teacherDashboardStatsProvider);
+      ref.invalidate(principalDashboardStatsProvider);
 
       return created;
     } catch (e) {
@@ -192,6 +195,10 @@ class LeaveNotifier extends AsyncNotifier<LeaveListState> {
           isSubmitting: false,
         ),
       );
+
+      // Keep dashboard counters in sync after leave approval/rejection.
+      ref.invalidate(teacherDashboardStatsProvider);
+      ref.invalidate(principalDashboardStatsProvider);
 
       return updated;
     } catch (e) {
@@ -240,6 +247,22 @@ final teacherLeaveBalanceProvider =
   (ref, params) async {
     final repo = ref.read(leaveRepositoryProvider);
     return repo.getTeacherBalance(
+      teacherId: params.teacherId,
+      academicYearId: params.academicYearId,
+    );
+  },
+);
+
+typedef TeacherLeavesParams = ({
+  String teacherId,
+  String? academicYearId
+});
+
+final teacherLeavesProvider =
+    FutureProvider.family<LeaveListResponse, TeacherLeavesParams>(
+  (ref, params) async {
+    final repo = ref.read(leaveRepositoryProvider);
+    return repo.list(
       teacherId: params.teacherId,
       academicYearId: params.academicYearId,
     );

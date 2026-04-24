@@ -16,7 +16,6 @@ class ResultRepository {
   // ── POST /results/exams ────────────────────────────────────────────────────
   Future<ExamModel> createExam({
     required String name,
-    required String examType,
     required String standardId,
     required String startDate,
     required String endDate,
@@ -24,7 +23,6 @@ class ResultRepository {
   }) async {
     final body = <String, dynamic>{
       'name': name,
-      'exam_type': examType,
       'standard_id': standardId,
       'start_date': startDate,
       'end_date': endDate,
@@ -32,6 +30,25 @@ class ResultRepository {
     };
     final response = await _dio.post('$_base/exams', data: body);
     return ExamModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ExamBulkCreateResponseModel> createExamForAllClasses({
+    required String name,
+    required String startDate,
+    required String endDate,
+    String? academicYearId,
+  }) async {
+    final body = <String, dynamic>{
+      'name': name,
+      'apply_to_all_standards': true,
+      'start_date': startDate,
+      'end_date': endDate,
+      if (academicYearId != null) 'academic_year_id': academicYearId,
+    };
+    final response = await _dio.post('$_base/exams/bulk', data: body);
+    return ExamBulkCreateResponseModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   // ── POST /results/entries ──────────────────────────────────────────────────

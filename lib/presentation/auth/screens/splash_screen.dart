@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
 import '../widgets/school_logo.dart';
@@ -143,7 +144,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             child: Column(
                               children: [
                                 Text(
-                                  'EduNest',
+                                  AppConstants.appName,
                                   style: AppTypography.displayLarge.copyWith(
                                     color: AppColors.white,
                                     fontWeight: FontWeight.w800,
@@ -192,15 +193,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                     letterSpacing: 0.4,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'v1.0.0',
-                                  style: AppTypography.caption.copyWith(
-                                    color:
-                                        AppColors.white.withValues(alpha: 0.25),
-                                    fontSize: 10,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -239,32 +231,10 @@ class _GlowCircle extends StatelessWidget {
 class _LogoMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 88,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.goldPrimary, AppColors.goldDark],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.goldPrimary.withValues(alpha: 0.45),
-            blurRadius: 32,
-            offset: const Offset(0, 10),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      child: const Center(
-        child: SchoolLogo(
-          size: 60,
-          borderRadius: 12,
-          imagePadding: 6,
-        ),
-      ),
+    return const SchoolLogo(
+      size: 98,
+      borderRadius: 16,
+      imagePadding: 6,
     );
   }
 }

@@ -56,6 +56,26 @@ class ComplaintListState {
 }
 
 class ComplaintNotifier extends AsyncNotifier<ComplaintListState> {
+  bool _matchesActiveFilters(
+    ComplaintModel complaint,
+    ComplaintListState state,
+  ) {
+    if (state.statusFilter != null && complaint.status != state.statusFilter) {
+      return false;
+    }
+    if (state.categoryFilter != null &&
+        complaint.category != state.categoryFilter) {
+      return false;
+    }
+    if (state.complainantTypeFilter != null) {
+      final expectedRole = state.complainantTypeFilter!.backendValue;
+      if ((complaint.submittedByRole ?? '').toUpperCase() != expectedRole) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @override
   Future<ComplaintListState> build() async {
     return const ComplaintListState();
@@ -192,11 +212,22 @@ class ComplaintNotifier extends AsyncNotifier<ComplaintListState> {
       );
 
       final latest = state.valueOrNull ?? const ComplaintListState();
+      final existingIndex = latest.items.indexWhere((c) => c.id == complaintId);
+      final nextItems = latest.items
+          .where((c) => c.id != complaintId)
+          .toList(growable: true);
+      if (_matchesActiveFilters(updated, latest)) {
+        if (existingIndex >= 0 && existingIndex <= nextItems.length) {
+          nextItems.insert(existingIndex, updated);
+        } else {
+          nextItems.add(updated);
+        }
+      }
+
       state = AsyncData(
         latest.copyWith(
-          items: latest.items
-              .map((c) => c.id == complaintId ? updated : c)
-              .toList(),
+          items: nextItems,
+          total: nextItems.length,
           isSubmitting: false,
         ),
       );

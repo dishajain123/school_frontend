@@ -3,15 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/result/result_model.dart';
 import '../../../data/models/student/student_model.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
+import '../../../data/repositories/student_repository.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/attendance_provider.dart';
-import '../../../providers/masters_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/result_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
@@ -24,6 +27,11 @@ typedef _ExamSetupParams = ({
   String? section,
 });
 
+typedef _ExistingMarksParams = ({
+  String examId,
+  String? section,
+});
+
 final _examSetupProvider =
     FutureProvider.family<_ExamSetupData, _ExamSetupParams>(
   (ref, params) async {
@@ -32,12 +40,29 @@ final _examSetupProvider =
     }
 
     final activeYear = ref.watch(activeYearProvider);
-    if (activeYear == null) {
-      throw Exception('No active academic year found.');
+    final exams = await ref.watch(
+      examListProvider((
+        studentId: null,
+        academicYearId: null,
+        standardId: params.standardId,
+      )).future,
+    );
+    ExamModel? selectedExam;
+    for (final exam in exams) {
+      if (exam.id == params.examId) {
+        selectedExam = exam;
+        break;
+      }
+    }
+    final resolvedAcademicYearId =
+        selectedExam?.academicYearId ?? activeYear?.id;
+    if (resolvedAcademicYearId == null || resolvedAcademicYearId.isEmpty) {
+      throw Exception('No academic year context found for selected exam.');
     }
 
-    final assignments =
-        await ref.watch(myTeacherAssignmentsProvider(activeYear.id).future);
+    final assignments = await ref.watch(
+      myTeacherAssignmentsProvider(resolvedAcademicYearId).future,
+    );
 
     final normalizedSection = params.section?.trim();
     TeacherClassSubjectModel? selectedAssignment;
@@ -55,51 +80,182 @@ final _examSetupProvider =
     if (selectedAssignment == null) {
       throw Exception('No teacher assignment found for selected class.');
     }
+    final selectedAssignmentValue = selectedAssignment;
 
-    final students = await ref.watch(
-      studentsForAttendanceProvider(
-        (
+    final studentRepo = ref.read(studentRepositoryProvider);
+
+    final effectiveSection =
+        (normalizedSection != null && normalizedSection.isNotEmpty)
+            ? normalizedSection
+            : selectedAssignmentValue.section.trim();
+
+    Future<List<StudentModel>> fetchStudentsForScope({
+      required String? academicYearId,
+      required String? section,
+    }) async {
+      final students = <StudentModel>[];
+      var page = 1;
+      var totalPages = 1;
+      do {
+        final result = await studentRepo.list(
           standardId: params.standardId,
-          section: selectedAssignment.section,
-          academicYearId: activeYear.id,
-        ),
-      ).future,
-    );
+          section: section,
+          academicYearId: academicYearId,
+          page: page,
+          pageSize: 100,
+        );
+        students.addAll(result.items);
+        totalPages = result.totalPages <= 0 ? 1 : result.totalPages;
+        page += 1;
+      } while (page <= totalPages);
+      return students;
+    }
 
-    final subjects =
-        await ref.watch(subjectsProvider(params.standardId).future);
-    final exams = await ref.watch(
-      examListProvider((
-        studentId: null,
-        academicYearId: activeYear.id,
-        standardId: params.standardId,
-      )).future,
+    // Permanent roster strategy:
+    // 1) exam-year scoped students
+    // 2) current class/section students (fallback for rollover inconsistencies)
+    // 3) students already having marks in this exam (always include)
+    final examYearStudents = await fetchStudentsForScope(
+      academicYearId: resolvedAcademicYearId,
+      section: effectiveSection,
     );
-    ExamModel? selectedExam;
-    for (final exam in exams) {
-      if (exam.id == params.examId) {
-        selectedExam = exam;
-        break;
+    final currentRosterStudents = await fetchStudentsForScope(
+      academicYearId: null,
+      section: effectiveSection,
+    );
+    final studentsById = <String, StudentModel>{
+      for (final student in examYearStudents) student.id: student,
+    };
+    for (final student in currentRosterStudents) {
+      studentsById.putIfAbsent(student.id, () => student);
+    }
+
+    // Fallback: if section-scoped roster is empty (common after promotions
+    // or reassignment timing), load full class roster so marks entry is not blocked.
+    if (studentsById.isEmpty) {
+      final classWideStudents = await fetchStudentsForScope(
+        academicYearId: resolvedAcademicYearId,
+        section: null,
+      );
+      for (final student in classWideStudents) {
+        studentsById.putIfAbsent(student.id, () => student);
+      }
+    }
+    if (studentsById.isEmpty) {
+      final classWideAnyYear = await fetchStudentsForScope(
+        academicYearId: null,
+        section: null,
+      );
+      for (final student in classWideAnyYear) {
+        studentsById.putIfAbsent(student.id, () => student);
       }
     }
 
-    final examSubjects = subjects
-        .map(
-          (s) => _ExamSubject(
-            id: s.id,
-            name: s.name,
-            code: s.code,
-            maxMarks: 100,
-          ),
-        )
-        .toList();
+    try {
+      final distribution = await ref.read(
+        examDistributionProvider((
+          examId: params.examId,
+          section: selectedAssignmentValue.section,
+          studentId: null,
+        )).future,
+      );
+      for (final item in distribution.items) {
+        if (studentsById.containsKey(item.studentId)) continue;
+        try {
+          final fetched = await studentRepo.getById(item.studentId);
+          studentsById[item.studentId] = fetched;
+        } catch (_) {
+          // Ignore missing/inaccessible students; keep other roster entries.
+        }
+      }
+    } catch (_) {
+      // Distribution can fail for brand-new exams; roster still comes from class map.
+    }
+
+    final students = studentsById.values.toList();
+
+    int rollOrder(StudentModel s) {
+      final raw = s.rollNumber?.trim() ?? '';
+      final match = RegExp(r'\d+').firstMatch(raw);
+      return int.tryParse(match?.group(0) ?? '') ?? 999999;
+    }
+
+    students.sort((a, b) {
+      final byRoll = rollOrder(a).compareTo(rollOrder(b));
+      if (byRoll != 0) return byRoll;
+      return a.admissionNumber
+          .toLowerCase()
+          .compareTo(b.admissionNumber.toLowerCase());
+    });
+
+    final scopedAssignments = assignments.where((assignment) {
+      if (assignment.standardId != params.standardId) return false;
+      if (normalizedSection == null || normalizedSection.isEmpty) return true;
+      return assignment.section.trim() == normalizedSection;
+    }).toList();
+    if (scopedAssignments.isEmpty) {
+      throw Exception(
+          'No teacher assignment found for selected class/section.');
+    }
+
+    final examSubjects = <_ExamSubject>[];
+    final seenSubjectIds = <String>{};
+    for (final assignment in scopedAssignments) {
+      final subjectId = assignment.subjectId.trim();
+      if (subjectId.isEmpty || !seenSubjectIds.add(subjectId)) continue;
+      final subjectName = assignment.subjectName?.trim().isNotEmpty == true
+          ? assignment.subjectName!.trim()
+          : 'Subject';
+      final subjectCode = assignment.subjectCode?.trim().isNotEmpty == true
+          ? assignment.subjectCode!.trim()
+          : '';
+      examSubjects.add(
+        _ExamSubject(
+          id: subjectId,
+          name: subjectName,
+          code: subjectCode,
+          maxMarks: 100,
+        ),
+      );
+    }
+    if (examSubjects.isEmpty) {
+      throw Exception('No assigned subjects found for this class/section.');
+    }
 
     return _ExamSetupData(
       examName: selectedExam?.name ?? 'Selected Exam',
-      standardName: selectedAssignment.classLabel,
+      standardName: selectedAssignmentValue.classLabel,
       students: students,
       subjects: examSubjects,
     );
+  },
+);
+
+final _existingMarksProvider =
+    FutureProvider.family<Map<String, _ExistingMark>, _ExistingMarksParams>(
+  (ref, params) async {
+    try {
+      final distribution = await ref.watch(
+        examDistributionProvider((
+          examId: params.examId,
+          section: params.section,
+          studentId: null,
+        )).future,
+      );
+      final existing = <String, _ExistingMark>{};
+      for (final student in distribution.items) {
+        for (final subject in student.subjects) {
+          existing['${student.studentId}::${subject.subjectId}'] =
+              _ExistingMark(
+            marksObtained: subject.marksObtained,
+            maxMarks: subject.maxMarks,
+          );
+        }
+      }
+      return existing;
+    } catch (_) {
+      return const <String, _ExistingMark>{};
+    }
   },
 );
 
@@ -121,7 +277,9 @@ class EnterResultsScreen extends ConsumerStatefulWidget {
 
 class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
     with SingleTickerProviderStateMixin {
-  final Map<String, Map<String, TextEditingController>> _controllers = {};
+  final Map<String, Map<String, TextEditingController>> _marksControllers = {};
+  final Map<String, Map<String, TextEditingController>> _maxControllers = {};
+  final Set<String> _hydratedEntryKeys = <String>{};
   bool _isSubmitting = false;
   String? _selectedStandardId;
   String? _selectedSection;
@@ -149,19 +307,88 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
 
   @override
   void dispose() {
-    for (final studentMap in _controllers.values) {
-      for (final ctrl in studentMap.values) {
-        ctrl.dispose();
-      }
-    }
+    _disposeControllers();
     _animCtrl.dispose();
     super.dispose();
   }
 
-  TextEditingController _getCtrl(String studentId, String subjectId) {
-    _controllers[studentId] ??= {};
-    _controllers[studentId]![subjectId] ??= TextEditingController();
-    return _controllers[studentId]![subjectId]!;
+  void _disposeControllers() {
+    for (final studentMap in _marksControllers.values) {
+      for (final ctrl in studentMap.values) {
+        ctrl.dispose();
+      }
+    }
+    for (final studentMap in _maxControllers.values) {
+      for (final ctrl in studentMap.values) {
+        ctrl.dispose();
+      }
+    }
+    _marksControllers.clear();
+    _maxControllers.clear();
+    _hydratedEntryKeys.clear();
+  }
+
+  void _resetEntryInputs() {
+    _disposeControllers();
+  }
+
+  TextEditingController _getMarksCtrl(String studentId, String subjectId) {
+    _marksControllers[studentId] ??= {};
+    _marksControllers[studentId]![subjectId] ??= TextEditingController();
+    return _marksControllers[studentId]![subjectId]!;
+  }
+
+  TextEditingController _getMaxCtrl(
+      String studentId, String subjectId, double defaultMaxMarks) {
+    _maxControllers[studentId] ??= {};
+    _maxControllers[studentId]![subjectId] ??=
+        TextEditingController(text: defaultMaxMarks.toStringAsFixed(0));
+    return _maxControllers[studentId]![subjectId]!;
+  }
+
+  bool _looksLikeDuplicateSaveError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('already exists') ||
+        lower.contains('duplicate') ||
+        lower.contains('uq_result_exam_student_subject') ||
+        lower.contains('unique constraint');
+  }
+
+  String _entryKey(String studentId, String subjectId) {
+    return '$studentId::$subjectId';
+  }
+
+  String _formatNumericValue(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
+  }
+
+  void _hydrateExistingEntries(
+    _ExamSetupData examSetup,
+    Map<String, _ExistingMark> existingMarks,
+  ) {
+    for (final student in examSetup.students) {
+      for (final subject in examSetup.subjects) {
+        final key = _entryKey(student.id, subject.id);
+        if (_hydratedEntryKeys.contains(key)) continue;
+
+        final marksCtrl = _getMarksCtrl(student.id, subject.id);
+        final maxCtrl = _getMaxCtrl(student.id, subject.id, subject.maxMarks);
+        final existing = existingMarks[key];
+        if (existing != null) {
+          if (marksCtrl.text.trim().isEmpty) {
+            marksCtrl.text = _formatNumericValue(existing.marksObtained);
+          }
+          if (maxCtrl.text.trim().isEmpty ||
+              maxCtrl.text.trim() == subject.maxMarks.toStringAsFixed(0)) {
+            maxCtrl.text = _formatNumericValue(existing.maxMarks);
+          }
+        }
+        _hydratedEntryKeys.add(key);
+      }
+    }
   }
 
   Future<void> _submit(_ExamSetupData examSetup) async {
@@ -171,25 +398,52 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
       return;
     }
 
-    final subjectMaxById = <String, double>{
-      for (final subject in examSetup.subjects) subject.id: subject.maxMarks,
-    };
     final entries = <Map<String, dynamic>>[];
-    for (final entry in _controllers.entries) {
-      final studentId = entry.key;
-      for (final subEntry in entry.value.entries) {
-        final subjectId = subEntry.key;
-        final marks = double.tryParse(subEntry.value.text.trim());
-        final maxMarks = subjectMaxById[subjectId] ?? 100;
-        if (marks != null) {
-          entries.add({
-            'student_id': studentId,
-            'subject_id': subjectId,
-            'marks_obtained': marks,
-            'max_marks': maxMarks,
-          });
+    String? validationError;
+    for (final student in examSetup.students) {
+      for (final subject in examSetup.subjects) {
+        final marksCtrl = _getMarksCtrl(student.id, subject.id);
+        final maxCtrl = _getMaxCtrl(student.id, subject.id, subject.maxMarks);
+        final marksText = marksCtrl.text.trim();
+        final maxText = maxCtrl.text.trim();
+
+        final hasMarks = marksText.isNotEmpty;
+        final hasMax = maxText.isNotEmpty;
+        if (!hasMarks && !hasMax) {
+          continue;
         }
+
+        final marks = double.tryParse(marksText);
+        final maxMarks = double.tryParse(maxText);
+        if (!hasMarks || marks == null || marks < 0) {
+          validationError =
+              'Enter valid obtained marks for ${student.displayName} (${subject.name}).';
+          break;
+        }
+        if (!hasMax || maxMarks == null || maxMarks <= 0) {
+          validationError =
+              'Enter valid total marks for ${student.displayName} (${subject.name}).';
+          break;
+        }
+        if (marks > maxMarks) {
+          validationError =
+              'Obtained marks cannot exceed total marks for ${student.displayName} (${subject.name}).';
+          break;
+        }
+
+        entries.add({
+          'student_id': student.id,
+          'subject_id': subject.id,
+          'marks_obtained': marks,
+          'max_marks': maxMarks,
+        });
       }
+      if (validationError != null) break;
+    }
+
+    if (validationError != null) {
+      SnackbarUtils.showError(context, validationError);
+      return;
     }
 
     if (entries.isEmpty) {
@@ -205,9 +459,17 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
           );
       if (mounted && result != null) {
         SnackbarUtils.showSuccess(context, 'Results saved successfully.');
-        context.pop(true);
       } else if (mounted) {
-        SnackbarUtils.showError(context, 'Failed to save results.');
+        final err =
+            ref.read(enterResultsProvider).error ?? 'Failed to save results.';
+        if (_looksLikeDuplicateSaveError(err)) {
+          SnackbarUtils.showInfo(
+            context,
+            'Results already exist. Edit marks and save again to update.',
+          );
+          return;
+        }
+        SnackbarUtils.showError(context, err);
       }
     } catch (e) {
       if (mounted) SnackbarUtils.showError(context, e.toString());
@@ -218,10 +480,27 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
     final activeYear = ref.watch(activeYearProvider);
-    final resolvedExamId = widget.examId ?? _selectedExamId;
-    final resolvedStandardId = widget.standardId ?? _selectedStandardId;
-    final resolvedSection = widget.section ?? _selectedSection;
+    final resolvedExamId = _selectedExamId ?? widget.examId;
+    final resolvedStandardId = _selectedStandardId ?? widget.standardId;
+    final resolvedSection = _selectedSection ?? widget.section;
+    final existingMarksAsync =
+        (resolvedExamId == null || resolvedExamId.isEmpty)
+            ? const AsyncValue<Map<String, _ExistingMark>>.data(
+                <String, _ExistingMark>{},
+              )
+            : ref.watch(_existingMarksProvider((
+                examId: resolvedExamId,
+                section: resolvedSection,
+              )));
+    final canCreateExam = currentUser?.role == UserRole.principal ||
+        currentUser?.role == UserRole.superadmin;
+    final canUploadPdf = currentUser != null &&
+        currentUser.hasPermission('result:create') &&
+        (currentUser.role == UserRole.teacher ||
+            currentUser.role == UserRole.principal ||
+            currentUser.role == UserRole.superadmin);
 
     final assignmentsAsync = activeYear == null
         ? const AsyncValue<List<TeacherClassSubjectModel>>.data(
@@ -246,7 +525,11 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
     if (needsSelection) {
       return Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: const AppAppBar(title: 'Enter Results', showBack: true),
+        appBar: AppAppBar(
+          title: 'Enter Results',
+          showBack: true,
+          onBackPressed: () => context.go(RouteNames.dashboard),
+        ),
         body: _SelectionPanel(
           assignmentsAsync: assignmentsAsync,
           examsAsync: examsAsync,
@@ -255,30 +538,41 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
           selectedExamId: resolvedExamId,
           onClassSectionChanged: (standardId, section) {
             setState(() {
+              _resetEntryInputs();
               _selectedStandardId = standardId;
               _selectedSection = section;
               _selectedExamId = null;
             });
           },
-          onExamChanged: (examId) => setState(() => _selectedExamId = examId),
-          onCreateExam: (standardId) async {
-            if (activeYear == null) return;
-            final created = await _openCreateExamDialog(
-              context: context,
-              standardId: standardId,
-              academicYearId: activeYear.id,
-            );
-            if (created != null) {
-              ref.invalidate(
-                examListProvider((
-                  studentId: null,
-                  academicYearId: activeYear.id,
-                  standardId: standardId,
-                )),
-              );
-              setState(() => _selectedExamId = created.id);
-            }
+          onExamChanged: (examId) {
+            setState(() {
+              _resetEntryInputs();
+              _selectedExamId = examId;
+            });
           },
+          canCreateExam: canCreateExam,
+          onCreateExam: !canCreateExam
+              ? null
+              : (standardId) async {
+                  if (activeYear == null) return;
+                  final created = await _openCreateExamDialog(
+                    context: context,
+                    standardId: standardId,
+                    academicYearId: activeYear.id,
+                    academicYearStartDate: activeYear.startDate,
+                    academicYearEndDate: activeYear.endDate,
+                  );
+                  if (created != null) {
+                    ref.invalidate(
+                      examListProvider((
+                        studentId: null,
+                        academicYearId: activeYear.id,
+                        standardId: standardId,
+                      )),
+                    );
+                    setState(() => _selectedExamId = created.id);
+                  }
+                },
         ),
       );
     }
@@ -293,14 +587,26 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: const AppAppBar(
+      appBar: AppAppBar(
         title: 'Enter Results',
         showBack: true,
+        onBackPressed: () {
+          setState(() {
+            _resetEntryInputs();
+            _selectedExamId = null;
+            _selectedStandardId = null;
+            _selectedSection = null;
+          });
+        },
       ),
       body: examSetupAsync.when(
         loading: _buildShimmer,
         error: (e, _) => AppErrorState(message: e.toString()),
         data: (examSetup) {
+          if (existingMarksAsync.hasValue) {
+            _hydrateExistingEntries(
+                examSetup, existingMarksAsync.valueOrNull ?? const {});
+          }
           return FadeTransition(
             opacity: _fade,
             child: SlideTransition(
@@ -317,8 +623,18 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                         return _StudentResultCard(
                           student: student,
                           subjects: examSetup.subjects,
-                          getController: (subjectId) =>
-                              _getCtrl(student.id, subjectId),
+                          canUploadPdf: canUploadPdf,
+                          onUploadPdf: () => context.push(
+                            RouteNames.reportCard,
+                            extra: {
+                              'studentId': student.id,
+                              'examId': resolvedExamId,
+                            },
+                          ),
+                          getMarksController: (subjectId) =>
+                              _getMarksCtrl(student.id, subjectId),
+                          getMaxController: (subjectId, defaultMax) =>
+                              _getMaxCtrl(student.id, subjectId, defaultMax),
                         );
                       },
                     ),
@@ -353,11 +669,19 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
     required BuildContext context,
     required String standardId,
     required String academicYearId,
+    required DateTime academicYearStartDate,
+    required DateTime academicYearEndDate,
   }) async {
     final nameCtrl = TextEditingController();
-    ExamType selectedType = ExamType.unitTest;
-    DateTime startDate = DateTime.now();
-    DateTime endDate = DateTime.now();
+    final minDate = DateUtils.dateOnly(academicYearStartDate);
+    final maxDate = DateUtils.dateOnly(academicYearEndDate);
+    final now = DateUtils.dateOnly(DateTime.now());
+    final initialDate = now.isBefore(minDate)
+        ? minDate
+        : (now.isAfter(maxDate) ? maxDate : now);
+    DateTime startDate = initialDate;
+    DateTime endDate = initialDate;
+    bool createForAllClasses = false;
     ExamModel? createdExam;
 
     await showDialog<void>(
@@ -379,23 +703,16 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                         hintText: 'e.g. Midterm 2026',
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<ExamType>(
-                      initialValue: selectedType,
-                      items: ExamType.values
-                          .where((e) => e != ExamType.other)
-                          .map(
-                            (e) => DropdownMenuItem<ExamType>(
-                              value: e,
-                              child: Text(e.label),
-                            ),
-                          )
-                          .toList(),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Create for all classes'),
+                      subtitle: const Text(
+                        'Create this exam for every class in this academic year',
+                      ),
+                      value: createForAllClasses,
                       onChanged: (value) {
-                        if (value == null) return;
-                        setModalState(() => selectedType = value);
+                        setModalState(() => createForAllClasses = value);
                       },
-                      decoration: const InputDecoration(labelText: 'Exam Type'),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -405,8 +722,8 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
+                                firstDate: minDate,
+                                lastDate: maxDate,
                                 initialDate: startDate,
                               );
                               if (picked != null) {
@@ -429,7 +746,7 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                               final picked = await showDatePicker(
                                 context: context,
                                 firstDate: startDate,
-                                lastDate: DateTime(2100),
+                                lastDate: maxDate,
                                 initialDate: endDate.isBefore(startDate)
                                     ? startDate
                                     : endDate,
@@ -463,19 +780,41 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                       );
                       return;
                     }
-                    final created = await ref
-                        .read(createExamProvider.notifier)
-                        .createExam(
-                          name: examName,
-                          examType: selectedType.backendValue,
-                          standardId: standardId,
-                          academicYearId: academicYearId,
-                          startDate:
-                              startDate.toIso8601String().split("T").first,
-                          endDate: endDate.toIso8601String().split("T").first,
-                        );
+                    final created = !createForAllClasses
+                        ? await ref
+                            .read(createExamProvider.notifier)
+                            .createExam(
+                              name: examName,
+                              standardId: standardId,
+                              academicYearId: academicYearId,
+                              startDate:
+                                  startDate.toIso8601String().split("T").first,
+                              endDate:
+                                  endDate.toIso8601String().split("T").first,
+                            )
+                        : null;
+                    final bulkCreated = createForAllClasses
+                        ? await ref
+                            .read(createExamProvider.notifier)
+                            .createExamForAllClasses(
+                              name: examName,
+                              academicYearId: academicYearId,
+                              startDate:
+                                  startDate.toIso8601String().split("T").first,
+                              endDate:
+                                  endDate.toIso8601String().split("T").first,
+                            )
+                        : null;
                     if (!dialogContext.mounted) return;
-                    if (created == null) {
+                    if (createForAllClasses && bulkCreated == null) {
+                      SnackbarUtils.showError(
+                        dialogContext,
+                        ref.read(createExamProvider).error ??
+                            'Could not create exam for all classes.',
+                      );
+                      return;
+                    }
+                    if (!createForAllClasses && created == null) {
                       SnackbarUtils.showError(
                         dialogContext,
                         ref.read(createExamProvider).error ??
@@ -483,8 +822,20 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                       );
                       return;
                     }
-                    createdExam = created;
-                    SnackbarUtils.showSuccess(dialogContext, 'Exam created.');
+                    createdExam = createForAllClasses
+                        ? (bulkCreated!.created.isNotEmpty
+                            ? bulkCreated.created.first
+                            : null)
+                        : created;
+                    if (createForAllClasses) {
+                      SnackbarUtils.showSuccess(
+                        dialogContext,
+                        'Exam created for ${bulkCreated!.createdCount} classes'
+                        '${bulkCreated.skippedCount > 0 ? ' (${bulkCreated.skippedCount} skipped)' : ''}.',
+                      );
+                    } else {
+                      SnackbarUtils.showSuccess(dialogContext, 'Exam created.');
+                    }
                     Navigator.of(dialogContext).pop();
                   },
                   child: const Text('Create'),
@@ -510,6 +861,7 @@ class _SelectionPanel extends StatelessWidget {
     required this.selectedExamId,
     required this.onClassSectionChanged,
     required this.onExamChanged,
+    required this.canCreateExam,
     required this.onCreateExam,
   });
 
@@ -520,7 +872,8 @@ class _SelectionPanel extends StatelessWidget {
   final String? selectedExamId;
   final void Function(String standardId, String section) onClassSectionChanged;
   final ValueChanged<String?> onExamChanged;
-  final Future<void> Function(String standardId) onCreateExam;
+  final bool canCreateExam;
+  final Future<void> Function(String standardId)? onCreateExam;
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +941,7 @@ class _SelectionPanel extends StatelessWidget {
                     .map(
                       (exam) => DropdownMenuItem<String>(
                         value: exam.id,
-                        child: Text('${exam.name} (${exam.examType.label})'),
+                        child: Text(exam.name),
                       ),
                     )
                     .toList(),
@@ -596,19 +949,23 @@ class _SelectionPanel extends StatelessWidget {
                 onChanged: onExamChanged,
               ),
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: selectedStandardId == null
-                      ? null
-                      : () => onCreateExam(selectedStandardId!),
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('Create Exam'),
+              if (canCreateExam)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed:
+                        selectedStandardId == null || onCreateExam == null
+                            ? null
+                            : () => onCreateExam!(selectedStandardId!),
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Create Exam'),
+                  ),
                 ),
-              ),
               if (selectedExamId == null || selectedExamId!.isEmpty)
                 Text(
-                  'Create or select an exam to start entering subject-wise marks.',
+                  canCreateExam
+                      ? 'Create or select an exam to start entering subject-wise marks.'
+                      : 'Select an exam defined by the principal to enter marks.',
                   style: AppTypography.bodySmall.copyWith(
                     color: AppColors.grey500,
                   ),
@@ -695,12 +1052,19 @@ class _StudentResultCard extends StatelessWidget {
   const _StudentResultCard({
     required this.student,
     required this.subjects,
-    required this.getController,
+    required this.getMarksController,
+    required this.getMaxController,
+    required this.canUploadPdf,
+    required this.onUploadPdf,
   });
 
   final StudentModel student;
   final List<_ExamSubject> subjects;
-  final TextEditingController Function(String subjectId) getController;
+  final TextEditingController Function(String subjectId) getMarksController;
+  final TextEditingController Function(String subjectId, double defaultMax)
+      getMaxController;
+  final bool canUploadPdf;
+  final VoidCallback onUploadPdf;
 
   @override
   Widget build(BuildContext context) {
@@ -767,6 +1131,12 @@ class _StudentResultCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (canUploadPdf)
+                  TextButton.icon(
+                    onPressed: onUploadPdf,
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
+                    label: const Text('Upload PDF'),
+                  ),
               ],
             ),
           ),
@@ -782,7 +1152,9 @@ class _StudentResultCard extends StatelessWidget {
                   child: _SubjectMarksRow(
                     subjectName: subject.name,
                     maxMarks: subject.maxMarks,
-                    controller: getController(subject.id),
+                    marksController: getMarksController(subject.id),
+                    maxMarksController:
+                        getMaxController(subject.id, subject.maxMarks),
                   ),
                 );
               }).toList(),
@@ -798,12 +1170,14 @@ class _SubjectMarksRow extends StatelessWidget {
   const _SubjectMarksRow({
     required this.subjectName,
     required this.maxMarks,
-    required this.controller,
+    required this.marksController,
+    required this.maxMarksController,
   });
 
   final String subjectName;
   final double maxMarks;
-  final TextEditingController controller;
+  final TextEditingController marksController;
+  final TextEditingController maxMarksController;
 
   @override
   Widget build(BuildContext context) {
@@ -826,7 +1200,7 @@ class _SubjectMarksRow extends StatelessWidget {
           width: 70,
           height: 38,
           child: TextField(
-            controller: controller,
+            controller: marksController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -861,11 +1235,44 @@ class _SubjectMarksRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          '/${maxMarks.toStringAsFixed(0)}',
-          style: AppTypography.caption.copyWith(
-            color: AppColors.grey400,
-            fontSize: 11,
+        const Text('/', style: TextStyle(color: AppColors.grey400)),
+        const SizedBox(width: 6),
+        SizedBox(
+          width: 70,
+          height: 38,
+          child: TextField(
+            controller: maxMarksController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+            ],
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.grey800,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+            decoration: InputDecoration(
+              hintText: maxMarks.toStringAsFixed(0),
+              hintStyle: AppTypography.bodyMedium.copyWith(
+                color: AppColors.grey400,
+                fontSize: 13,
+              ),
+              filled: true,
+              fillColor: AppColors.surface50,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.surface200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.navyMedium, width: 1.5),
+              ),
+              isDense: true,
+            ),
           ),
         ),
       ],
@@ -951,5 +1358,15 @@ class _ExamSubject {
   final String id;
   final String name;
   final String code;
+  final double maxMarks;
+}
+
+class _ExistingMark {
+  const _ExistingMark({
+    required this.marksObtained,
+    required this.maxMarks,
+  });
+
+  final double marksObtained;
   final double maxMarks;
 }

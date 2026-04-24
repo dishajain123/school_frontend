@@ -191,8 +191,12 @@ class _ProgressStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentStep = status.indexValue + 1;
-    const totalSteps = 4;
+    final currentStep = switch (status) {
+      ComplaintStatus.open => 1,
+      ComplaintStatus.inProgress => 2,
+      ComplaintStatus.resolved || ComplaintStatus.closed => 3,
+    };
+    const totalSteps = 3;
     final progress = currentStep / totalSteps;
 
     return Column(

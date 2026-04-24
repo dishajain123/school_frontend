@@ -6,9 +6,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/masters/standard_model.dart';
 import '../../../data/models/student/student_model.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../data/models/timetable/timetable_model.dart';
 import '../../../data/repositories/student_repository.dart';
 import '../../../providers/academic_year_provider.dart';
@@ -16,6 +18,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../providers/student_provider.dart';
+import '../../../providers/teacher_provider.dart';
 import '../../../providers/timetable_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
@@ -72,7 +75,7 @@ class TimetableViewScreen extends ConsumerWidget {
       );
     }
 
-    // PARENT — scope to selected child's standard
+    // PARENT — scope to selected child's class/section
     if (currentUser.role == UserRole.parent) {
       return _ParentTimetableView(
         section: section,
@@ -133,6 +136,12 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
   @override
   Widget build(BuildContext context) {
     final standardsAsync = ref.watch(standardsProvider(widget.academicYearId));
+    final currentUser = ref.watch(currentUserProvider);
+    final teacherAssignmentsAsync = (currentUser?.role == UserRole.teacher)
+        ? ref.watch(teacherAssignmentsByTeacherProvider(currentUser!.id))
+        : const AsyncData<List<TeacherClassSubjectModel>>(
+            <TeacherClassSubjectModel>[],
+          );
     final sectionsAsync = _selectedStandardId == null
         ? const AsyncData<List<String>>(<String>[])
         : ref.watch(
@@ -141,6 +150,10 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
               academicYearId: widget.academicYearId,
             )),
           );
+    final safeSelectedSection =
+        sectionsAsync.valueOrNull?.contains(_selectedSection) == true
+            ? _selectedSection
+            : null;
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -189,6 +202,72 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                 }
               },
             ),
+          if (widget.canUpload && _loadedStandardId != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.white),
+              tooltip: 'Remove timetable',
+              onPressed: () async {
+                final standardId = _loadedStandardId;
+                if (standardId == null) return;
+
+                final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Remove timetable?'),
+                        content: Text(
+                          _loadedSection == null || _loadedSection!.isEmpty
+                              ? 'This will remove the class timetable for the selected academic year.'
+                              : 'This will remove timetable for section ${_loadedSection!}.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.errorRed,
+                            ),
+                            child: const Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+
+                if (!confirm) return;
+
+                final success = await ref
+                    .read(timetableDeleteProvider.notifier)
+                    .delete(
+                      standardId: standardId,
+                      academicYearId: widget.academicYearId,
+                      section: _loadedSection,
+                    );
+                if (!context.mounted) return;
+
+                if (success) {
+                  SnackbarUtils.showSuccess(context, 'Timetable removed');
+                  ref.invalidate(
+                    timetableProvider((
+                      standardId: standardId,
+                      academicYearId: widget.academicYearId,
+                      section: _loadedSection,
+                    )),
+                  );
+                } else {
+                  final error = ref.read(timetableDeleteProvider).error;
+                  SnackbarUtils.showError(
+                    context,
+                    error ?? 'Failed to remove timetable',
+                  );
+                }
+              },
+            ),
         ],
       ),
       body: Column(
@@ -205,16 +284,44 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                 standardsAsync.when(
                   loading: () => AppLoading.card(height: 52),
                   error: (e, _) => _FilterError(message: e.toString()),
-                  data: (standards) => _ClassFilterField(
-                    standards: standards,
-                    value: _selectedStandardId,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedStandardId = value;
-                        _selectedSection = null;
-                      });
-                    },
-                  ),
+                  data: (standards) {
+                    if (currentUser?.role == UserRole.teacher) {
+                      return teacherAssignmentsAsync.when(
+                        loading: () => AppLoading.card(height: 52),
+                        error: (e, _) => _FilterError(message: e.toString()),
+                        data: (assignments) {
+                          final allowedStandardIds =
+                              assignments.map((a) => a.standardId).toSet();
+                          final allowedStandards = standards
+                              .where((s) => allowedStandardIds.contains(s.id))
+                              .toList();
+                          final safeValue = allowedStandardIds.contains(_selectedStandardId)
+                              ? _selectedStandardId
+                              : null;
+                          return _ClassFilterField(
+                            standards: allowedStandards,
+                            value: safeValue,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedStandardId = value;
+                                _selectedSection = null;
+                              });
+                            },
+                          );
+                        },
+                      );
+                    }
+                    return _ClassFilterField(
+                      standards: standards,
+                      value: _selectedStandardId,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStandardId = value;
+                          _selectedSection = null;
+                        });
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: AppDimensions.space12),
                 sectionsAsync.when(
@@ -227,7 +334,7 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                   ),
                   data: (sections) => _SectionFilterField(
                     sections: sections,
-                    value: _selectedSection,
+                    value: safeSelectedSection,
                     enabled: _selectedStandardId != null,
                     onChanged: (value) =>
                         setState(() => _selectedSection = value),
@@ -345,7 +452,7 @@ class _ParentTimetableView extends ConsumerWidget {
           icon: Icons.schedule_outlined,
           title: 'No child selected',
           subtitle:
-              'Select a child from the dashboard to view their timetable.',
+              'Select a linked child from dashboard to view their timetable.',
         ),
       );
     }

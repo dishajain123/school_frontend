@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -92,8 +93,8 @@ class _LoginHeader extends StatelessWidget {
     final top = MediaQuery.of(context).padding.top;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-          AppDimensions.pageHorizontal, top + 32, AppDimensions.pageHorizontal, 32),
+      padding: EdgeInsets.fromLTRB(AppDimensions.pageHorizontal, top + 32,
+          AppDimensions.pageHorizontal, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,7 +106,7 @@ class _LoginHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'EduNest',
+                    AppConstants.appName,
                     style: AppTypography.titleLargeOnDark.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,

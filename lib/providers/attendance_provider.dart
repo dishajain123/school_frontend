@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/attendance/attendance_analytics.dart';
 import '../data/models/attendance/attendance_model.dart';
 import '../data/models/attendance/attendance_record_input.dart';
-import '../data/models/attendance/attendance_snapshot.dart';
 import '../data/models/attendance/below_threshold.dart';
 import '../data/models/attendance/mark_attendance_request.dart';
 import '../data/models/auth/current_user.dart';
@@ -30,12 +29,6 @@ typedef StudentAnalyticsParams = ({
   String studentId,
   int? month,
   int? year,
-});
-
-typedef ClassSnapshotParams = ({
-  String standardId,
-  String academicYearId,
-  String date,
 });
 
 typedef BelowThresholdParams = ({
@@ -121,18 +114,6 @@ final studentAnalyticsProvider =
       params.studentId,
       month: params.month,
       year: params.year,
-    );
-  },
-);
-
-final classSnapshotProvider =
-    FutureProvider.family<ClassAttendanceSnapshot, ClassSnapshotParams>(
-  (ref, params) async {
-    final repo = ref.read(attendanceRepositoryProvider);
-    return repo.getClassSnapshot(
-      standardId: params.standardId,
-      academicYearId: params.academicYearId,
-      date: params.date,
     );
   },
 );

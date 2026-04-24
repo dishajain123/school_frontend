@@ -6,13 +6,13 @@ import '../data/repositories/homework_repository.dart';
 
 // ── Params type for the list provider ────────────────────────────────────────
 //
-// date          — required ISO string "yyyy-MM-dd". The screen always passes
-//                 today's date or the user's chosen date.
+// date          — optional ISO string "yyyy-MM-dd".
+//                 when null, backend returns across dates (latest first).
 // subjectId     — optional UUID to filter by subject (used by teachers).
 // academicYearId — optional UUID; when null the backend uses the active year.
 //
 typedef HomeworkParams = ({
-  String date,
+  String? date,
   String? standardId,
   String? subjectId,
   String? academicYearId,

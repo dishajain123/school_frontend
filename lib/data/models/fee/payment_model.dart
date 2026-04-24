@@ -10,7 +10,6 @@ enum PaymentMode {
   online,
   bankTransfer,
   upi,
-  dd,
 }
 
 extension PaymentModeX on PaymentMode {
@@ -26,8 +25,6 @@ extension PaymentModeX on PaymentMode {
         return PaymentMode.bankTransfer;
       case 'UPI':
         return PaymentMode.upi;
-      case 'DD':
-        return PaymentMode.dd;
       default:
         return PaymentMode.cash;
     }
@@ -45,8 +42,6 @@ extension PaymentModeX on PaymentMode {
         return 'BANK_TRANSFER';
       case PaymentMode.upi:
         return 'UPI';
-      case PaymentMode.dd:
-        return 'DD';
     }
   }
 
@@ -62,8 +57,6 @@ extension PaymentModeX on PaymentMode {
         return 'Bank Transfer';
       case PaymentMode.upi:
         return 'UPI';
-      case PaymentMode.dd:
-        return 'Demand Draft';
     }
   }
 
@@ -79,8 +72,6 @@ extension PaymentModeX on PaymentMode {
         return Icons.account_balance_outlined;
       case PaymentMode.upi:
         return Icons.smartphone_outlined;
-      case PaymentMode.dd:
-        return Icons.receipt_long_outlined;
     }
   }
 }

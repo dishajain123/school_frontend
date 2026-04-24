@@ -11,7 +11,7 @@ import '../data/repositories/diary_repository.dart';
 // academicYearId — optional UUID; when null the backend uses the active year.
 //
 typedef DiaryParams = ({
-  String date,
+  String? date,
   String? standardId,
   String? subjectId,
   String? academicYearId,
@@ -24,8 +24,7 @@ typedef DiaryParams = ({
 //   • Each day's diary is small (≤ ~20 items) — no pagination required.
 //   • Pull-to-refresh is handled by ref.invalidate in the screen.
 //
-final diaryListProvider =
-    FutureProvider.family<DiaryListResponse, DiaryParams>(
+final diaryListProvider = FutureProvider.family<DiaryListResponse, DiaryParams>(
   (ref, params) async {
     final repo = ref.read(diaryRepositoryProvider);
     return repo.listDiary(

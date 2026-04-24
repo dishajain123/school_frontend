@@ -14,6 +14,27 @@ class LedgerGenerateResult {
   final int skipped;
 }
 
+class FeeStructureBatchResult {
+  const FeeStructureBatchResult({
+    required this.items,
+    required this.created,
+    required this.updated,
+  });
+  final List<FeeStructureModel> items;
+  final int created;
+  final int updated;
+}
+
+class FeeStructureUpdateResult {
+  const FeeStructureUpdateResult({
+    required this.items,
+    required this.total,
+  });
+
+  final List<FeeStructureModel> items;
+  final int total;
+}
+
 // ── FeeRepository ─────────────────────────────────────────────────────────────
 
 class FeeRepository {
@@ -23,14 +44,56 @@ class FeeRepository {
 
   static const String _base = '/fees';
 
-  // ── POST /fees/structures ──────────────────────────────────────────────────
-  // Permission: fee:create
-  // Creates a fee structure for a standard + academic year + category.
-
-  Future<FeeStructureModel> createStructure(
+  Future<FeeStructureBatchResult> createStructuresBatch(
       Map<String, dynamic> payload) async {
-    final response = await _dio.post('$_base/structures', data: payload);
-    return FeeStructureModel.fromJson(response.data as Map<String, dynamic>);
+    final response = await _dio.post('$_base/structures/batch', data: payload);
+    final data = response.data as Map<String, dynamic>;
+    final itemsRaw = data['items'] as List<dynamic>? ?? const [];
+    return FeeStructureBatchResult(
+      items: itemsRaw
+          .map((e) => FeeStructureModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      created: (data['created'] as num?)?.toInt() ?? 0,
+      updated: (data['updated'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Future<FeeStructureUpdateResult> updateStructure({
+    required String structureId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _dio.patch(
+      '$_base/structures/$structureId',
+      data: payload,
+    );
+    final data = response.data as Map<String, dynamic>;
+    final itemsRaw = data['items'] as List<dynamic>? ?? const [];
+    return FeeStructureUpdateResult(
+      items: itemsRaw
+          .map((e) => FeeStructureModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: (data['total'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Future<List<FeeStructureModel>> listStructures({
+    required String standardId,
+    String? academicYearId,
+  }) async {
+    final response = await _dio.get(
+      '$_base/structures',
+      queryParameters: {
+        'standard_id': standardId,
+        if (academicYearId != null && academicYearId.trim().isNotEmpty)
+          'academic_year_id': academicYearId,
+      },
+    );
+    final data = response.data;
+    final List<dynamic> raw =
+        data is List ? data : (data['items'] as List<dynamic>? ?? []);
+    return raw
+        .map((e) => FeeStructureModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   // ── POST /fees/ledger/generate ─────────────────────────────────────────────
@@ -82,10 +145,17 @@ class FeeRepository {
   // STUDENT role: backend validates own studentId.
   // PARENT role: backend validates child belongs to parent.
 
-  Future<FeeDashboardResult> getDashboard(String studentId) async {
+  Future<FeeDashboardResult> getDashboard(
+    String studentId, {
+    String? academicYearId,
+  }) async {
     final response = await _dio.get(
       _base,
-      queryParameters: {'student_id': studentId},
+      queryParameters: {
+        'student_id': studentId,
+        if (academicYearId != null && academicYearId.trim().isNotEmpty)
+          'academic_year_id': academicYearId,
+      },
     );
     return FeeDashboardResult.fromJson(response.data as Map<String, dynamic>);
   }

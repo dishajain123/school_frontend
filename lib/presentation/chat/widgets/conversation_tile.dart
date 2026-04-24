@@ -11,11 +11,13 @@ class ConversationTile extends StatefulWidget {
     required this.conversation,
     required this.onTap,
     this.isLast = false,
+    this.onDelete,
   });
 
   final ConversationModel conversation;
   final VoidCallback onTap;
   final bool isLast;
+  final VoidCallback? onDelete;
 
   @override
   State<ConversationTile> createState() => _ConversationTileState();
@@ -94,7 +96,8 @@ class _ConversationTileState extends State<ConversationTile>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              DateFormatter.formatRelative(conversation.updatedAt),
+                              DateFormatter.formatRelative(
+                                  conversation.updatedAt),
                               style: AppTypography.caption.copyWith(
                                 color: AppColors.grey400,
                                 fontSize: 11,
@@ -124,11 +127,29 @@ class _ConversationTileState extends State<ConversationTile>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: AppColors.grey400,
-                  ),
+                  if (widget.onDelete != null)
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'delete') widget.onDelete?.call();
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Text('Delete chat'),
+                        ),
+                      ],
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        size: 18,
+                        color: AppColors.grey400,
+                      ),
+                    )
+                  else
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: AppColors.grey400,
+                    ),
                 ],
               ),
             ),

@@ -121,6 +121,7 @@ class BehaviourLogModel {
   const BehaviourLogModel({
     required this.id,
     required this.studentId,
+    this.studentName,
     required this.teacherId,
     required this.incidentType,
     required this.description,
@@ -134,6 +135,7 @@ class BehaviourLogModel {
 
   final String id;
   final String studentId;
+  final String? studentName;
   final String teacherId;
   final IncidentType incidentType;
   final String description;
@@ -150,6 +152,7 @@ class BehaviourLogModel {
     return BehaviourLogModel(
       id: (json['id'] ?? '').toString(),
       studentId: (json['student_id'] ?? '').toString(),
+      studentName: json['student_name'] as String?,
       teacherId: (json['teacher_id'] ?? '').toString(),
       incidentType: IncidentTypeX.fromString(json['incident_type'] as String?),
       description: (json['description'] ?? '').toString(),

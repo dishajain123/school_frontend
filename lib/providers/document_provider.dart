@@ -166,6 +166,21 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     required bool approve,
     String? reason,
   }) async {
+    DocumentModel? target;
+    for (final d in state.documents) {
+      if (d.id == documentId) {
+        target = d;
+        break;
+      }
+    }
+    final hasFile = (target?.fileKey ?? '').trim().isNotEmpty;
+    if (!hasFile) {
+      state = state.copyWith(
+        error: 'Uploaded file is missing for this document.',
+      );
+      return false;
+    }
+
     try {
       final updated = await _repo.verifyDocument(
         documentId: documentId,

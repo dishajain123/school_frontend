@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -16,7 +17,7 @@ class SmsApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'EduNest — Smart School Platform',
+      title: '${AppConstants.appName} — Smart School Platform',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: router,

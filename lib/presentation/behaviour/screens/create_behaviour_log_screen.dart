@@ -324,19 +324,10 @@ class _CreateBehaviourLogScreenState
                 const SizedBox(height: AppDimensions.space16),
                 AppTextField(
                   controller: _descriptionController,
-                  label: 'Description',
-                  hint: 'Describe the incident and context',
+                  label: 'Feedback (Optional)',
+                  hint: 'Add remarks/context (optional)',
                   maxLines: 5,
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Description is required';
-                    }
-                    if (value.trim().length < 5) {
-                      return 'Please add more details';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: AppDimensions.space32),
                 AppButton.primary(
@@ -377,7 +368,14 @@ class _CreateBehaviourLogScreenState
   }
 
   String _studentLabel(StudentModel student) {
+    final name = student.studentName?.trim();
     final roll = student.rollNumber;
+    if (name != null && name.isNotEmpty) {
+      if (roll != null && roll.trim().isNotEmpty) {
+        return '$name · Roll $roll';
+      }
+      return name;
+    }
     if (roll != null && roll.trim().isNotEmpty) {
       return '${student.admissionNumber} · Roll $roll';
     }

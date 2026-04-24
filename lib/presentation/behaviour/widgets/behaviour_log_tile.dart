@@ -24,8 +24,13 @@ class BehaviourLogTile extends StatelessWidget {
       onTap: onTap,
       padding: EdgeInsets.zero,
       child: AppListTile(
-        title: log.incidentType.label,
-        subtitle: log.description,
+        title: (log.studentName != null && log.studentName!.trim().isNotEmpty)
+            ? log.studentName!.trim()
+            : log.incidentType.label,
+        subtitle:
+            (log.studentName != null && log.studentName!.trim().isNotEmpty)
+                ? '${log.incidentType.label} · ${log.description}'
+                : log.description,
         showDivider: false,
         leading: Container(
           width: AppDimensions.quickActionIconContainer,

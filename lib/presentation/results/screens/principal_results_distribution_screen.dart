@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/result/result_model.dart';
 import '../../../data/models/student/student_model.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../data/repositories/student_repository.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/attendance_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/result_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
@@ -49,7 +55,16 @@ final _studentsByClassSectionProvider =
 );
 
 class PrincipalResultsDistributionScreen extends ConsumerStatefulWidget {
-  const PrincipalResultsDistributionScreen({super.key});
+  const PrincipalResultsDistributionScreen({
+    super.key,
+    this.initialStandardId,
+    this.initialSection,
+    this.initialExamId,
+  });
+
+  final String? initialStandardId;
+  final String? initialSection;
+  final String? initialExamId;
 
   @override
   ConsumerState<PrincipalResultsDistributionScreen> createState() =>
@@ -63,28 +78,91 @@ class _PrincipalResultsDistributionScreenState
   String? _selectedExamId;
   String? _selectedStudentId;
 
+  bool _isNoTeacherEntriesError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('no result entries found that were entered by you');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStandardId = widget.initialStandardId;
+    _selectedSection = widget.initialSection;
+    _selectedExamId = widget.initialExamId;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final activeYearId = ref.watch(activeYearProvider)?.id;
-    final standardsAsync = ref.watch(standardsProvider(activeYearId));
+    final activeYear = ref.watch(activeYearProvider);
+    final activeYearId = activeYear?.id;
+    final currentUser = ref.watch(currentUserProvider);
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final standardsCatalogAsync = ref.watch(standardsProvider(activeYearId));
+    final teacherAssignmentsAsync = isTeacher
+        ? ref.watch(myTeacherAssignmentsProvider(activeYearId))
+        : const AsyncValue<List<TeacherClassSubjectModel>>.data(
+            <TeacherClassSubjectModel>[],
+          );
+    final teacherHistoryExamsAsync = isTeacher
+        ? ref.watch(examListProvider((
+            studentId: null,
+            academicYearId: activeYearId,
+            standardId: null,
+          )))
+        : const AsyncValue<List<ExamModel>>.data(<ExamModel>[]);
+
+    final standards = standardsCatalogAsync.valueOrNull ?? const [];
+    final teacherAssignments = teacherAssignmentsAsync.valueOrNull ??
+        const <TeacherClassSubjectModel>[];
+    final teacherHistoryExams =
+        teacherHistoryExamsAsync.valueOrNull ?? const <ExamModel>[];
+
+    final standardOptions = isTeacher
+        ? _buildTeacherStandardOptions(
+            assignments: teacherAssignments,
+            historyExams: teacherHistoryExams,
+            standards: standards,
+          )
+        : standards
+            .map((s) => _StandardOption(id: s.id, label: s.name))
+            .toList();
+
+    final selectedStandardId = standardOptions.any(
+      (option) => option.id == _selectedStandardId,
+    )
+        ? _selectedStandardId
+        : null;
+
+    if (_selectedStandardId != selectedStandardId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _selectedStandardId = selectedStandardId;
+          _selectedSection = null;
+          _selectedExamId = null;
+          _selectedStudentId = null;
+        });
+      });
+    }
+
     final sectionsAsync =
-        (_selectedStandardId == null || _selectedStandardId!.isEmpty)
+        (selectedStandardId == null || selectedStandardId.isEmpty)
             ? const AsyncValue<List<String>>.data(<String>[])
             : ref.watch(resultSectionsProvider((
-                standardId: _selectedStandardId!,
+                standardId: selectedStandardId,
                 academicYearId: activeYearId,
               )));
     final examsAsync = ref.watch(examListProvider((
       studentId: null,
       academicYearId: activeYearId,
-      standardId: _selectedStandardId,
+      standardId: selectedStandardId,
     )));
 
     final studentsAsync =
-        (_selectedStandardId == null || _selectedStandardId!.isEmpty)
+        (selectedStandardId == null || selectedStandardId.isEmpty)
             ? const AsyncValue<List<StudentModel>>.data(<StudentModel>[])
             : ref.watch(_studentsByClassSectionProvider((
-                standardId: _selectedStandardId!,
+                standardId: selectedStandardId,
                 section: _selectedSection,
                 academicYearId: activeYearId,
               )));
@@ -97,11 +175,11 @@ class _PrincipalResultsDistributionScreenState
       body: Column(
         children: [
           _FiltersPanel(
-            standardsAsync: standardsAsync,
+            standardOptions: standardOptions,
             sectionsAsync: sectionsAsync,
             examsAsync: examsAsync,
             studentsAsync: studentsAsync,
-            selectedStandardId: _selectedStandardId,
+            selectedStandardId: selectedStandardId,
             selectedSection: _selectedSection,
             selectedExamId: _selectedExamId,
             selectedStudentId: _selectedStudentId,
@@ -122,6 +200,26 @@ class _PrincipalResultsDistributionScreenState
             onExamChanged: (value) => setState(() => _selectedExamId = value),
             onStudentChanged: (value) =>
                 setState(() => _selectedStudentId = value),
+            onCreateExam: (selectedStandardId == null || activeYearId == null)
+                ? null
+                : () async {
+                    final created = await _openCreateExamDialog(
+                      context: context,
+                      standardId: selectedStandardId,
+                      academicYearId: activeYearId,
+                      academicYearStartDate: activeYear!.startDate,
+                      academicYearEndDate: activeYear.endDate,
+                    );
+                    if (created == null || !mounted) return;
+                    ref.invalidate(
+                      examListProvider((
+                        studentId: null,
+                        academicYearId: activeYearId,
+                        standardId: selectedStandardId,
+                      )),
+                    );
+                    setState(() => _selectedExamId = created.id);
+                  },
           ),
           Container(height: 1, color: AppColors.surface100),
           Expanded(
@@ -129,11 +227,12 @@ class _PrincipalResultsDistributionScreenState
               loading: () => AppLoading.listView(count: 4),
               error: (e, _) => AppErrorState(message: e.toString()),
               data: (exams) {
-                if (_selectedStandardId != null && exams.isEmpty) {
+                if (selectedStandardId != null && exams.isEmpty) {
                   return const AppEmptyState(
                     icon: Icons.assessment_outlined,
                     title: 'No exams found',
-                    subtitle: 'Teachers have not created exams for this class.',
+                    subtitle:
+                        'Create principal-defined exams for this class first.',
                   );
                 }
 
@@ -168,16 +267,26 @@ class _PrincipalResultsDistributionScreenState
 
                 return distributionAsync.when(
                   loading: () => AppLoading.listView(count: 4),
-                  error: (e, _) => AppErrorState(
-                    message: e.toString(),
-                    onRetry: () => ref.invalidate(
-                      examDistributionProvider((
-                        examId: resolvedExamId,
-                        section: _selectedSection,
-                        studentId: _selectedStudentId,
-                      )),
-                    ),
-                  ),
+                  error: (e, _) {
+                    if (_isNoTeacherEntriesError(e)) {
+                      return const AppEmptyState(
+                        icon: Icons.analytics_outlined,
+                        title: 'No marks found',
+                        subtitle:
+                            'No result entries entered by you for this exam yet.',
+                      );
+                    }
+                    return AppErrorState(
+                      message: e.toString(),
+                      onRetry: () => ref.invalidate(
+                        examDistributionProvider((
+                          examId: resolvedExamId,
+                          section: _selectedSection,
+                          studentId: _selectedStudentId,
+                        )),
+                      ),
+                    );
+                  },
                   data: (distribution) {
                     if (distribution.items.isEmpty) {
                       return const AppEmptyState(
@@ -197,7 +306,11 @@ class _PrincipalResultsDistributionScreenState
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _StudentSummaryCard(
                             student: student,
-                            onTap: () => _showStudentDetails(context, student),
+                            onTap: () => _showStudentDetails(
+                              context,
+                              student,
+                              resolvedExamId,
+                            ),
                           ),
                         );
                       },
@@ -212,9 +325,45 @@ class _PrincipalResultsDistributionScreenState
     );
   }
 
+  List<_StandardOption> _buildTeacherStandardOptions({
+    required List<TeacherClassSubjectModel> assignments,
+    required List<ExamModel> historyExams,
+    required List<dynamic> standards,
+  }) {
+    final namesById = <String, String>{
+      for (final standard in standards)
+        standard.id.toString(): standard.name.toString(),
+    };
+    final optionsById = <String, _StandardOption>{};
+
+    for (final assignment in assignments) {
+      final id = assignment.standardId.trim();
+      if (id.isEmpty) continue;
+      final label = (assignment.standardName?.trim().isNotEmpty ?? false)
+          ? assignment.standardName!.trim()
+          : (namesById[id] ?? 'Class');
+      optionsById[id] = _StandardOption(id: id, label: label);
+    }
+
+    for (final exam in historyExams) {
+      final id = exam.standardId.trim();
+      if (id.isEmpty || optionsById.containsKey(id)) continue;
+      optionsById[id] = _StandardOption(
+        id: id,
+        label: namesById[id] ?? 'Class',
+      );
+    }
+
+    final options = optionsById.values.toList();
+    options
+        .sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+    return options;
+  }
+
   void _showStudentDetails(
     BuildContext context,
     ResultDistributionStudentModel student,
+    String examId,
   ) {
     showModalBottomSheet<void>(
       context: context,
@@ -259,6 +408,24 @@ class _PrincipalResultsDistributionScreenState
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.push(
+                        RouteNames.reportCard,
+                        extra: {
+                          'studentId': student.studentId,
+                          'examId': examId,
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                    label: const Text('View / Upload Report Card'),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Flexible(
@@ -321,11 +488,199 @@ class _PrincipalResultsDistributionScreenState
       },
     );
   }
+
+  Future<ExamModel?> _openCreateExamDialog({
+    required BuildContext context,
+    required String standardId,
+    required String academicYearId,
+    required DateTime academicYearStartDate,
+    required DateTime academicYearEndDate,
+  }) async {
+    final nameCtrl = TextEditingController();
+    final minDate = DateUtils.dateOnly(academicYearStartDate);
+    final maxDate = DateUtils.dateOnly(academicYearEndDate);
+    final now = DateUtils.dateOnly(DateTime.now());
+    final initialDate = now.isBefore(minDate)
+        ? minDate
+        : (now.isAfter(maxDate) ? maxDate : now);
+    DateTime startDate = initialDate;
+    DateTime endDate = initialDate;
+    bool createForAllClasses = false;
+    ExamModel? createdExam;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              title: const Text('Create Exam'),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Exam Name',
+                        hintText: 'e.g. Midterm 2026',
+                      ),
+                    ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Create for all classes'),
+                      subtitle: const Text(
+                        'Create this exam for every class in this academic year',
+                      ),
+                      value: createForAllClasses,
+                      onChanged: (value) {
+                        setModalState(() => createForAllClasses = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                firstDate: minDate,
+                                lastDate: maxDate,
+                                initialDate: startDate,
+                              );
+                              if (picked != null) {
+                                setModalState(() => startDate = picked);
+                              }
+                            },
+                            child: Text(
+                              'Start ${startDate.toIso8601String().split("T").first}',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                firstDate: startDate,
+                                lastDate: maxDate,
+                                initialDate: endDate.isBefore(startDate)
+                                    ? startDate
+                                    : endDate,
+                              );
+                              if (picked != null) {
+                                setModalState(() => endDate = picked);
+                              }
+                            },
+                            child: Text(
+                              'End ${endDate.toIso8601String().split("T").first}',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final examName = nameCtrl.text.trim();
+                    if (examName.isEmpty) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('Exam name is required.'),
+                        ),
+                      );
+                      return;
+                    }
+                    final created = !createForAllClasses
+                        ? await ref
+                            .read(createExamProvider.notifier)
+                            .createExam(
+                              name: examName,
+                              standardId: standardId,
+                              academicYearId: academicYearId,
+                              startDate:
+                                  startDate.toIso8601String().split("T").first,
+                              endDate:
+                                  endDate.toIso8601String().split("T").first,
+                            )
+                        : null;
+                    final bulkCreated = createForAllClasses
+                        ? await ref
+                            .read(createExamProvider.notifier)
+                            .createExamForAllClasses(
+                              name: examName,
+                              academicYearId: academicYearId,
+                              startDate:
+                                  startDate.toIso8601String().split("T").first,
+                              endDate:
+                                  endDate.toIso8601String().split("T").first,
+                            )
+                        : null;
+                    if (!dialogContext.mounted) return;
+                    if (createForAllClasses && bulkCreated == null) {
+                      final error = ref.read(createExamProvider).error ??
+                          'Could not create exam for all classes.';
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        SnackBar(content: Text(error)),
+                      );
+                      return;
+                    }
+                    if (!createForAllClasses && created == null) {
+                      final error = ref.read(createExamProvider).error ??
+                          'Could not create exam.';
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        SnackBar(content: Text(error)),
+                      );
+                      return;
+                    }
+                    createdExam = createForAllClasses
+                        ? (bulkCreated!.created.isNotEmpty
+                            ? bulkCreated.created.first
+                            : null)
+                        : created;
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          createForAllClasses
+                              ? 'Exam created for ${bulkCreated!.createdCount} classes'
+                                  '${bulkCreated.skippedCount > 0 ? ' (${bulkCreated.skippedCount} skipped)' : ''}.'
+                              : 'Exam created.',
+                        ),
+                      ),
+                    );
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nameCtrl.dispose();
+    return createdExam;
+  }
 }
 
 class _FiltersPanel extends StatelessWidget {
   const _FiltersPanel({
-    required this.standardsAsync,
+    required this.standardOptions,
     required this.sectionsAsync,
     required this.examsAsync,
     required this.studentsAsync,
@@ -337,9 +692,10 @@ class _FiltersPanel extends StatelessWidget {
     required this.onSectionChanged,
     required this.onExamChanged,
     required this.onStudentChanged,
+    required this.onCreateExam,
   });
 
-  final AsyncValue<dynamic> standardsAsync;
+  final List<_StandardOption> standardOptions;
   final AsyncValue<dynamic> sectionsAsync;
   final AsyncValue<List<ExamModel>> examsAsync;
   final AsyncValue<List<StudentModel>> studentsAsync;
@@ -351,10 +707,10 @@ class _FiltersPanel extends StatelessWidget {
   final ValueChanged<String?> onSectionChanged;
   final ValueChanged<String?> onExamChanged;
   final ValueChanged<String?> onStudentChanged;
+  final Future<void> Function()? onCreateExam;
 
   @override
   Widget build(BuildContext context) {
-    final standards = (standardsAsync.valueOrNull as List?) ?? const [];
     final sections = (sectionsAsync.valueOrNull as List?) ?? const [];
     final exams = examsAsync.valueOrNull ?? const <ExamModel>[];
     final students = studentsAsync.valueOrNull ?? const <StudentModel>[];
@@ -371,11 +727,11 @@ class _FiltersPanel extends StatelessWidget {
                   isExpanded: true,
                   initialValue: selectedStandardId,
                   decoration: _inputDecoration('Class'),
-                  items: standards
+                  items: standardOptions
                       .map(
-                        (s) => DropdownMenuItem<String>(
-                          value: s.id.toString(),
-                          child: Text(s.name.toString()),
+                        (option) => DropdownMenuItem<String>(
+                          value: option.id,
+                          child: Text(option.label),
                         ),
                       )
                       .toList(),
@@ -451,6 +807,17 @@ class _FiltersPanel extends StatelessWidget {
               ),
             ],
           ),
+          if (onCreateExam != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onCreateExam,
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Create Exam'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -466,6 +833,16 @@ class _FiltersPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StandardOption {
+  const _StandardOption({
+    required this.id,
+    required this.label,
+  });
+
+  final String id;
+  final String label;
 }
 
 class _StudentSummaryCard extends StatelessWidget {

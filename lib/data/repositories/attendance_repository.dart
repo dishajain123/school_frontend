@@ -5,7 +5,6 @@ import '../../core/network/dio_client.dart';
 import '../models/attendance/attendance_model.dart';
 import '../models/attendance/mark_attendance_request.dart';
 import '../models/attendance/attendance_analytics.dart';
-import '../models/attendance/attendance_snapshot.dart';
 import '../models/attendance/below_threshold.dart';
 
 class AttendanceRepository {
@@ -73,25 +72,6 @@ class AttendanceRepository {
       },
     );
     return StudentAttendanceAnalytics.fromJson(
-        response.data as Map<String, dynamic>);
-  }
-
-  // ── Analytics: Class Snapshot ───────────────────────────────────────────────
-
-  Future<ClassAttendanceSnapshot> getClassSnapshot({
-    required String standardId,
-    required String academicYearId,
-    required String date,
-  }) async {
-    final response = await _dio.get(
-      ApiConstants.attendanceClassSnapshot(standardId),
-      queryParameters: {
-        'standard_id': standardId,
-        'academic_year_id': academicYearId,
-        'date': date,
-      },
-    );
-    return ClassAttendanceSnapshot.fromJson(
         response.data as Map<String, dynamic>);
   }
 

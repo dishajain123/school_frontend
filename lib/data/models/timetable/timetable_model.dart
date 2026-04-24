@@ -9,6 +9,7 @@ class TimetableModel {
     this.effectiveFrom,
     this.effectiveTo,
     this.uploadedBy,
+    this.uploadedByName,
     required this.schoolId,
     required this.createdAt,
     required this.updatedAt,
@@ -23,6 +24,7 @@ class TimetableModel {
   final DateTime? effectiveFrom;
   final DateTime? effectiveTo;
   final String? uploadedBy;
+  final String? uploadedByName;
   final String schoolId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -42,6 +44,7 @@ class TimetableModel {
           ? DateTime.tryParse(json['effective_to'] as String)
           : null,
       uploadedBy: json['uploaded_by'] as String?,
+      uploadedByName: json['uploaded_by_name'] as String?,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

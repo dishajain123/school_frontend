@@ -9,12 +9,9 @@ enum FeeCategory {
   tuition,
   transport,
   library,
+  laboratory,
   sports,
-  exam,
-  development,
-  computer,
-  canteen,
-  hostel,
+  examination,
   miscellaneous,
 }
 
@@ -27,18 +24,12 @@ extension FeeCategoryX on FeeCategory {
         return FeeCategory.transport;
       case 'LIBRARY':
         return FeeCategory.library;
+      case 'LABORATORY':
+        return FeeCategory.laboratory;
       case 'SPORTS':
         return FeeCategory.sports;
-      case 'EXAM':
-        return FeeCategory.exam;
-      case 'DEVELOPMENT':
-        return FeeCategory.development;
-      case 'COMPUTER':
-        return FeeCategory.computer;
-      case 'CANTEEN':
-        return FeeCategory.canteen;
-      case 'HOSTEL':
-        return FeeCategory.hostel;
+      case 'EXAMINATION':
+        return FeeCategory.examination;
       default:
         return FeeCategory.miscellaneous;
     }
@@ -52,18 +43,12 @@ extension FeeCategoryX on FeeCategory {
         return 'TRANSPORT';
       case FeeCategory.library:
         return 'LIBRARY';
+      case FeeCategory.laboratory:
+        return 'LABORATORY';
       case FeeCategory.sports:
         return 'SPORTS';
-      case FeeCategory.exam:
-        return 'EXAM';
-      case FeeCategory.development:
-        return 'DEVELOPMENT';
-      case FeeCategory.computer:
-        return 'COMPUTER';
-      case FeeCategory.canteen:
-        return 'CANTEEN';
-      case FeeCategory.hostel:
-        return 'HOSTEL';
+      case FeeCategory.examination:
+        return 'EXAMINATION';
       case FeeCategory.miscellaneous:
         return 'MISCELLANEOUS';
     }
@@ -77,18 +62,12 @@ extension FeeCategoryX on FeeCategory {
         return 'Transport';
       case FeeCategory.library:
         return 'Library';
+      case FeeCategory.laboratory:
+        return 'Laboratory';
       case FeeCategory.sports:
         return 'Sports';
-      case FeeCategory.exam:
-        return 'Exam';
-      case FeeCategory.development:
-        return 'Development';
-      case FeeCategory.computer:
-        return 'Computer';
-      case FeeCategory.canteen:
-        return 'Canteen';
-      case FeeCategory.hostel:
-        return 'Hostel';
+      case FeeCategory.examination:
+        return 'Examination';
       case FeeCategory.miscellaneous:
         return 'Miscellaneous';
     }
@@ -102,18 +81,12 @@ extension FeeCategoryX on FeeCategory {
         return Icons.directions_bus_outlined;
       case FeeCategory.library:
         return Icons.menu_book_outlined;
+      case FeeCategory.laboratory:
+        return Icons.science_outlined;
       case FeeCategory.sports:
         return Icons.sports_soccer_outlined;
-      case FeeCategory.exam:
+      case FeeCategory.examination:
         return Icons.quiz_outlined;
-      case FeeCategory.development:
-        return Icons.construction_outlined;
-      case FeeCategory.computer:
-        return Icons.computer_outlined;
-      case FeeCategory.canteen:
-        return Icons.restaurant_outlined;
-      case FeeCategory.hostel:
-        return Icons.hotel_outlined;
       case FeeCategory.miscellaneous:
         return Icons.category_outlined;
     }
@@ -127,18 +100,12 @@ extension FeeCategoryX on FeeCategory {
         return AppColors.infoBlue;
       case FeeCategory.library:
         return AppColors.subjectHistory;
+      case FeeCategory.laboratory:
+        return AppColors.subjectScience;
       case FeeCategory.sports:
         return AppColors.successGreen;
-      case FeeCategory.exam:
+      case FeeCategory.examination:
         return AppColors.subjectMath;
-      case FeeCategory.development:
-        return AppColors.subjectScience;
-      case FeeCategory.computer:
-        return AppColors.subjectPhysics;
-      case FeeCategory.canteen:
-        return AppColors.warningAmber;
-      case FeeCategory.hostel:
-        return AppColors.subjectChem;
       case FeeCategory.miscellaneous:
         return AppColors.grey600;
     }
@@ -159,6 +126,7 @@ class FeeStructureModel {
     required this.schoolId,
     required this.createdAt,
     required this.updatedAt,
+    this.customFeeHead,
     this.description,
   });
 
@@ -166,6 +134,7 @@ class FeeStructureModel {
   final String standardId;
   final String academicYearId;
   final FeeCategory feeCategory;
+  final String? customFeeHead;
   final double amount;
   final DateTime dueDate;
   final String? description;
@@ -174,11 +143,15 @@ class FeeStructureModel {
   final DateTime updatedAt;
 
   factory FeeStructureModel.fromJson(Map<String, dynamic> json) {
+    final customFeeHead = (json['custom_fee_head'] as String?)?.trim();
     return FeeStructureModel(
       id: json['id'] as String,
       standardId: json['standard_id'] as String,
       academicYearId: json['academic_year_id'] as String,
       feeCategory: FeeCategoryX.fromString(json['fee_category'] as String?),
+      customFeeHead: (customFeeHead == null || customFeeHead.isEmpty)
+          ? null
+          : customFeeHead,
       amount: (json['amount'] as num).toDouble(),
       dueDate: DateTime.parse(json['due_date'] as String),
       description: json['description'] as String?,
@@ -186,6 +159,13 @@ class FeeStructureModel {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
+  }
+
+  String get displayLabel {
+    if (customFeeHead != null && customFeeHead!.trim().isNotEmpty) {
+      return customFeeHead!.trim();
+    }
+    return feeCategory.label;
   }
 
   Map<String, dynamic> toJson() => {

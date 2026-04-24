@@ -64,6 +64,7 @@ class _AnnouncementListScreenState
       backgroundColor: AppColors.surface50,
       appBar: AppAppBar(
         title: 'Announcements',
+        showBack: true,
         actions: [
           if (_canCreate(user))
             Padding(

@@ -1,3 +1,5 @@
+import '../../../core/utils/media_url_resolver.dart';
+
 class AlbumModel {
   const AlbumModel({
     required this.id,
@@ -32,7 +34,8 @@ class AlbumModel {
       eventDate: DateTime.parse(json['event_date'] as String),
       description: json['description'] as String?,
       coverPhotoKey: json['cover_photo_key'] as String?,
-      coverPhotoUrl: json['cover_photo_url'] as String?,
+      coverPhotoUrl:
+          MediaUrlResolver.resolveNullable(json['cover_photo_url'] as String?),
       createdBy: json['created_by'] as String?,
       schoolId: json['school_id'] as String,
       academicYearId: json['academic_year_id'] as String,
@@ -42,24 +45,30 @@ class AlbumModel {
   }
 
   AlbumModel copyWith({
+    String? eventName,
+    DateTime? eventDate,
+    String? description,
+    String? academicYearId,
+    DateTime? updatedAt,
     String? coverPhotoKey,
     String? coverPhotoUrl,
     bool clearCoverPhoto = false,
+    bool clearDescription = false,
   }) {
     return AlbumModel(
       id: id,
-      eventName: eventName,
-      eventDate: eventDate,
-      description: description,
+      eventName: eventName ?? this.eventName,
+      eventDate: eventDate ?? this.eventDate,
+      description: clearDescription ? null : (description ?? this.description),
       coverPhotoKey:
           clearCoverPhoto ? null : (coverPhotoKey ?? this.coverPhotoKey),
       coverPhotoUrl:
           clearCoverPhoto ? null : (coverPhotoUrl ?? this.coverPhotoUrl),
       createdBy: createdBy,
       schoolId: schoolId,
-      academicYearId: academicYearId,
+      academicYearId: academicYearId ?? this.academicYearId,
       createdAt: createdAt,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

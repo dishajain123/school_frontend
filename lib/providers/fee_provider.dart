@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/auth/current_user.dart';
 import '../data/models/fee/fee_ledger_model.dart';
+import '../data/models/fee/fee_structure_model.dart';
 import '../data/models/fee/payment_model.dart';
 import '../data/models/student/student_model.dart';
 import '../data/repositories/fee_repository.dart';
@@ -10,14 +11,24 @@ import '../providers/auth_provider.dart';
 import '../providers/parent_provider.dart';
 
 // ── Fee Dashboard Provider ─────────────────────────────────────────────────────
-// Keyed by studentId — one cached instance per student.
-// Invalidate with ref.invalidate(feeDashboardProvider(studentId)) after payment.
+// Keyed by (studentId, academicYearId) for year-aware fee dashboards.
+// Invalidate with ref.invalidate(feeDashboardProvider) after payment to refresh all cached keys.
+
+typedef FeeDashboardParams = ({
+  String studentId,
+  String? academicYearId,
+});
 
 final feeDashboardProvider =
-    FutureProvider.family<FeeDashboardResult, String>((ref, studentId) async {
-  final repo = ref.read(feeRepositoryProvider);
-  return repo.getDashboard(studentId);
-});
+    FutureProvider.family<FeeDashboardResult, FeeDashboardParams>(
+  (ref, params) async {
+    final repo = ref.read(feeRepositoryProvider);
+    return repo.getDashboard(
+      params.studentId,
+      academicYearId: params.academicYearId,
+    );
+  },
+);
 
 typedef FeeAnalyticsParams = ({
   String? academicYearId,
@@ -35,6 +46,26 @@ final feeAnalyticsProvider =
       standardId: params.standardId,
       section: params.section,
       studentId: params.studentId,
+    );
+  },
+);
+
+typedef FeeStructuresParams = ({
+  String? academicYearId,
+  String? standardId,
+});
+
+final feeStructuresProvider =
+    FutureProvider.family<List<FeeStructureModel>, FeeStructuresParams>(
+  (ref, params) async {
+    final standardId = params.standardId;
+    if (standardId == null || standardId.trim().isEmpty) {
+      return <FeeStructureModel>[];
+    }
+    final repo = ref.read(feeRepositoryProvider);
+    return repo.listStructures(
+      standardId: standardId,
+      academicYearId: params.academicYearId,
     );
   },
 );
@@ -187,7 +218,7 @@ class RecordPaymentNotifier extends Notifier<RecordPaymentState> {
       );
       state = state.copyWith(isLoading: false, lastPayment: payment);
       // Bust the dashboard cache so the caller can refresh.
-      ref.invalidate(feeDashboardProvider(studentId));
+      ref.invalidate(feeDashboardProvider);
       // Also invalidate payment list for this ledger.
       ref.invalidate(paymentListProvider(feeLedgerId));
       return payment;

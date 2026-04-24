@@ -46,6 +46,8 @@ class MessageModel {
     required this.schoolId,
     this.content,
     this.fileKey,
+    this.reactions = const [],
+    this.myReaction,
   });
 
   final String id;
@@ -56,6 +58,8 @@ class MessageModel {
   final String? fileKey;
   final DateTime sentAt;
   final String schoolId;
+  final List<MessageReactionSummary> reactions;
+  final String? myReaction;
 
   bool isMine(String currentUserId) => senderId == currentUserId;
 
@@ -87,6 +91,11 @@ class MessageModel {
       fileKey: json['file_key'] as String?,
       sentAt: DateTime.parse(sentAtStr).toLocal(),
       schoolId: json['school_id'] as String? ?? '',
+      reactions: ((json['reactions'] as List<dynamic>?) ?? const [])
+          .map(
+              (e) => MessageReactionSummary.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      myReaction: json['my_reaction'] as String?,
     );
   }
 
@@ -103,6 +112,29 @@ class MessageModel {
       fileKey: json['file_key'] as String?,
       sentAt: DateTime.parse(json['sent_at'] as String).toLocal(),
       schoolId: '',
+      reactions: const [],
+      myReaction: null,
+    );
+  }
+
+  MessageModel copyWith({
+    String? content,
+    String? fileKey,
+    List<MessageReactionSummary>? reactions,
+    String? myReaction,
+    bool clearMyReaction = false,
+  }) {
+    return MessageModel(
+      id: id,
+      conversationId: conversationId,
+      senderId: senderId,
+      content: content ?? this.content,
+      messageType: messageType,
+      fileKey: fileKey ?? this.fileKey,
+      sentAt: sentAt,
+      schoolId: schoolId,
+      reactions: reactions ?? this.reactions,
+      myReaction: clearMyReaction ? null : (myReaction ?? this.myReaction),
     );
   }
 
@@ -112,4 +144,26 @@ class MessageModel {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+class MessageReactionSummary {
+  const MessageReactionSummary({
+    required this.emoji,
+    required this.count,
+  });
+
+  final String emoji;
+  final int count;
+
+  factory MessageReactionSummary.fromJson(Map<String, dynamic> json) {
+    return MessageReactionSummary(
+      emoji: (json['emoji'] ?? '').toString(),
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'emoji': emoji,
+        'count': count,
+      };
 }

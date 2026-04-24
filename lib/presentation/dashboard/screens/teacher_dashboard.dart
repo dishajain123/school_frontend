@@ -52,19 +52,19 @@ class TeacherDashboard extends ConsumerWidget {
         icon: Icons.assignment_outlined,
         label: 'Assignment',
         color: AppColors.infoBlue,
-        onTap: () => context.go(RouteNames.createAssignment),
+        onTap: () => context.go(RouteNames.assignments),
       ),
       QuickActionItem(
         icon: Icons.home_work_outlined,
         label: 'Homework',
         color: AppColors.subjectMath,
-        onTap: () => context.go(RouteNames.createHomework),
+        onTap: () => context.go(RouteNames.homework),
       ),
       QuickActionItem(
         icon: Icons.menu_book_outlined,
         label: 'Diary',
         color: AppColors.warningAmber,
-        onTap: () => context.go(RouteNames.createDiary),
+        onTap: () => context.go(RouteNames.diary),
       ),
     ];
 
@@ -79,13 +79,31 @@ class TeacherDashboard extends ConsumerWidget {
         icon: Icons.bar_chart_outlined,
         label: 'Analytics',
         color: AppColors.subjectScience,
-        onTap: () => context.go(RouteNames.attendance),
+        onTap: () => context.go(RouteNames.teacherAnalytics),
       ),
       QuickActionItem(
         icon: Icons.quiz_outlined,
         label: 'Exam',
         color: AppColors.subjectPhysics,
         onTap: () => context.go(RouteNames.examSchedules),
+      ),
+      QuickActionItem(
+        icon: Icons.grading_outlined,
+        label: 'Results',
+        color: AppColors.subjectChem,
+        onTap: () => context.go(RouteNames.principalResultsDistribution),
+      ),
+      QuickActionItem(
+        icon: Icons.edit_note_outlined,
+        label: 'Enter Marks',
+        color: AppColors.subjectScience,
+        onTap: () => context.go(RouteNames.enterResults),
+      ),
+      QuickActionItem(
+        icon: Icons.fact_check_outlined,
+        label: 'Behaviour',
+        color: AppColors.subjectHistory,
+        onTap: () => context.go(RouteNames.behaviourLogs),
       ),
       QuickActionItem(
         icon: Icons.campaign_outlined,

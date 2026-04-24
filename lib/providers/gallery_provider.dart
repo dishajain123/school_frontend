@@ -107,6 +107,71 @@ class GalleryAlbumListNotifier extends AsyncNotifier<GalleryAlbumListState> {
     }
   }
 
+  Future<AlbumModel?> updateAlbum({
+    required String albumId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final current = state.valueOrNull ?? const GalleryAlbumListState();
+    state = AsyncData(current.copyWith(isSubmitting: true, clearError: true));
+
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      final updated = await repo.updateAlbum(albumId: albumId, payload: payload);
+      final prev = state.valueOrNull ?? const GalleryAlbumListState();
+      final updatedItems = prev.items
+          .map((album) => album.id == albumId ? updated : album)
+          .toList();
+      state = AsyncData(
+        prev.copyWith(
+          items: updatedItems,
+          isSubmitting: false,
+        ),
+      );
+      return updated;
+    } catch (e) {
+      state = AsyncData(
+        (state.valueOrNull ?? const GalleryAlbumListState()).copyWith(
+          isSubmitting: false,
+          error: e.toString(),
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<bool> deleteAlbum(String albumId) async {
+    final current = state.valueOrNull ?? const GalleryAlbumListState();
+    state = AsyncData(current.copyWith(isSubmitting: true, clearError: true));
+
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      await repo.deleteAlbum(albumId);
+
+      final prev = state.valueOrNull ?? const GalleryAlbumListState();
+      final updatedItems = prev.items.where((album) => album.id != albumId).toList();
+      final updatedCounts = Map<String, int>.from(prev.photoCounts)
+        ..remove(albumId);
+
+      state = AsyncData(
+        prev.copyWith(
+          items: updatedItems,
+          total: updatedItems.length,
+          photoCounts: updatedCounts,
+          isSubmitting: false,
+        ),
+      );
+      return true;
+    } catch (e) {
+      state = AsyncData(
+        (state.valueOrNull ?? const GalleryAlbumListState()).copyWith(
+          isSubmitting: false,
+          error: e.toString(),
+        ),
+      );
+      return false;
+    }
+  }
+
   void setPhotoCount(String albumId, int count) {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -318,10 +383,19 @@ final galleryCanManageProvider = Provider<bool>((ref) {
       user.role == UserRole.teacher;
 });
 
+final galleryCanDeleteAlbumProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  return user.role == UserRole.principal;
+});
+
 final galleryCanInteractProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return false;
-  return user.role == UserRole.parent || user.role == UserRole.student;
+  return user.role == UserRole.parent ||
+      user.role == UserRole.student ||
+      user.role == UserRole.teacher ||
+      user.role == UserRole.trustee;
 });
 
 class PhotoInteractionState {
@@ -425,6 +499,22 @@ class PhotoInteractionNotifier extends StateNotifier<PhotoInteractionState> {
       final repo = ref.read(galleryRepositoryProvider);
       final interactions =
           await repo.addComment(photoId: photoId, comment: text);
+      _applyInteraction(interactions);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isSubmitting: false, error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String commentId) async {
+    if (commentId.trim().isEmpty) return false;
+
+    state = state.copyWith(isSubmitting: true, clearError: true);
+    try {
+      final repo = ref.read(galleryRepositoryProvider);
+      final interactions =
+          await repo.deleteComment(photoId: photoId, commentId: commentId);
       _applyInteraction(interactions);
       return true;
     } catch (e) {

@@ -38,9 +38,9 @@ class RouteNames {
   static const String createParent = '/parents/create';
 
   static const String attendance = '/attendance';
+  static const String teacherAnalytics = '/teacher-analytics';
   static const String markAttendance = '/attendance/mark';
   static const String attendanceAnalytics = '/attendance/analytics/:studentId';
-  static const String classSnapshot = '/attendance/snapshot';
   static const String belowThreshold = '/attendance/below-threshold';
 
   static const String assignments = '/assignments';

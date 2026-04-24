@@ -33,6 +33,8 @@ class ResultListScreen extends ConsumerWidget {
     final selectedChild = ref.watch(selectedChildProvider);
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
     final activeYear = ref.watch(activeYearProvider);
+    final isStudentOrParent = currentUser?.role == UserRole.student ||
+        currentUser?.role == UserRole.parent;
 
     final resolvedStudentId = studentId ??
         (currentUser?.role == UserRole.parent
@@ -48,7 +50,7 @@ class ResultListScreen extends ConsumerWidget {
               ? () => context.go(RouteNames.dashboard)
               : null,
         ),
-        body: AppEmptyState(
+        body: const AppEmptyState(
           icon: Icons.analytics_outlined,
           title: 'Student not selected',
           subtitle: 'Select a student to view results.',
@@ -58,7 +60,7 @@ class ResultListScreen extends ConsumerWidget {
 
     final params = (
       studentId: resolvedStudentId,
-      academicYearId: activeYear?.id,
+      academicYearId: isStudentOrParent ? null : activeYear?.id,
       standardId: null,
     );
 
@@ -183,13 +185,6 @@ class _ExamCard extends StatelessWidget {
                       style: AppTypography.titleMedium.copyWith(
                         color: AppColors.navyDeep,
                         fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      exam.examType.label,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.grey600,
                       ),
                     ),
                     const SizedBox(height: 4),

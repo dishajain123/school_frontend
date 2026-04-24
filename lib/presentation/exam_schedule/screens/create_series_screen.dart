@@ -63,6 +63,14 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
     return AppScaffold(
       appBar: AppAppBar(
         title: _step == 1 ? 'Create Exam Series' : 'Add Exam Entries',
+        showBack: true,
+        onBackPressed: () {
+          if (_step == 2) {
+            setState(() => _step = 1);
+            return;
+          }
+          context.pop();
+        },
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),

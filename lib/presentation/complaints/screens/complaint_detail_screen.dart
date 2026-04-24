@@ -155,7 +155,9 @@ class _ComplaintDetailScreenState extends ConsumerState<ComplaintDetailScreen>
         ref.watch(complaintByIdProvider(widget.complaintId)) ?? _complaint;
     final user = ref.watch(currentUserProvider);
     final canManage =
-        user?.role == UserRole.principal || user?.role == UserRole.trustee;
+        user?.role == UserRole.principal ||
+        user?.role == UserRole.trustee ||
+        user?.role == UserRole.superadmin;
 
     return AppScaffold(
       appBar: const AppAppBar(title: 'Complaint Detail', showBack: true),

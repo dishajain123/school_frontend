@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/chat/conversation_model.dart';
+import '../../../data/models/chat/message_model.dart';
 import '../../../presentation/common/widgets/app_error_state.dart';
 import '../../../presentation/common/widgets/app_loading.dart';
 import '../../../providers/auth_provider.dart';
@@ -82,11 +84,132 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  Future<void> _showReactionPicker(MessageModel message) async {
+    const emojiOptions = [
+      '👍',
+      '❤️',
+      '😂',
+      '😮',
+      '😢',
+      '🙏',
+      '🔥',
+      '👏',
+      '🎉',
+      '🤝',
+      '✅',
+      '💯',
+      '😍',
+      '😡',
+      '😎',
+      '🤔',
+      '🙌',
+      '🌟',
+    ];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+          child: SizedBox(
+            height: 58,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: emojiOptions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final emoji = emojiOptions[index];
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pop(emoji),
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: emoji == '❤️'
+                          ? AppColors.errorRed.withValues(alpha: 0.1)
+                          : AppColors.surface100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: emoji == '❤️'
+                            ? AppColors.errorRed.withValues(alpha: 0.4)
+                            : AppColors.surface200,
+                      ),
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    await ref
+        .read(chatRoomProvider(widget.conversationId).notifier)
+        .reactToMessage(
+          messageId: message.id,
+          emoji: selected,
+        );
+  }
+
+  Future<void> _deleteConversation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete chat'),
+        content: const Text(
+          'This chat will be deleted for everyone. Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref
+          .read(conversationNotifierProvider.notifier)
+          .deleteConversation(widget.conversationId);
+      if (!mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        context.go(RouteNames.conversations);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete conversation.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatAsync = ref.watch(chatRoomProvider(widget.conversationId));
     final currentUser = ref.watch(currentUserProvider);
     final currentUserId = currentUser?.id ?? '';
+    final canDeleteChat = currentUser != null &&
+        (currentUser.role == UserRole.principal ||
+            currentUser.role == UserRole.teacher);
+    final canReactToMessage = currentUser != null &&
+        (currentUser.role == UserRole.parent ||
+            currentUser.role == UserRole.student ||
+            currentUser.role == UserRole.teacher ||
+            currentUser.role == UserRole.principal);
 
     ref.listen(chatRoomProvider(widget.conversationId), (prev, next) {
       final prevCount = prev?.valueOrNull?.messages.length ?? 0;
@@ -116,6 +239,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   .read(chatRoomProvider(widget.conversationId).notifier)
                   .reconnect()
               : null,
+          showDelete: canDeleteChat,
+          onDelete: canDeleteChat ? _deleteConversation : null,
         ),
       ),
       body: chatAsync.when(
@@ -162,6 +287,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 message: message,
                                 isMine: message.isMine(currentUserId),
                                 previousMessage: previousMessage,
+                                onDoubleTap: canReactToMessage
+                                    ? () => _showReactionPicker(message)
+                                    : null,
                               ),
                             ],
                           );
@@ -205,6 +333,8 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isConnected,
     required this.onBack,
     this.onReconnect,
+    this.showDelete = false,
+    this.onDelete,
   });
 
   final String title;
@@ -212,6 +342,8 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isConnected;
   final VoidCallback onBack;
   final VoidCallback? onReconnect;
+  final bool showDelete;
+  final VoidCallback? onDelete;
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -327,6 +459,22 @@ class _ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                           color: AppColors.white, size: 18),
                     ),
                   ),
+                if (showDelete && onDelete != null) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.delete_outline_rounded,
+                          color: AppColors.white, size: 18),
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
               ],
             ),

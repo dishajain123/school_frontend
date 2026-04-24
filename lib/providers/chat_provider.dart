@@ -8,11 +8,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../data/models/chat/conversation_model.dart';
 import '../data/models/chat/message_model.dart';
 import '../data/repositories/chat_repository.dart';
+import 'auth_provider.dart';
 
 // ── Conversation List ─────────────────────────────────────────────────────────
 
-class ConversationNotifier
-    extends AsyncNotifier<List<ConversationModel>> {
+class ConversationNotifier extends AsyncNotifier<List<ConversationModel>> {
   @override
   Future<List<ConversationModel>> build() async {
     return _fetch();
@@ -63,6 +63,13 @@ class ConversationNotifier
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<void> deleteConversation(String conversationId) async {
+    final repo = ref.read(chatRepositoryProvider);
+    await repo.deleteConversation(conversationId);
+    final current = state.valueOrNull ?? [];
+    state = AsyncData(current.where((c) => c.id != conversationId).toList());
   }
 
   void _upsert(ConversationModel conversation) {
@@ -181,6 +188,11 @@ class ChatRoomNotifier
           if (_disposed) return;
           try {
             final json = jsonDecode(raw as String) as Map<String, dynamic>;
+            final event = (json['event'] ?? 'message_created').toString();
+            if (event == 'reaction_updated') {
+              _applyReactionWsUpdate(json);
+              return;
+            }
             final incoming = MessageModel.fromWsJson(json);
             final cur = state.valueOrNull ?? const ChatRoomState();
             if (!cur.messages.any((m) => m.id == incoming.id)) {
@@ -246,8 +258,7 @@ class ChatRoomNotifier
     if (cur == null) return false;
 
     if (!cur.isConnected || _channel == null) {
-      _updateState(
-          (s) => s.copyWith(error: 'Not connected. Reconnecting…'));
+      _updateState((s) => s.copyWith(error: 'Not connected. Reconnecting…'));
       _connectWs(arg); // attempt reconnect
       return false;
     }
@@ -280,8 +291,8 @@ class ChatRoomNotifier
       final fileKey = await repo.uploadChatFile(arg, multipart);
 
       if (!cur.isConnected || _channel == null) {
-        _updateState((s) =>
-            s.copyWith(isSending: false, error: 'Not connected.'));
+        _updateState(
+            (s) => s.copyWith(isSending: false, error: 'Not connected.'));
         return false;
       }
 
@@ -292,8 +303,8 @@ class ChatRoomNotifier
       _updateState((s) => s.copyWith(isSending: false));
       return true;
     } catch (_) {
-      _updateState((s) =>
-          s.copyWith(isSending: false, error: 'Failed to send file.'));
+      _updateState(
+          (s) => s.copyWith(isSending: false, error: 'Failed to send file.'));
       return false;
     }
   }
@@ -314,8 +325,67 @@ class ChatRoomNotifier
     _connectWs(arg);
   }
 
-  void clearError() =>
-      _updateState((s) => s.copyWith(clearError: true));
+  void clearError() => _updateState((s) => s.copyWith(clearError: true));
+
+  Future<void> reactToMessage({
+    required String messageId,
+    required String emoji,
+  }) async {
+    final cur = state.valueOrNull;
+    if (cur == null) return;
+    try {
+      final result = await ref.read(chatRepositoryProvider).reactToMessage(
+            messageId: messageId,
+            emoji: emoji,
+          );
+      _updateState(
+        (s) => s.copyWith(
+          messages: s.messages
+              .map(
+                (message) => message.id == messageId
+                    ? message.copyWith(
+                        reactions: result.reactions,
+                        myReaction: result.myReaction,
+                        clearMyReaction: result.myReaction == null,
+                      )
+                    : message,
+              )
+              .toList(),
+        ),
+      );
+    } catch (_) {
+      _updateState((s) => s.copyWith(error: 'Failed to update reaction.'));
+    }
+  }
+
+  void _applyReactionWsUpdate(Map<String, dynamic> json) {
+    final messageId = (json['message_id'] ?? '').toString();
+    if (messageId.isEmpty) return;
+    final actorUserId = (json['actor_user_id'] ?? '').toString();
+    final reaction = json['reaction'] as String?;
+    final status = (json['status'] ?? '').toString().toLowerCase();
+    final currentUserId = ref.read(currentUserProvider)?.id ?? '';
+    final reactions = ((json['reactions'] as List<dynamic>?) ?? const [])
+        .map((e) => MessageReactionSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    _updateState(
+      (s) => s.copyWith(
+        messages: s.messages.map((message) {
+          if (message.id != messageId) return message;
+          if (actorUserId.isNotEmpty && actorUserId == currentUserId) {
+            final shouldClear = status == 'removed';
+            return message.copyWith(
+              reactions: reactions,
+              myReaction: shouldClear ? null : reaction,
+              clearMyReaction: shouldClear,
+            );
+          }
+          return message.copyWith(reactions: reactions);
+        }).toList(),
+      ),
+    );
+  }
 }
 
 final chatRoomProvider = AsyncNotifierProvider.autoDispose

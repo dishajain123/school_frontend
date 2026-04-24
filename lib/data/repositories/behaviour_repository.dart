@@ -9,10 +9,20 @@ class BehaviourRepository {
   const BehaviourRepository(this._dio);
   final Dio _dio;
 
-  Future<BehaviourLogListResponse> list(String studentId) async {
+  Future<BehaviourLogListResponse> list({
+    String? studentId,
+    IncidentType? incidentType,
+    String? standardId,
+    String? section,
+  }) async {
     final response = await _dio.get(
       ApiConstants.behaviour,
-      queryParameters: {'student_id': studentId},
+      queryParameters: {
+        if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
+        if (incidentType != null) 'incident_type': incidentType.backendValue,
+        if (standardId != null && standardId.isNotEmpty) 'standard_id': standardId,
+        if (section != null && section.isNotEmpty) 'section': section,
+      },
     );
     return BehaviourLogListResponse.fromJson(
       response.data as Map<String, dynamic>,

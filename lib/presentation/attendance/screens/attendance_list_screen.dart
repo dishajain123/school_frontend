@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../data/models/attendance/attendance_analytics.dart';
 import '../../../data/models/attendance/attendance_model.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -106,6 +107,13 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
     );
 
     final attendanceAsync = ref.watch(attendanceListProvider(params));
+    final subjectAnalyticsParams = (
+      studentId: studentId,
+      month: _month,
+      year: _year,
+    );
+    final subjectAnalyticsAsync =
+        ref.watch(studentAnalyticsProvider(subjectAnalyticsParams));
 
     return AppScaffold(
       appBar: const AppAppBar(title: 'Attendance', showBack: true),
@@ -113,7 +121,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
         color: AppColors.navyDeep,
         onRefresh: () async => ref.invalidate(attendanceListProvider(params)),
         child: attendanceAsync.when(
-          data: (result) => _buildContent(result.items),
+          data: (result) => _buildContent(
+            result.items,
+            subjects: subjectAnalyticsAsync.valueOrNull?.subjects ?? const [],
+          ),
           loading: () => AppLoading.fullPage(),
           error: (e, _) => AppErrorState(
             message: e.toString(),
@@ -124,7 +135,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
     );
   }
 
-  Widget _buildContent(List<AttendanceModel> records) {
+  Widget _buildContent(
+    List<AttendanceModel> records, {
+    required List<SubjectAttendanceStat> subjects,
+  }) {
     final present =
         records.where((r) => r.status == AttendanceStatus.present).length;
     final absent =
@@ -150,8 +164,12 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: _AttendanceViewFilters(
               mode: _viewMode,
+              subjects: subjects,
+              selectedSubjectId: _selectedSubjectId,
               selectedLectureNumber: _selectedLectureNumber,
               onModeChanged: (mode) => setState(() => _viewMode = mode),
+              onSubjectChanged: (subjectId) =>
+                  setState(() => _selectedSubjectId = subjectId),
               onLectureChanged: (lecture) =>
                   setState(() => _selectedLectureNumber = lecture),
             ),
@@ -568,14 +586,20 @@ class _AttendanceRecordTile extends StatelessWidget {
 class _AttendanceViewFilters extends StatelessWidget {
   const _AttendanceViewFilters({
     required this.mode,
+    required this.subjects,
+    required this.selectedSubjectId,
     required this.selectedLectureNumber,
     required this.onModeChanged,
+    required this.onSubjectChanged,
     required this.onLectureChanged,
   });
 
   final _AttendanceViewMode mode;
+  final List<SubjectAttendanceStat> subjects;
+  final String? selectedSubjectId;
   final int? selectedLectureNumber;
   final ValueChanged<_AttendanceViewMode> onModeChanged;
+  final ValueChanged<String?> onSubjectChanged;
   final ValueChanged<int?> onLectureChanged;
 
   @override
@@ -586,6 +610,26 @@ class _AttendanceViewFilters extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        DropdownButtonFormField<String?>(
+          initialValue: selectedSubjectId,
+          decoration: const InputDecoration(
+            labelText: 'Subject',
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All Subjects'),
+            ),
+            ...subjects.map(
+              (s) => DropdownMenuItem<String?>(
+                value: s.subjectId,
+                child: Text('${s.subjectName} (${s.subjectCode})'),
+              ),
+            ),
+          ],
+          onChanged: onSubjectChanged,
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
             ChoiceChip(

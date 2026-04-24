@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/chat/conversation_model.dart';
 import '../../../presentation/common/widgets/app_app_bar.dart';
 import '../../../presentation/common/widgets/app_empty_state.dart';
@@ -11,6 +12,7 @@ import '../../../presentation/common/widgets/app_error_state.dart';
 import '../../../presentation/common/widgets/app_loading.dart';
 import '../../../presentation/common/widgets/app_scaffold.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/conversation_tile.dart';
 import '../widgets/new_conversation_sheet.dart';
 
@@ -61,9 +63,50 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     }
   }
 
+  Future<void> _deleteConversation(ConversationModel conversation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete chat'),
+        content: Text(
+          'Delete "${conversation.displayName}" for all participants?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(conversationNotifierProvider.notifier)
+          .deleteConversation(conversation.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conversation deleted.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete conversation.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(conversationNotifierProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final canDeleteChat = currentUser != null &&
+        (currentUser.role == UserRole.principal ||
+            currentUser.role == UserRole.teacher);
 
     return AppScaffold(
       appBar: AppAppBar(
@@ -147,6 +190,9 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                   conversation: conversation,
                   isLast: i == conversations.length - 1,
                   onTap: () => _openChat(context, conversation),
+                  onDelete: canDeleteChat
+                      ? () => _deleteConversation(conversation)
+                      : null,
                 );
               },
             ),

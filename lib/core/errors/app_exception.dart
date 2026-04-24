@@ -44,6 +44,15 @@ class ConflictException extends AppException {
   }) : super(message: message, statusCode: statusCode);
 }
 
+/// 410 — Resource has been permanently removed.
+class GoneException extends AppException {
+  const GoneException({
+    String message = 'This feature is no longer available. Please update the app.',
+    int? statusCode = 410,
+  }) : super(message: message, statusCode: statusCode);
+}
+
+
 /// 422 — Validation error from the server.
 class ValidationException extends AppException {
   const ValidationException({

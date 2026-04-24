@@ -116,8 +116,6 @@ class ApiConstants {
   static const String attendance = '/attendance';
   static String attendanceStudentAnalytics(String studentId) =>
       '/attendance/analytics/student/$studentId';
-  static String attendanceClassSnapshot(String standardId) =>
-      '/attendance/analytics/class/$standardId';
   static const String attendanceBelowThreshold =
       '/attendance/analytics/below-threshold';
 
@@ -185,6 +183,8 @@ class ApiConstants {
 
   // ── Chat ──────────────────────────────────────────────────────────────────
   static const String chatConversations = '/chat/conversations';
+  static String chatConversationById(String conversationId) =>
+      '/chat/conversations/$conversationId';
   static const String chatUsers = '/chat/users';
   static String chatMessages(String conversationId) =>
       '/chat/conversations/$conversationId/messages';
@@ -192,6 +192,8 @@ class ApiConstants {
       '/chat/conversations/$conversationId/read';
   static String chatUploadFile(String conversationId) =>
       '/chat/conversations/$conversationId/files';
+  static String chatMessageReaction(String messageId) =>
+      '/chat/messages/$messageId/reaction';
   static String chatWebSocket(String token, String conversationId) =>
       '$resolvedWsBaseUrl$apiPrefix/ws/chat?${Uri(queryParameters: {
             'token': token,
@@ -219,13 +221,16 @@ class ApiConstants {
       '/gallery/photos/$photoId/reaction';
   static String galleryPhotoComments(String photoId) =>
       '/gallery/photos/$photoId/comments';
+  static String galleryPhotoCommentById(String photoId, String commentId) =>
+      '/gallery/photos/$photoId/comments/$commentId';
 
   // ── Documents ─────────────────────────────────────────────────────────────
   static const String documentRequest = '/documents/request';
   static const String documentUpload = '/documents/upload';
   static const String documents = '/documents';
   static const String documentRequirements = '/documents/requirements';
-  static const String documentRequirementStatus = '/documents/requirements/status';
+  static const String documentRequirementStatus =
+      '/documents/requirements/status';
   static const String documentReviewQueue = '/documents/review-queue';
   static String documentDownload(String id) => '/documents/$id/download';
   static String documentVerify(String id) => '/documents/$id/verify';

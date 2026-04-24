@@ -66,10 +66,12 @@ class LeaveRepository {
   Future<LeaveListResponse> list({
     LeaveStatus? status,
     String? academicYearId,
+    String? teacherId,
   }) async {
     final params = <String, dynamic>{
       if (status != null) 'status': status.backendValue,
       if (academicYearId != null) 'academic_year_id': academicYearId,
+      if (teacherId != null) 'teacher_id': teacherId,
     };
 
     final response = await _dio.get(

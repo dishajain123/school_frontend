@@ -8,8 +8,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
+import '../../../data/models/timetable/timetable_model.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/timetable_provider.dart';
 import '../../../providers/teacher_provider.dart';
@@ -47,7 +52,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
 
   String? _selectedStandardId;
   String? _selectedExamType;
-  final _sectionController = TextEditingController();
+  String? _selectedSection;
   PlatformFile? _pickedFile;
   Uint8List? _pickedBytes;
 
@@ -61,7 +66,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     _selectedStandardId = widget.initialStandardId;
     final initialSection = widget.initialSection?.trim();
     if (initialSection != null && initialSection.isNotEmpty) {
-      _sectionController.text = initialSection;
+      _selectedSection = initialSection.toUpperCase();
     }
 
     _animCtrl = AnimationController(
@@ -76,7 +81,6 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
 
   @override
   void dispose() {
-    _sectionController.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
@@ -120,9 +124,47 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     }
 
     final activeYear = ref.read(activeYearProvider);
-    final section = _sectionController.text.trim().isEmpty
+    final section =
+        (_selectedSection == null || _selectedSection!.trim().isEmpty)
+            ? null
+            : _selectedSection!.trim().toUpperCase();
+    final existingForSelection = (_selectedStandardId == null)
         ? null
-        : _sectionController.text.trim().toUpperCase();
+        : await ref
+            .read(
+              timetableProvider((
+                standardId: _selectedStandardId!,
+                academicYearId: activeYear?.id,
+                section: section,
+              )).future,
+            )
+            .then<TimetableModel?>((value) => value)
+            .catchError((_) => null);
+
+    if (existingForSelection != null && mounted) {
+      final shouldReplace = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Replace Existing Schedule?'),
+              content: const Text(
+                'A schedule file already exists for this class/section. '
+                'Uploading now will replace it.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Replace'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!shouldReplace) return;
+    }
 
     String? overrideFileName;
     if (widget.examMode && _selectedExamType != null) {
@@ -168,8 +210,47 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
   @override
   Widget build(BuildContext context) {
     final uploadState = ref.watch(timetableUploadProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final activeYear = ref.watch(activeYearProvider);
     final standardsAsync = ref.watch(standardsProvider(activeYear?.id));
+    final teacherAssignmentsAsync = (currentUser?.role == UserRole.teacher)
+        ? ref.watch(teacherAssignmentsByTeacherProvider(currentUser!.id))
+        : const AsyncData<List<TeacherClassSubjectModel>>(
+            <TeacherClassSubjectModel>[],
+          );
+    final studentSectionsAsync = _selectedStandardId == null
+        ? const AsyncData<List<String>>(<String>[])
+        : ref.watch(sectionsByStandardProvider((
+            standardId: _selectedStandardId,
+            academicYearId: activeYear?.id,
+          )));
+    final timetableSectionsAsync = _selectedStandardId == null
+        ? const AsyncData<List<String>>(<String>[])
+        : ref.watch(timetableSectionsProvider((
+            standardId: _selectedStandardId!,
+            academicYearId: activeYear?.id,
+          )));
+
+    final mergedSections = <String>{
+      ...studentSectionsAsync.valueOrNull?.map((s) => s.trim().toUpperCase()) ??
+          const <String>{},
+      ...timetableSectionsAsync.valueOrNull
+              ?.map((s) => s.trim().toUpperCase()) ??
+          const <String>{},
+    }.where((s) => s.isNotEmpty).toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final safeSelectedSection =
+        mergedSections.contains(_selectedSection) ? _selectedSection : null;
+    final AsyncValue<TimetableModel?> existingTimetableAsync =
+        _selectedStandardId == null
+            ? const AsyncData<TimetableModel?>(null)
+            : ref
+                .watch(timetableProvider((
+                  standardId: _selectedStandardId!,
+                  academicYearId: activeYear?.id,
+                  section: safeSelectedSection,
+                )))
+                .whenData((value) => value);
 
     return AppScaffold(
       appBar: const AppAppBar(
@@ -198,21 +279,65 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                           loading: () => AppLoading.card(height: 46),
                           error: (_, __) =>
                               _InlineError('Could not load classes'),
-                          data: (standards) => _StyledDropdown<String>(
-                            hint: 'Select class',
-                            value: _selectedStandardId,
-                            items: standards
-                                .map((s) => DropdownMenuItem(
-                                      value: s.id,
-                                      child: Text(s.name,
-                                          style: AppTypography.bodyMedium
-                                              .copyWith(
-                                                  color: AppColors.grey800)),
-                                    ))
-                                .toList(),
-                            onChanged: (id) =>
-                                setState(() => _selectedStandardId = id),
-                          ),
+                          data: (standards) {
+                            if (currentUser?.role == UserRole.teacher) {
+                              return teacherAssignmentsAsync.when(
+                                loading: () => AppLoading.card(height: 46),
+                                error: (_, __) =>
+                                    _InlineError('Could not load classes'),
+                                data: (assignments) {
+                                  final allowedStandardIds = assignments
+                                      .map((a) => a.standardId)
+                                      .toSet();
+                                  final allowedStandards = standards
+                                      .where((s) =>
+                                          allowedStandardIds.contains(s.id))
+                                      .toList();
+                                  final safeValue = allowedStandardIds
+                                          .contains(_selectedStandardId)
+                                      ? _selectedStandardId
+                                      : null;
+                                  return _StyledDropdown<String>(
+                                    hint: 'Select class',
+                                    value: safeValue,
+                                    items: allowedStandards
+                                        .map((s) => DropdownMenuItem(
+                                              value: s.id,
+                                              child: Text(
+                                                s.name,
+                                                style: AppTypography.bodyMedium
+                                                    .copyWith(
+                                                        color:
+                                                            AppColors.grey800),
+                                              ),
+                                            ))
+                                        .toList(),
+                                    onChanged: (id) => setState(() {
+                                      _selectedStandardId = id;
+                                      _selectedSection = null;
+                                    }),
+                                  );
+                                },
+                              );
+                            }
+                            return _StyledDropdown<String>(
+                              hint: 'Select class',
+                              value: _selectedStandardId,
+                              items: standards
+                                  .map((s) => DropdownMenuItem(
+                                        value: s.id,
+                                        child: Text(s.name,
+                                            style: AppTypography.bodyMedium
+                                                .copyWith(
+                                                    color: AppColors.grey800)),
+                                      ))
+                                  .toList(),
+                              onChanged: (id) => setState(() {
+                                _selectedStandardId = id;
+                                _selectedSection = null;
+                              }),
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
                         if (widget.examMode) ...[
@@ -241,9 +366,37 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                         ],
                         _FieldLabel('Section (optional)'),
                         const SizedBox(height: 8),
-                        _SectionInput(
-                          controller: _sectionController,
-                          hint: 'e.g. A, B, C — leave blank for all sections',
+                        _StyledDropdown<String?>(
+                          hint: _selectedStandardId == null
+                              ? 'Select class first'
+                              : 'All sections',
+                          value: safeSelectedSection,
+                          items: [
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text(
+                                'All sections',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.grey800,
+                                ),
+                              ),
+                            ),
+                            ...mergedSections.map(
+                              (section) => DropdownMenuItem<String?>(
+                                value: section,
+                                child: Text(
+                                  section,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.grey800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: _selectedStandardId == null
+                              ? (_) {}
+                              : (value) =>
+                                  setState(() => _selectedSection = value),
                         ),
                         const SizedBox(height: 16),
                         _FieldLabel('Academic Year'),
@@ -277,6 +430,68 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                       title: 'File Attachment',
                       icon: Icons.attach_file_rounded,
                       children: [
+                        existingTimetableAsync.when(
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                          data: (existing) {
+                            if (existing == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.green.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Already uploaded: ${existing.fileName}',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Open this first to avoid duplicate upload.',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.grey600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Uploaded by ${existing.uploadedByName?.trim().isNotEmpty == true ? existing.uploadedByName!.trim() : 'Staff'} on ${DateFormatter.formatDateTime(existing.updatedAt)}',
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.grey500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: existing.fileUrl == null
+                                          ? null
+                                          : () => _showOpenDialog(
+                                                context,
+                                                existing.fileUrl!,
+                                              ),
+                                      icon: const Icon(
+                                          Icons.open_in_new_rounded,
+                                          size: 16),
+                                      label: const Text('Open Existing File'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         _pickedFile == null
                             ? _FileTapTarget(onTap: _pickFile)
                             : _FileAttached(
@@ -316,6 +531,30 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
       ),
     );
   }
+}
+
+void _showOpenDialog(BuildContext context, String url) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Open Timetable'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Copy and open this link in your browser:'),
+          const SizedBox(height: 8),
+          SelectableText(url),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _FormCard extends StatelessWidget {
@@ -441,37 +680,6 @@ class _StyledDropdown<T> extends StatelessWidget {
               color: AppColors.grey400),
           onChanged: onChanged,
           items: items,
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionInput extends StatelessWidget {
-  const _SectionInput({required this.controller, required this.hint});
-  final TextEditingController controller;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.surface50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surface200),
-      ),
-      child: TextField(
-        controller: controller,
-        textCapitalization: TextCapitalization.characters,
-        maxLength: 10,
-        style: AppTypography.bodyMedium.copyWith(color: AppColors.grey800),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: hint,
-          hintStyle: AppTypography.bodyMedium
-              .copyWith(color: AppColors.grey400, fontSize: 13),
-          counterText: '',
         ),
       ),
     );

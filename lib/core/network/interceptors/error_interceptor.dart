@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import '../../errors/app_exception.dart';
 
 /// Maps HTTP status codes to typed [AppException] subclasses.
-/// Extracts the `detail` field from backend JSON error bodies.
+/// Handles both legacy and envelope-shaped error responses.
 class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
@@ -72,6 +72,12 @@ class ErrorInterceptor extends Interceptor {
           message: detail ?? 'Conflict: resource already exists.',
           statusCode: statusCode,
         );
+      case 410:
+        return GoneException(
+          message:
+              detail ?? 'This API is no longer available. Please update the app.',
+          statusCode: statusCode,
+        );
       case 422:
         return ValidationException(
           message: detail ?? 'Validation failed.',
@@ -102,23 +108,45 @@ class ErrorInterceptor extends Interceptor {
       host == '10.0.2.2' ||
       host == 'host.docker.internal';
 
-  /// Extracts the human-readable message from backend error body.
-  /// Backend sends: { "error": "...", "detail": "...", "request_id": "..." }
+  /// Extracts the best human-readable error message from possible backend shapes.
   String? _extractDetail(dynamic data) {
     if (data == null) return null;
+
     if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.isNotEmpty) {
+        return message;
+      }
+
       final detail = data['detail'];
       if (detail is String && detail.isNotEmpty) return detail;
-      // 422 validation errors: detail is a list
       if (detail is List && detail.isNotEmpty) {
         final first = detail.first;
         if (first is Map) {
           return first['msg']?.toString() ?? first.toString();
         }
-        return detail.first.toString();
+        return first.toString();
       }
-      return data['error']?.toString();
+
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        final details = error['details'];
+        if (details is String && details.isNotEmpty) {
+          return details;
+        }
+        if (details is List && details.isNotEmpty) {
+          return details.first.toString();
+        }
+        final code = error['code'];
+        if (code is String && code.isNotEmpty) {
+          return code;
+        }
+      }
+
+      final legacyError = data['error'];
+      if (legacyError is String && legacyError.isNotEmpty) return legacyError;
     }
+
     return data.toString();
   }
 }

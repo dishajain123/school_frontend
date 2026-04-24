@@ -51,6 +51,7 @@ class CurrentUser {
     required this.id,
     required this.role,
     required this.permissions,
+    this.fullName,
     this.email,
     this.phone,
     this.schoolId,
@@ -61,6 +62,7 @@ class CurrentUser {
   final String id;
   final UserRole role;
   final List<String> permissions;
+  final String? fullName;
   final String? email;
   final String? phone;
   final String? schoolId;
@@ -81,6 +83,7 @@ class CurrentUser {
           .toString(),
       role: UserRoleX.fromBackend(roleValue),
       permissions: permissions,
+      fullName: json['full_name'] as String?,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       schoolId: (json['school_id'] ?? json['schoolId']) as String?,
@@ -94,6 +97,7 @@ class CurrentUser {
       'id': id,
       'role': role.backendValue,
       'permissions': permissions,
+      'full_name': fullName,
       'email': email,
       'phone': phone,
       'school_id': schoolId,
@@ -106,6 +110,7 @@ class CurrentUser {
     String? id,
     UserRole? role,
     List<String>? permissions,
+    String? fullName,
     String? email,
     String? phone,
     String? schoolId,
@@ -116,6 +121,7 @@ class CurrentUser {
       id: id ?? this.id,
       role: role ?? this.role,
       permissions: permissions ?? this.permissions,
+      fullName: fullName ?? this.fullName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
       schoolId: schoolId ?? this.schoolId,

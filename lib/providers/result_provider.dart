@@ -100,22 +100,26 @@ class CreateExamState {
     this.isLoading = false,
     this.error,
     this.createdExam,
+    this.bulkResult,
   });
 
   final bool isLoading;
   final String? error;
   final ExamModel? createdExam;
+  final ExamBulkCreateResponseModel? bulkResult;
 
   CreateExamState copyWith({
     bool? isLoading,
     String? error,
     ExamModel? createdExam,
+    ExamBulkCreateResponseModel? bulkResult,
     bool clearError = false,
   }) {
     return CreateExamState(
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       createdExam: createdExam ?? this.createdExam,
+      bulkResult: bulkResult ?? this.bulkResult,
     );
   }
 }
@@ -126,7 +130,6 @@ class CreateExamNotifier extends Notifier<CreateExamState> {
 
   Future<ExamModel?> createExam({
     required String name,
-    required String examType,
     required String standardId,
     required String startDate,
     required String endDate,
@@ -136,7 +139,6 @@ class CreateExamNotifier extends Notifier<CreateExamState> {
     try {
       final exam = await ref.read(resultRepositoryProvider).createExam(
             name: name,
-            examType: examType,
             standardId: standardId,
             startDate: startDate,
             endDate: endDate,
@@ -144,6 +146,29 @@ class CreateExamNotifier extends Notifier<CreateExamState> {
           );
       state = state.copyWith(isLoading: false, createdExam: exam);
       return exam;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return null;
+    }
+  }
+
+  Future<ExamBulkCreateResponseModel?> createExamForAllClasses({
+    required String name,
+    required String startDate,
+    required String endDate,
+    String? academicYearId,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final result =
+          await ref.read(resultRepositoryProvider).createExamForAllClasses(
+                name: name,
+                startDate: startDate,
+                endDate: endDate,
+                academicYearId: academicYearId,
+              );
+      state = state.copyWith(isLoading: false, bulkResult: result);
+      return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       return null;

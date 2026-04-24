@@ -94,6 +94,11 @@ class _LeaveDecisionScreenState extends ConsumerState<LeaveDecisionScreen> {
     if (!mounted) return;
 
     if (result != null) {
+      await ref.read(leaveNotifierProvider.notifier).load(
+            statusFilter: null,
+            refresh: true,
+          );
+      if (!mounted) return;
       SnackbarUtils.showSuccess(
         context,
         decision == LeaveStatus.approved

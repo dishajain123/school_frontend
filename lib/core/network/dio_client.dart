@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_logout_bus.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
 import 'interceptors/auth_interceptor.dart';
+import 'interceptors/envelope_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
 
 final dioClientProvider = Provider<Dio>((ref) {
@@ -35,16 +37,19 @@ final dioClientProvider = Provider<Dio>((ref) {
         AuthLogoutBus.instance.notifyLogout();
       },
     ),
+    EnvelopeInterceptor(),
     ErrorInterceptor(),
-    LogInterceptor(
-      requestBody: true,   // ← ENABLED
-      responseBody: true,  // ← ENABLED
-      logPrint: (o) {
-        // ignore: avoid_print
-        print('[Dio] $o');
-      },
-    ),
   ]);
+
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (o) => debugPrint('$o'),
+      ),
+    );
+  }
 
   return dio;
 });

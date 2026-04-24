@@ -35,6 +35,21 @@ class GalleryRepository {
     return AlbumModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<AlbumModel> updateAlbum({
+    required String albumId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.galleryAlbumById(albumId),
+      data: payload,
+    );
+    return AlbumModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAlbum(String albumId) async {
+    await _dio.delete(ApiConstants.galleryAlbumById(albumId));
+  }
+
   Future<PhotoModel> uploadPhoto({
     required String albumId,
     required List<int> fileBytes,
@@ -98,6 +113,17 @@ class GalleryRepository {
     final response = await _dio.post(
       ApiConstants.galleryPhotoComments(photoId),
       data: {'comment': comment},
+    );
+    return PhotoInteractionModel.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  Future<PhotoInteractionModel> deleteComment({
+    required String photoId,
+    required String commentId,
+  }) async {
+    final response = await _dio.delete(
+      ApiConstants.galleryPhotoCommentById(photoId, commentId),
     );
     return PhotoInteractionModel.fromJson(
         response.data as Map<String, dynamic>);

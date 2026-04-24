@@ -104,6 +104,18 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
         user.role == UserRole.superadmin;
   }
 
+  bool get _canViewTeacherLeaves {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return false;
+    return user.hasPermission('leave:read') ||
+        user.hasPermission('leave:approve') ||
+        user.hasPermission('leave:apply') ||
+        user.role == UserRole.principal ||
+        user.role == UserRole.trustee ||
+        user.role == UserRole.superadmin ||
+        user.role == UserRole.teacher;
+  }
+
   Future<void> _openAssignSheet(TeacherModel teacher) async {
     final created = await AppBottomSheet.show<bool>(
       context,
@@ -238,6 +250,11 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
         (teacherId: teacher.id, academicYearId: activeYearId),
       ),
     );
+    final teacherLeavesAsync = ref.watch(
+      teacherLeavesProvider(
+        (teacherId: teacher.id, academicYearId: activeYearId),
+      ),
+    );
     final academicYears = ref.watch(academicYearNotifierProvider).valueOrNull ??
         const <AcademicYearModel>[];
     final academicYearName = teacher.academicYearId != null
@@ -339,6 +356,12 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
                         balances: balances,
                       ),
                     ),
+                    if (_canViewTeacherLeaves) ...[
+                      const SizedBox(height: 16),
+                      _TeacherLeaveRequestsCard(
+                        leavesAsync: teacherLeavesAsync,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     _AssignmentsCard(
                       assignmentsAsync: assignmentsAsync,
@@ -794,6 +817,235 @@ class _TeacherLeaveBalanceCard extends StatelessWidget {
           color: AppColors.white,
           fontWeight: FontWeight.w700,
           fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherLeaveRequestsCard extends StatelessWidget {
+  const _TeacherLeaveRequestsCard({
+    required this.leavesAsync,
+  });
+
+  final AsyncValue<LeaveListResponse> leavesAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: AppColors.navyDeep.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(
+                    Icons.fact_check_outlined,
+                    size: 15,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Leave Requests Overview',
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navyDeep,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: AppColors.surface100),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: leavesAsync.when(
+              loading: () => const LinearProgressIndicator(
+                minHeight: 2,
+                color: AppColors.navyMedium,
+              ),
+              error: (e, _) => Text(
+                e.toString(),
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+              ),
+              data: (result) {
+                final pending =
+                    result.items.where((l) => l.status == LeaveStatus.pending).length;
+                final approved = result.items
+                    .where((l) => l.status == LeaveStatus.approved)
+                    .length;
+                final rejected = result.items
+                    .where((l) => l.status == LeaveStatus.rejected)
+                    .length;
+
+                final recent = [...result.items]
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                final recentItems = recent.take(5).toList();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total Pending Leaves: $pending',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _LeaveStatusCountTile(
+                            label: 'Pending',
+                            count: pending,
+                            color: AppColors.warningAmber,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _LeaveStatusCountTile(
+                            label: 'Approved',
+                            count: approved,
+                            color: AppColors.successGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _LeaveStatusCountTile(
+                            label: 'Rejected',
+                            count: rejected,
+                            color: AppColors.errorRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (recentItems.isEmpty)
+                      Text(
+                        'No leave requests found for this teacher.',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.grey500,
+                        ),
+                      )
+                    else
+                      Column(
+                        children: recentItems
+                            .map(
+                              (leave) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${leave.leaveType.shortLabel} • ${DateFormatter.formatDate(leave.fromDate)} - ${DateFormatter.formatDate(leave.toDate)}',
+                                        style: AppTypography.bodySmall.copyWith(
+                                          color: AppColors.grey700,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    _LeaveStatusBadge(status: leave.status),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaveStatusCountTile extends StatelessWidget {
+  const _LeaveStatusCountTile({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Text(
+            count.toString(),
+            style: AppTypography.titleMedium.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.grey700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaveStatusBadge extends StatelessWidget {
+  const _LeaveStatusBadge({required this.status});
+
+  final LeaveStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: status.backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status.label,
+        style: AppTypography.labelSmall.copyWith(
+          color: status.color,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

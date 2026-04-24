@@ -8,8 +8,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/router/route_names.dart';
 import '../../../data/models/auth/current_user.dart';
+import '../../../providers/academic_year_provider.dart';
+import '../../../providers/attendance_provider.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/dashboard_provider.dart';
+import '../../../providers/masters_provider.dart';
+import '../../../providers/parent_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
@@ -31,6 +36,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   late TabController _tabController;
   Timer? _autoRefreshTimer;
   String _activeFilter = 'all';
+  String? _selectedClassKey;
+  String? _selectedScopedSubjectId;
 
   @override
   void initState() {
@@ -71,13 +78,50 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
   void _applyTabFilter(int index) {
     setState(
         () => _activeFilter = ['all', 'active', 'overdue', 'submitted'][index]);
-    final filters = switch (index) {
-      1 => const AssignmentFilters(isActive: true, isOverdue: false),
-      2 => const AssignmentFilters(isActive: true, isOverdue: true),
-      3 => const AssignmentFilters(isSubmitted: true),
-      _ => const AssignmentFilters(),
-    };
+    final role = ref.read(currentUserProvider)?.role;
+    final isStudent = role == UserRole.student;
+    final isParent = role == UserRole.parent;
+    final selectedChild = isParent ? ref.read(selectedChildProvider) : null;
+    final filters = _buildFiltersForCurrentState(
+      indexOverride: index,
+      scopedSubjectId:
+          (isStudent || isParent) ? _selectedScopedSubjectId : null,
+      scopedStandardId: isParent ? selectedChild?.standardId : null,
+    );
     ref.read(assignmentsProvider.notifier).applyFilters(filters);
+  }
+
+  AssignmentFilters _buildFiltersForCurrentState({
+    int? indexOverride,
+    String? scopedSubjectId,
+    String? scopedStandardId,
+  }) {
+    final index = indexOverride ?? _tabController.index;
+    final selectedStandardId =
+        _selectedClassKey?.split('|').first ?? scopedStandardId;
+    return switch (index) {
+      1 => AssignmentFilters(
+          standardId: selectedStandardId,
+          subjectId: scopedSubjectId,
+          isActive: true,
+          isOverdue: false,
+        ),
+      2 => AssignmentFilters(
+          standardId: selectedStandardId,
+          subjectId: scopedSubjectId,
+          isActive: true,
+          isOverdue: true,
+        ),
+      3 => AssignmentFilters(
+          standardId: selectedStandardId,
+          subjectId: scopedSubjectId,
+          isSubmitted: true,
+        ),
+      _ => AssignmentFilters(
+          standardId: selectedStandardId,
+          subjectId: scopedSubjectId,
+        ),
+    };
   }
 
   @override
@@ -88,11 +132,90 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
     final canGrade = currentUser?.hasPermission('submission:grade') ?? false;
     final canViewSubmissions =
         canGrade || currentUser?.role == UserRole.teacher;
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final isStudent = currentUser?.role == UserRole.student;
+    final isParent = currentUser?.role == UserRole.parent;
+    final selectedChild = isParent ? ref.watch(selectedChildProvider) : null;
+    final parentStandardId = selectedChild?.standardId;
+    final activeYear = ref.watch(activeYearProvider);
+    final teacherAssignmentsAsync =
+        ref.watch(myTeacherAssignmentsProvider(activeYear?.id));
+    AsyncValue<dynamic> studentProfileAsync = const AsyncData(null);
+    if (isStudent) {
+      studentProfileAsync = ref.watch(myStudentProfileProvider);
+    }
+    final studentStandardId =
+        (studentProfileAsync.valueOrNull as dynamic)?.standardId as String?;
+    final scopedStandardId = isStudent ? studentStandardId : parentStandardId;
+    AsyncValue<List<dynamic>> scopedSubjectsAsync = const AsyncData(<dynamic>[]);
+    if ((isStudent || isParent) &&
+        scopedStandardId != null &&
+        scopedStandardId.isNotEmpty) {
+      scopedSubjectsAsync = ref.watch(subjectsProvider(scopedStandardId));
+    }
+
+    final classOptions = <_ClassOption>[];
+    final classOptionKeys = <String>{};
+    if (isTeacher) {
+      teacherAssignmentsAsync.whenData((assignments) {
+        for (final a in assignments) {
+          final key = '${a.standardId}|${a.section.trim()}';
+          if (classOptionKeys.add(key)) {
+            classOptions.add(
+              _ClassOption(
+                key: key,
+                standardId: a.standardId,
+                label: a.classLabel,
+              ),
+            );
+          }
+        }
+      });
+      final hasSelected =
+          _selectedClassKey == null || classOptionKeys.contains(_selectedClassKey);
+      if (!hasSelected) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() => _selectedClassKey = null);
+          ref
+              .read(assignmentsProvider.notifier)
+              .applyFilters(_buildFiltersForCurrentState(
+                scopedSubjectId: null,
+                scopedStandardId: scopedStandardId,
+              ));
+        });
+      }
+    }
+    final scopedSubjectOptions = <String, String>{};
+    if (isStudent || isParent) {
+      final subjects = (scopedSubjectsAsync.valueOrNull ?? const <dynamic>[]);
+      for (final subject in subjects) {
+        final id = (subject.id as String?)?.trim();
+        final name = (subject.name as String?)?.trim();
+        if (id != null && id.isNotEmpty && name != null && name.isNotEmpty) {
+          scopedSubjectOptions[id] = name;
+        }
+      }
+      if (_selectedScopedSubjectId != null &&
+          !scopedSubjectOptions.containsKey(_selectedScopedSubjectId)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() => _selectedScopedSubjectId = null);
+          ref.read(assignmentsProvider.notifier).applyFilters(
+                _buildFiltersForCurrentState(
+                  scopedSubjectId: null,
+                  scopedStandardId: scopedStandardId,
+                ),
+              );
+        });
+      }
+    }
 
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Assignments',
-        showBack: currentUser?.role == UserRole.parent,
+        showBack: true,
+        onBackPressed: () => context.go(RouteNames.dashboard),
         bottom: TabBar(
           controller: _tabController,
           onTap: _applyTabFilter,
@@ -162,33 +285,67 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
           return RefreshIndicator(
             onRefresh: () => ref.read(assignmentsProvider.notifier).refresh(),
             color: AppColors.navyDeep,
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(top: 8, bottom: 100),
-              itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == filtered.length) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.navyDeep),
-                    ),
-                  );
-                }
-                final assignment = filtered[index];
-                return AssignmentCard(
-                  assignment: assignment,
-                  onTap: () => context
-                      .push(RouteNames.assignmentDetailPath(assignment.id)),
-                  showSubmissionAction: canViewSubmissions,
-                  onViewSubmissions: canViewSubmissions
-                      ? () => context
-                          .push(RouteNames.submissionListPath(assignment.id))
-                      : null,
-                );
-              },
+            child: Column(
+              children: [
+                if (isTeacher && classOptions.isNotEmpty)
+                  _TeacherClassFilterBar(
+                    classOptions: classOptions,
+                    selectedClassKey: _selectedClassKey,
+                    onSelect: (classKey) {
+                      setState(() => _selectedClassKey = classKey);
+                      ref
+                          .read(assignmentsProvider.notifier)
+                          .applyFilters(_buildFiltersForCurrentState(
+                            scopedSubjectId: null,
+                            scopedStandardId: null,
+                          ));
+                    },
+                  ),
+                if ((isStudent || isParent) && scopedSubjectOptions.isNotEmpty)
+                  _StudentSubjectFilterBar(
+                    subjectOptions: scopedSubjectOptions,
+                    selectedSubjectId: _selectedScopedSubjectId,
+                    onSelect: (subjectId) {
+                      setState(() => _selectedScopedSubjectId = subjectId);
+                      ref.read(assignmentsProvider.notifier).applyFilters(
+                            _buildFiltersForCurrentState(
+                              scopedSubjectId: _selectedScopedSubjectId,
+                              scopedStandardId: scopedStandardId,
+                            ),
+                          );
+                    },
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollCtrl,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 8, bottom: 100),
+                    itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == filtered.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.navyDeep),
+                          ),
+                        );
+                      }
+                      final assignment = filtered[index];
+                      return AssignmentCard(
+                        assignment: assignment,
+                        onTap: () => context
+                            .push(RouteNames.assignmentDetailPath(assignment.id)),
+                        showSubmissionAction: canViewSubmissions,
+                        onViewSubmissions: canViewSubmissions
+                            ? () => context
+                                .push(RouteNames.submissionListPath(assignment.id))
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -203,6 +360,147 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
       itemBuilder: (_, __) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: AppLoading.card(height: 120),
+      ),
+    );
+  }
+}
+
+class _TeacherClassFilterBar extends StatelessWidget {
+  const _TeacherClassFilterBar({
+    required this.classOptions,
+    required this.selectedClassKey,
+    required this.onSelect,
+  });
+
+  final List<_ClassOption> classOptions;
+  final String? selectedClassKey;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _ClassFilterChip(
+              label: 'All Classes',
+              selected: selectedClassKey == null,
+              onTap: () => onSelect(null),
+            ),
+            const SizedBox(width: 8),
+            ...classOptions.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _ClassFilterChip(
+                  label: entry.label,
+                  selected: selectedClassKey == entry.key,
+                  onTap: () => onSelect(entry.key),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClassOption {
+  const _ClassOption({
+    required this.key,
+    required this.standardId,
+    required this.label,
+  });
+
+  final String key;
+  final String standardId;
+  final String label;
+}
+
+class _StudentSubjectFilterBar extends StatelessWidget {
+  const _StudentSubjectFilterBar({
+    required this.subjectOptions,
+    required this.selectedSubjectId,
+    required this.onSelect,
+  });
+
+  final Map<String, String> subjectOptions;
+  final String? selectedSubjectId;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _ClassFilterChip(
+              label: 'All Subjects',
+              selected: selectedSubjectId == null,
+              onTap: () => onSelect(null),
+            ),
+            const SizedBox(width: 8),
+            ...subjectOptions.entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _ClassFilterChip(
+                  label: entry.value,
+                  selected: selectedSubjectId == entry.key,
+                  onTap: () => onSelect(entry.key),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClassFilterChip extends StatelessWidget {
+  const _ClassFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.navyDeep.withValues(alpha: 0.12)
+              : AppColors.surface50,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? AppColors.navyDeep.withValues(alpha: 0.35)
+                : AppColors.surface200,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelMedium.copyWith(
+            color: selected ? AppColors.navyDeep : AppColors.grey700,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

@@ -24,6 +24,38 @@ class MessageListResult {
   final int totalPages;
 }
 
+class MessageReactionResult {
+  const MessageReactionResult({
+    required this.messageId,
+    required this.conversationId,
+    required this.status,
+    required this.reactions,
+    this.reaction,
+    this.myReaction,
+  });
+
+  final String messageId;
+  final String conversationId;
+  final String status;
+  final String? reaction;
+  final String? myReaction;
+  final List<MessageReactionSummary> reactions;
+
+  factory MessageReactionResult.fromJson(Map<String, dynamic> json) {
+    return MessageReactionResult(
+      messageId: json['message_id'] as String,
+      conversationId: json['conversation_id'] as String,
+      status: (json['status'] ?? '').toString(),
+      reaction: json['reaction'] as String?,
+      myReaction: json['my_reaction'] as String?,
+      reactions: ((json['reactions'] as List<dynamic>?) ?? const [])
+          .map(
+              (e) => MessageReactionSummary.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class UserSearchResult {
   const UserSearchResult({
     required this.id,
@@ -94,6 +126,10 @@ class ChatRepository {
     return ConversationModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<void> deleteConversation(String conversationId) async {
+    await _dio.delete(ApiConstants.chatConversationById(conversationId));
+  }
+
   // ── Messages ───────────────────────────────────────────────────────────────
 
   /// Returns messages for a conversation — backend returns newest first (DESC).
@@ -129,6 +165,19 @@ class ChatRepository {
       data: {'message_ids': messageIds},
     );
     return (response.data as Map<String, dynamic>)['updated'] as int? ?? 0;
+  }
+
+  Future<MessageReactionResult> reactToMessage({
+    required String messageId,
+    required String emoji,
+  }) async {
+    final response = await _dio.patch(
+      ApiConstants.chatMessageReaction(messageId),
+      data: {'emoji': emoji},
+    );
+    return MessageReactionResult.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   Future<String> uploadChatFile(

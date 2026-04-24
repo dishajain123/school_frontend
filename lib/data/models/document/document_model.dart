@@ -135,7 +135,7 @@ extension DocumentStatusX on DocumentStatus {
       case DocumentStatus.pending:
         return 'Pending';
       case DocumentStatus.processing:
-        return 'Processing';
+        return 'Pending Verification';
       case DocumentStatus.ready:
         return 'Ready';
       case DocumentStatus.failed:

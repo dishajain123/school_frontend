@@ -143,7 +143,7 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
     }
 
     final params = (
-      date: _toApiDate(_selectedDate),
+      date: isTeacher ? null : _toApiDate(_selectedDate),
       standardId: isParent ? selectedChild?.standardId : null,
       subjectId: _selectedSubjectId,
       academicYearId: null,
@@ -178,13 +178,14 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
       ),
       body: Column(
         children: [
-          _DateBar(
-            selectedDate: _selectedDate,
-            isToday: _isToday,
-            onPrev: _goToPrevDay,
-            onNext: _goToNextDay,
-            onTap: _pickDate,
-          ),
+          if (!isTeacher)
+            _DateBar(
+              selectedDate: _selectedDate,
+              isToday: _isToday,
+              onPrev: _goToPrevDay,
+              onNext: _goToNextDay,
+              onTap: _pickDate,
+            ),
           if (isTeacher && subjectOptions.isNotEmpty)
             _SubjectChipBar(
               subjectOptions: subjectOptions,
@@ -219,10 +220,14 @@ class _HomeworkListScreenState extends ConsumerState<HomeworkListScreen>
                     if (response.items.isEmpty) {
                       return AppEmptyState(
                         icon: Icons.menu_book_outlined,
-                        title: _isToday
+                        title: isTeacher
+                            ? 'No homework posted yet'
+                            : _isToday
                             ? 'Nothing due today'
                             : 'No homework on this day',
-                        subtitle: _isToday
+                        subtitle: isTeacher
+                            ? 'Use + to post homework for your assigned classes.'
+                            : _isToday
                             ? 'Enjoy your day — check back tomorrow.'
                             : 'No homework was posted for this date.',
                       );

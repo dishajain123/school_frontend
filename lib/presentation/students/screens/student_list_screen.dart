@@ -123,7 +123,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
 
   void _selectAllSectionStudents() {
     if (_selectedStandard == null || _selectedSection == null) {
-      SnackbarUtils.showError(context, 'Please select class and section first.');
+      SnackbarUtils.showError(
+          context, 'Please select class and section first.');
       return;
     }
     setState(() {
@@ -186,6 +187,7 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
               standardId: _selectedStandard!.id,
               section: _selectedSection!,
               promotionStatus: 'PROMOTED',
+              academicYearId: _selectedStandard?.academicYearId,
               excludedStudentIds: _excludedStudentIds.toList(),
             );
       } else {
@@ -209,7 +211,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
     }
   }
 
-  String? _getStandardName(StudentModel student, List<StandardModel> standards) {
+  String? _getStandardName(
+      StudentModel student, List<StandardModel> standards) {
     if (student.standardId == null) return null;
     try {
       return standards.firstWhere((s) => s.id == student.standardId).name;
@@ -317,7 +320,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
                   : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 220),
             ),
-            if (_filtersExpanded) Container(height: 1, color: AppColors.surface100),
+            if (_filtersExpanded)
+              Container(height: 1, color: AppColors.surface100),
             Expanded(
               child: asyncState.when(
                 loading: () => _buildShimmer(),
@@ -330,7 +334,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
                 data: (studentState) {
                   if (studentState.isLoading) return _buildShimmer();
 
-                  if (studentState.error != null && studentState.items.isEmpty) {
+                  if (studentState.error != null &&
+                      studentState.items.isEmpty) {
                     return AppErrorState(
                       message: studentState.error,
                       onRetry: () => ref
@@ -379,8 +384,8 @@ class _StudentListScreenState extends ConsumerState<StudentListScreen>
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      AppColors.navyDeep.withValues(alpha: 0.05),
+                                  color: AppColors.navyDeep
+                                      .withValues(alpha: 0.05),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -491,7 +496,9 @@ class _FilterPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _DropdownField<String?>(
-            hint: selectedStandard == null ? 'Select class first' : 'All Sections',
+            hint: selectedStandard == null
+                ? 'Select class first'
+                : 'All Sections',
             value: selectedSection,
             items: [
               const DropdownMenuItem<String?>(
@@ -563,6 +570,19 @@ class _DropdownField<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uniqueItems = <DropdownMenuItem<T>>[];
+    final seenValues = <Object?>{};
+    for (final item in items) {
+      final key = item.value as Object?;
+      if (seenValues.contains(key)) continue;
+      seenValues.add(key);
+      uniqueItems.add(item);
+    }
+
+    final hasCurrentValue =
+        value == null ? true : uniqueItems.any((item) => item.value == value);
+    final safeValue = hasCurrentValue ? value : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -608,7 +628,7 @@ class _DropdownField<T> extends StatelessWidget {
                           ),
                         )
                       : DropdownButton<T>(
-                          value: value,
+                          value: safeValue,
                           isExpanded: true,
                           hint: Text(hint,
                               style: AppTypography.bodyMedium
@@ -618,7 +638,7 @@ class _DropdownField<T> extends StatelessWidget {
                           icon: const Icon(Icons.keyboard_arrow_down_rounded,
                               color: AppColors.grey400),
                           onChanged: onChanged,
-                          items: items,
+                          items: uniqueItems,
                         ),
                 ),
               ),
@@ -680,7 +700,9 @@ class _BulkActionBar extends StatelessWidget {
                 child: _ActionBtn(
                   label: sectionModeEnabled ? 'Section Selected' : 'Select All',
                   icon: Icons.select_all_rounded,
-                  onTap: (isBulkUpdating || sectionModeEnabled) ? null : onSelectAll,
+                  onTap: (isBulkUpdating || sectionModeEnabled)
+                      ? null
+                      : onSelectAll,
                   isSecondary: true,
                 ),
               ),
@@ -689,7 +711,8 @@ class _BulkActionBar extends StatelessWidget {
                 child: _ActionBtn(
                   label: 'Clear',
                   icon: Icons.clear_all_rounded,
-                  onTap: (isBulkUpdating || selectedCount == 0) ? null : onClear,
+                  onTap:
+                      (isBulkUpdating || selectedCount == 0) ? null : onClear,
                   isSecondary: true,
                 ),
               ),
@@ -701,7 +724,8 @@ class _BulkActionBar extends StatelessWidget {
                       ? 'Promoting...'
                       : 'Promote ($selectedCount)',
                   icon: Icons.trending_up_rounded,
-                  onTap: (isBulkUpdating || selectedCount == 0) ? null : onPromote,
+                  onTap:
+                      (isBulkUpdating || selectedCount == 0) ? null : onPromote,
                   isLoading: isBulkUpdating,
                 ),
               ),

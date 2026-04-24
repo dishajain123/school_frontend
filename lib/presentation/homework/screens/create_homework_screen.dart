@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
@@ -135,7 +136,11 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
         context.pop(true);
       }
     } catch (e) {
-      if (mounted) SnackbarUtils.showError(context, e.toString());
+      if (!mounted) return;
+      final message = extractMessage(
+        e is DioException ? (e.error ?? e) : e,
+      );
+      SnackbarUtils.showError(context, message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
