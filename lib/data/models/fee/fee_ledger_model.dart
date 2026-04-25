@@ -2,14 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
 // ── FeeStatus ─────────────────────────────────────────────────────────────────
-// Mirrors app/utils/enums.FeeStatus: PENDING | PARTIAL | PAID
 
-enum FeeStatus {
-  pending,
-  partial,
-  paid,
-  overdue,
-}
+enum FeeStatus { pending, partial, paid, overdue }
 
 extension FeeStatusX on FeeStatus {
   static FeeStatus fromString(String? value) {
@@ -54,7 +48,7 @@ extension FeeStatusX on FeeStatus {
   Color get color {
     switch (this) {
       case FeeStatus.pending:
-        return AppColors.errorRed;
+        return AppColors.grey500;
       case FeeStatus.partial:
         return AppColors.warningAmber;
       case FeeStatus.paid:
@@ -67,7 +61,7 @@ extension FeeStatusX on FeeStatus {
   Color get bgColor {
     switch (this) {
       case FeeStatus.pending:
-        return AppColors.errorLight;
+        return AppColors.surface100;
       case FeeStatus.partial:
         return AppColors.warningAmber.withValues(alpha: 0.12);
       case FeeStatus.paid:
@@ -92,20 +86,12 @@ extension FeeStatusX on FeeStatus {
 }
 
 // ── FeeLedgerModel ────────────────────────────────────────────────────────────
-// Mirrors FeeLedgerResponse from app/schemas/fee.py.
-//
-// NOTE: The backend FeeLedgerResponse does NOT expose fee_category or due_date.
-// Those fields live on the related FeeStructure. If the backend schema is updated
-// to include them (via a nested structure or extra fields), add them here.
 
 class FeeLedgerModel {
   const FeeLedgerModel({
     required this.id,
     required this.studentId,
     required this.feeStructureId,
-    this.installmentName,
-    this.feeDescription,
-    this.dueDate,
     required this.totalAmount,
     required this.paidAmount,
     required this.outstandingAmount,
@@ -113,62 +99,79 @@ class FeeLedgerModel {
     required this.schoolId,
     required this.createdAt,
     required this.updatedAt,
+    this.installmentName,
+    this.feeCategory,
+    this.customFeeHead,
+    this.dueDate,
+    this.feeDescription,
+    this.lastPaymentDate,
   });
 
   final String id;
   final String studentId;
   final String feeStructureId;
-  final String? installmentName;
-  final String? feeDescription;
-  final DateTime? dueDate;
   final double totalAmount;
   final double paidAmount;
-  final double outstandingAmount; // computed by service: total - paid, clamped ≥ 0
+  final double outstandingAmount;
   final FeeStatus status;
   final String schoolId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// 0.0 – 1.0 fraction of total that has been paid, clamped for safety.
+  // Installment-specific fields (new)
+  final String? installmentName;
+  final String? feeCategory;
+  final String? customFeeHead;
+  final DateTime? dueDate;
+  final String? feeDescription;
+  final DateTime? lastPaymentDate;
+
   double get progressFraction =>
       totalAmount > 0 ? (paidAmount / totalAmount).clamp(0.0, 1.0) : 0.0;
 
   bool get isFullyPaid => status == FeeStatus.paid;
   bool get hasOutstanding => outstandingAmount > 0.01;
-  bool get isOverdue {
-    if (status == FeeStatus.overdue) return true;
-    if (dueDate == null || !hasOutstanding || isFullyPaid) return false;
-    final today = DateTime.now();
-    final cutoff = DateTime(today.year, today.month, today.day);
-    return dueDate!.isBefore(cutoff);
+  bool get isOverdue => status == FeeStatus.overdue;
+
+  /// Display label: installment name > custom_fee_head > fee_category > "Fee Entry"
+  String get displayLabel {
+    if (installmentName != null && installmentName!.trim().isNotEmpty) {
+      return installmentName!.trim();
+    }
+    if (customFeeHead != null && customFeeHead!.trim().isNotEmpty) {
+      return customFeeHead!.trim();
+    }
+    if (feeCategory != null && feeCategory!.isNotEmpty) {
+      final c = feeCategory!;
+      return c[0].toUpperCase() + c.substring(1).toLowerCase();
+    }
+    return 'Fee Entry';
   }
 
-  // Backward-compatible UI helpers
-  String get displayLabel =>
-      (installmentName != null && installmentName!.trim().isNotEmpty)
-          ? installmentName!.trim()
-          : 'Installment';
-
   factory FeeLedgerModel.fromJson(Map<String, dynamic> json) {
+    final instName = json['installment_name'] as String?;
     return FeeLedgerModel(
       id: json['id'] as String,
       studentId: json['student_id'] as String,
       feeStructureId: json['fee_structure_id'] as String,
-      installmentName:
-          (json['installment_name'] ?? json['fee_category']) as String?,
-      feeDescription: json['fee_description'] as String?,
-      dueDate: json['due_date'] != null
-          ? DateTime.tryParse(json['due_date'] as String)
-          : null,
       totalAmount: (json['total_amount'] as num).toDouble(),
       paidAmount: (json['paid_amount'] as num).toDouble(),
-      // outstanding_amount is a computed field set by the service (not in DB).
-      outstandingAmount:
-          (json['outstanding_amount'] as num?)?.toDouble() ?? 0.0,
+      outstandingAmount: (json['outstanding_amount'] as num?)?.toDouble() ?? 0.0,
       status: FeeStatusX.fromString(json['status'] as String?),
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      installmentName:
+          (instName == null || instName.isEmpty) ? null : instName,
+      feeCategory: json['fee_category'] as String?,
+      customFeeHead: json['custom_fee_head'] as String?,
+      dueDate: json['due_date'] != null
+          ? DateTime.tryParse(json['due_date'] as String)
+          : null,
+      feeDescription: json['fee_description'] as String?,
+      lastPaymentDate: json['last_payment_date'] != null
+          ? DateTime.tryParse(json['last_payment_date'] as String)
+          : null,
     );
   }
 
@@ -181,9 +184,6 @@ class FeeLedgerModel {
       id: id,
       studentId: studentId,
       feeStructureId: feeStructureId,
-      installmentName: installmentName,
-      feeDescription: feeDescription,
-      dueDate: dueDate,
       totalAmount: totalAmount,
       paidAmount: paidAmount ?? this.paidAmount,
       outstandingAmount: outstandingAmount ?? this.outstandingAmount,
@@ -191,26 +191,43 @@ class FeeLedgerModel {
       schoolId: schoolId,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      installmentName: installmentName,
+      feeCategory: feeCategory,
+      customFeeHead: customFeeHead,
+      dueDate: dueDate,
+      feeDescription: feeDescription,
+      lastPaymentDate: lastPaymentDate,
     );
   }
 }
 
 // ── FeeDashboardResult ────────────────────────────────────────────────────────
-// Mirrors FeeDashboardResponse: { items: [...], total: int }
 
 class FeeDashboardResult {
   const FeeDashboardResult({
     required this.items,
     required this.total,
+    this.totalBilled = 0.0,
+    this.totalPaid = 0.0,
+    this.totalOutstanding = 0.0,
+    this.hasOverdue = false,
   });
 
   final List<FeeLedgerModel> items;
   final int total;
+  final double totalBilled;
+  final double totalPaid;
+  final double totalOutstanding;
+  final bool hasOverdue;
 
-  double get grandTotal => items.fold(0.0, (s, l) => s + l.totalAmount);
-  double get grandPaid => items.fold(0.0, (s, l) => s + l.paidAmount);
-  double get grandOutstanding => items.fold(0.0, (s, l) => s + l.outstandingAmount);
-  bool get hasOverdue => items.any((item) => item.isOverdue);
+  double get grandTotal =>
+      totalBilled > 0 ? totalBilled : items.fold(0.0, (s, l) => s + l.totalAmount);
+  double get grandPaid =>
+      totalPaid > 0 ? totalPaid : items.fold(0.0, (s, l) => s + l.paidAmount);
+  double get grandOutstanding =>
+      totalOutstanding > 0
+          ? totalOutstanding
+          : items.fold(0.0, (s, l) => s + l.outstandingAmount);
 
   factory FeeDashboardResult.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
@@ -219,6 +236,10 @@ class FeeDashboardResult {
           .map((e) => FeeLedgerModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       total: json['total'] as int? ?? 0,
+      totalBilled: (json['total_billed'] as num?)?.toDouble() ?? 0.0,
+      totalPaid: (json['total_paid'] as num?)?.toDouble() ?? 0.0,
+      totalOutstanding: (json['total_outstanding'] as num?)?.toDouble() ?? 0.0,
+      hasOverdue: json['has_overdue'] as bool? ?? false,
     );
   }
 }
