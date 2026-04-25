@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
@@ -9,6 +11,10 @@ import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_loading.dart';
 
+// ── Color constants ───────────────────────────────────────────────────────────
+const _kGreen = Color(0xFF2E7D32);
+const _kGreenBg = Color(0xFFE8F5E9);
+
 class ReceiptScreen extends ConsumerWidget {
   const ReceiptScreen({
     super.key,
@@ -16,12 +22,14 @@ class ReceiptScreen extends ConsumerWidget {
     this.amount,
     this.paymentDate,
     this.paymentMode,
+    this.installmentName,
   });
 
   final String paymentId;
   final double? amount;
   final DateTime? paymentDate;
   final String? paymentMode;
+  final String? installmentName;
 
   factory ReceiptScreen.fromExtras(Map<String, dynamic> extra) {
     return ReceiptScreen(
@@ -29,24 +37,15 @@ class ReceiptScreen extends ConsumerWidget {
       amount: (extra['amount'] as num?)?.toDouble(),
       paymentDate: extra['paymentDate'] as DateTime?,
       paymentMode: extra['paymentMode'] as String?,
+      installmentName: extra['installmentName'] as String?,
     );
   }
 
   String _fmtDate(DateTime? d) {
     if (d == null) return '--';
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
@@ -78,6 +77,7 @@ class ReceiptScreen extends ConsumerWidget {
           amount: amount,
           paymentDate: paymentDate,
           paymentMode: paymentMode,
+          installmentName: installmentName,
           fmtDate: _fmtDate,
           fmt: _fmt,
         ),
@@ -89,83 +89,113 @@ class ReceiptScreen extends ConsumerWidget {
 class _ReceiptContent extends StatelessWidget {
   const _ReceiptContent({
     required this.url,
-    required this.amount,
-    required this.paymentDate,
-    required this.paymentMode,
     required this.fmtDate,
     required this.fmt,
+    this.amount,
+    this.paymentDate,
+    this.paymentMode,
+    this.installmentName,
   });
 
   final String url;
   final double? amount;
   final DateTime? paymentDate;
   final String? paymentMode;
+  final String? installmentName;
   final String Function(DateTime?) fmtDate;
   final String Function(double?) fmt;
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid receipt URL.')),
+      );
+      return;
+    }
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Could not open receipt. Try copying the link.')),
+        );
+      }
+    }
+  }
+
+  void _copyUrl(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Receipt link copied to clipboard.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.pageHorizontal,
-        AppDimensions.space32,
-        AppDimensions.pageHorizontal,
-        AppDimensions.space40,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
       children: [
         // ── Success hero ───────────────────────────────────────────────────
         Center(
           child: Column(
             children: [
               Container(
-                width: 88,
-                height: 88,
+                width: 92,
+                height: 92,
                 decoration: BoxDecoration(
-                  color: AppColors.successGreen.withValues(alpha: 0.1),
+                  color: _kGreenBg,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGreen.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.check_circle_rounded,
-                  size: 48,
-                  color: AppColors.successGreen,
+                  size: 52,
+                  color: _kGreen,
                 ),
               ),
-              const SizedBox(height: AppDimensions.space16),
+              const SizedBox(height: 16),
               Text(
-                'Payment Successful',
+                'Payment Successful!',
                 style: AppTypography.headlineMedium.copyWith(
                   color: AppColors.navyDeep,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: AppDimensions.space4),
+              const SizedBox(height: 6),
               Text(
                 'Your receipt has been generated and is ready to view.',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.grey500,
-                ),
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.grey500),
                 textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: AppDimensions.space32),
+        const SizedBox(height: 28),
 
-        // ── Amount highlight card ──────────────────────────────────────────
+        // ── Amount card ────────────────────────────────────────────────────
         Container(
-          padding: const EdgeInsets.all(AppDimensions.space20),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF0B1F3A), Color(0xFF1A3558)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0B1F3A).withValues(alpha: 0.2),
-                blurRadius: 16,
+                color: const Color(0xFF0B1F3A).withValues(alpha: 0.25),
+                blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -178,30 +208,47 @@ class _ReceiptContent extends StatelessWidget {
                   color: AppColors.white.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(height: AppDimensions.space8),
+              const SizedBox(height: 8),
               Text(
                 fmt(amount),
                 style: AppTypography.headlineLarge.copyWith(
-                  color: AppColors.successGreen,
-                  fontWeight: FontWeight.w700,
+                  color: _kGreen,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
               ),
+              if (installmentName != null &&
+                  installmentName!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    installmentName!,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
 
-        const SizedBox(height: AppDimensions.space20),
+        const SizedBox(height: 20),
 
         // ── Details card ───────────────────────────────────────────────────
         Container(
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            border: Border.all(color: AppColors.surface200),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0B1F3A).withValues(alpha: 0.05),
+                color: AppColors.navyDeep.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -209,30 +256,35 @@ class _ReceiptContent extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _DetailRow(
+              _ReceiptRow(
                 icon: Icons.calendar_today_outlined,
                 label: 'Payment Date',
                 value: fmtDate(paymentDate),
-                isLast: paymentMode == null,
+                isFirst: true,
               ),
               if (paymentMode != null)
-                _DetailRow(
+                _ReceiptRow(
                   icon: Icons.credit_card_outlined,
-                  label: 'Payment Mode',
+                  label: 'Payment Method',
                   value: paymentMode!,
-                  isLast: true,
                 ),
+              _ReceiptRow(
+                icon: Icons.receipt_long_outlined,
+                label: 'Receipt ID',
+                value: '...${paymentMode?.hashCode.abs() ?? '—'}',
+                isLast: true,
+              ),
             ],
           ),
         ),
 
-        const SizedBox(height: AppDimensions.space32),
+        const SizedBox(height: 28),
 
-        // ── Open receipt button ────────────────────────────────────────────
+        // ── Primary CTA: Open Receipt ──────────────────────────────────────
         ElevatedButton.icon(
           onPressed: () => _openUrl(context, url),
           icon: const Icon(Icons.open_in_new_rounded, size: 18),
-          label: const Text('Open Receipt'),
+          label: const Text('Open Receipt PDF'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.navyDeep,
             foregroundColor: AppColors.white,
@@ -241,111 +293,98 @@ class _ReceiptContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             textStyle: AppTypography.buttonPrimary,
+            elevation: 0,
           ),
         ),
 
-        const SizedBox(height: AppDimensions.space12),
+        const SizedBox(height: 12),
+
+        // ── Secondary CTA: Copy link ───────────────────────────────────────
+        OutlinedButton.icon(
+          onPressed: () => _copyUrl(context),
+          icon: const Icon(Icons.copy_rounded, size: 16),
+          label: const Text('Copy Receipt Link'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.navyDeep,
+            minimumSize: const Size.fromHeight(AppDimensions.buttonHeight),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            ),
+            side: const BorderSide(color: AppColors.surface200),
+          ),
+        ),
+
+        const SizedBox(height: 16),
 
         Center(
           child: Text(
-            'Receipt link expires in ~60 minutes.',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.grey400,
-            ),
+            'Receipt link expires in ~60 minutes.\nContact admin for a permanent copy.',
+            style: AppTypography.caption
+                .copyWith(color: AppColors.grey400, fontSize: 11),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
     );
   }
-
-  void _openUrl(BuildContext context, String url) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Open Receipt'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Copy the link below and open it in your browser:',
-              style: AppTypography.bodyMedium,
-            ),
-            const SizedBox(height: AppDimensions.space8),
-            Container(
-              padding: const EdgeInsets.all(AppDimensions.space12),
-              decoration: BoxDecoration(
-                color: AppColors.surface50,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                border: Border.all(color: AppColors.surface200),
-              ),
-              child: SelectableText(
-                url,
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.navyMedium,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
+// ── Receipt Row ───────────────────────────────────────────────────────────────
+
+class _ReceiptRow extends StatelessWidget {
+  const _ReceiptRow({
     required this.icon,
     required this.label,
     required this.value,
+    this.isFirst = false,
     this.isLast = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final bool isFirst;
   final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         border: isLast
             ? null
-            : Border(
-                bottom: BorderSide(
-                  color: AppColors.surface100,
-                  width: AppDimensions.borderThin,
-                ),
-              ),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.space16,
-        vertical: _space14,
+            : const Border(
+                bottom: BorderSide(color: AppColors.surface100)),
+        borderRadius: isFirst
+            ? const BorderRadius.vertical(top: Radius.circular(18))
+            : isLast
+                ? const BorderRadius.vertical(bottom: Radius.circular(18))
+                : null,
       ),
       child: Row(
         children: [
-          Icon(icon, size: AppDimensions.iconSM, color: AppColors.grey400),
-          const SizedBox(width: AppDimensions.space12),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.surface50,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 16, color: AppColors.navyMedium),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.grey500,
-              ),
+              style: AppTypography.bodySmall
+                  .copyWith(color: AppColors.grey500),
             ),
           ),
           Text(
             value,
             style: AppTypography.titleSmall.copyWith(
-              color: AppColors.navyDeep,
               fontWeight: FontWeight.w600,
+              color: AppColors.grey800,
             ),
           ),
         ],
@@ -353,6 +392,3 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
-
-// Local spacing constant
-const double _space14 = 14.0;

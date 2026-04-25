@@ -8,6 +8,7 @@ enum FeeStatus {
   pending,
   partial,
   paid,
+  overdue,
 }
 
 extension FeeStatusX on FeeStatus {
@@ -17,6 +18,8 @@ extension FeeStatusX on FeeStatus {
         return FeeStatus.paid;
       case 'PARTIAL':
         return FeeStatus.partial;
+      case 'OVERDUE':
+        return FeeStatus.overdue;
       default:
         return FeeStatus.pending;
     }
@@ -30,6 +33,8 @@ extension FeeStatusX on FeeStatus {
         return 'PARTIAL';
       case FeeStatus.paid:
         return 'PAID';
+      case FeeStatus.overdue:
+        return 'OVERDUE';
     }
   }
 
@@ -41,6 +46,8 @@ extension FeeStatusX on FeeStatus {
         return 'Partial';
       case FeeStatus.paid:
         return 'Paid';
+      case FeeStatus.overdue:
+        return 'Overdue';
     }
   }
 
@@ -52,6 +59,8 @@ extension FeeStatusX on FeeStatus {
         return AppColors.warningAmber;
       case FeeStatus.paid:
         return AppColors.successGreen;
+      case FeeStatus.overdue:
+        return AppColors.errorRed;
     }
   }
 
@@ -63,6 +72,21 @@ extension FeeStatusX on FeeStatus {
         return AppColors.warningAmber.withValues(alpha: 0.12);
       case FeeStatus.paid:
         return AppColors.successLight;
+      case FeeStatus.overdue:
+        return AppColors.errorLight;
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case FeeStatus.pending:
+        return Icons.schedule_rounded;
+      case FeeStatus.partial:
+        return Icons.timelapse_rounded;
+      case FeeStatus.paid:
+        return Icons.check_circle_rounded;
+      case FeeStatus.overdue:
+        return Icons.warning_amber_rounded;
     }
   }
 }
@@ -79,6 +103,9 @@ class FeeLedgerModel {
     required this.id,
     required this.studentId,
     required this.feeStructureId,
+    this.installmentName,
+    this.feeDescription,
+    this.dueDate,
     required this.totalAmount,
     required this.paidAmount,
     required this.outstandingAmount,
@@ -91,6 +118,9 @@ class FeeLedgerModel {
   final String id;
   final String studentId;
   final String feeStructureId;
+  final String? installmentName;
+  final String? feeDescription;
+  final DateTime? dueDate;
   final double totalAmount;
   final double paidAmount;
   final double outstandingAmount; // computed by service: total - paid, clamped ≥ 0
@@ -105,12 +135,31 @@ class FeeLedgerModel {
 
   bool get isFullyPaid => status == FeeStatus.paid;
   bool get hasOutstanding => outstandingAmount > 0.01;
+  bool get isOverdue {
+    if (status == FeeStatus.overdue) return true;
+    if (dueDate == null || !hasOutstanding || isFullyPaid) return false;
+    final today = DateTime.now();
+    final cutoff = DateTime(today.year, today.month, today.day);
+    return dueDate!.isBefore(cutoff);
+  }
+
+  // Backward-compatible UI helpers
+  String get displayLabel =>
+      (installmentName != null && installmentName!.trim().isNotEmpty)
+          ? installmentName!.trim()
+          : 'Installment';
 
   factory FeeLedgerModel.fromJson(Map<String, dynamic> json) {
     return FeeLedgerModel(
       id: json['id'] as String,
       studentId: json['student_id'] as String,
       feeStructureId: json['fee_structure_id'] as String,
+      installmentName:
+          (json['installment_name'] ?? json['fee_category']) as String?,
+      feeDescription: json['fee_description'] as String?,
+      dueDate: json['due_date'] != null
+          ? DateTime.tryParse(json['due_date'] as String)
+          : null,
       totalAmount: (json['total_amount'] as num).toDouble(),
       paidAmount: (json['paid_amount'] as num).toDouble(),
       // outstanding_amount is a computed field set by the service (not in DB).
@@ -132,6 +181,9 @@ class FeeLedgerModel {
       id: id,
       studentId: studentId,
       feeStructureId: feeStructureId,
+      installmentName: installmentName,
+      feeDescription: feeDescription,
+      dueDate: dueDate,
       totalAmount: totalAmount,
       paidAmount: paidAmount ?? this.paidAmount,
       outstandingAmount: outstandingAmount ?? this.outstandingAmount,
@@ -158,6 +210,7 @@ class FeeDashboardResult {
   double get grandTotal => items.fold(0.0, (s, l) => s + l.totalAmount);
   double get grandPaid => items.fold(0.0, (s, l) => s + l.paidAmount);
   double get grandOutstanding => items.fold(0.0, (s, l) => s + l.outstandingAmount);
+  bool get hasOverdue => items.any((item) => item.isOverdue);
 
   factory FeeDashboardResult.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];

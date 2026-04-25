@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -13,26 +13,38 @@ import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
 
+// ── Color constants ───────────────────────────────────────────────────────────
+const _kGreen = Color(0xFF2E7D32);
+const _kGreenBg = Color(0xFFE8F5E9);
+const _kRed = Color(0xFFC62828);
+const _kRedBg = Color(0xFFFFEBEE);
+
 class RecordPaymentScreen extends ConsumerStatefulWidget {
   const RecordPaymentScreen({
     super.key,
     required this.studentId,
     this.ledgerId,
-    this.outstandingAmount,
     this.totalAmount,
+    this.outstandingAmount,
+    this.installmentName,
+    this.dueDate,
   });
 
   final String studentId;
   final String? ledgerId;
-  final double? outstandingAmount;
   final double? totalAmount;
+  final double? outstandingAmount;
+  final String? installmentName;
+  final String? dueDate;
 
   factory RecordPaymentScreen.fromExtras(Map<String, dynamic> extra) {
     return RecordPaymentScreen(
-      studentId: extra['studentId'] as String? ?? '',
+      studentId: extra['studentId'] as String,
       ledgerId: extra['ledgerId'] as String?,
-      outstandingAmount: (extra['outstandingAmount'] as num?)?.toDouble(),
       totalAmount: (extra['totalAmount'] as num?)?.toDouble(),
+      outstandingAmount: (extra['outstandingAmount'] as num?)?.toDouble(),
+      installmentName: extra['installmentName'] as String?,
+      dueDate: extra['dueDate'] as String?,
     );
   }
 
@@ -45,13 +57,13 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _refCtrl = TextEditingController();
-
   PaymentMode _selectedMode = PaymentMode.cash;
   DateTime _paymentDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    // Pre-fill amount with outstanding balance
     if (widget.outstandingAmount != null && widget.outstandingAmount! > 0) {
       _amountCtrl.text = widget.outstandingAmount!.toStringAsFixed(2);
     }
@@ -64,21 +76,28 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     super.dispose();
   }
 
-  String _fmtDate(DateTime d) => DateFormat('dd MMM yyyy').format(d);
-
   String _fmt(double v) =>
       '₹${v.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+
+  String _fmtDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _paymentDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(DateTime.now().year - 1),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(
-            primary: AppColors.navyMedium,
+            primary: AppColors.navyDeep,
+            onPrimary: Colors.white,
           ),
         ),
         child: child!,
@@ -91,7 +110,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (widget.ledgerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No ledger entry selected.')),
+        const SnackBar(content: Text('No fee entry selected.')),
       );
       return;
     }
@@ -115,14 +134,18 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     if (!mounted) return;
 
     if (payment != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Payment of ₹${amount.toStringAsFixed(2)} recorded successfully.',
-          ),
-          backgroundColor: AppColors.successGreen,
-        ),
+      // Navigate to receipt
+      context.push(
+        RouteNames.feeReceipt,
+        extra: {
+          'paymentId': payment.id,
+          'amount': payment.amount,
+          'paymentDate': payment.paymentDate,
+          'paymentMode': payment.paymentMode.label,
+          'installmentName': widget.installmentName,
+        },
       );
+      // Also pop this screen
       context.pop(payment);
     }
   }
@@ -142,6 +165,10 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
       }
     });
 
+    final outstanding = widget.outstandingAmount ?? 0.0;
+    final isOverdue = widget.dueDate != null &&
+        DateTime.tryParse(widget.dueDate!)?.isBefore(DateTime.now()) == true;
+
     return Scaffold(
       backgroundColor: AppColors.surface50,
       appBar: const AppAppBar(
@@ -152,173 +179,103 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppDimensions.pageHorizontal,
-            AppDimensions.space16,
-            AppDimensions.pageHorizontal,
-            AppDimensions.space40,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           children: [
-            // ── Context banner ─────────────────────────────────────────────
-            if (widget.totalAmount != null && widget.outstandingAmount != null)
-              _ContextBanner(
-                totalAmount: widget.totalAmount!,
-                outstandingAmount: widget.outstandingAmount!,
-                fmt: _fmt,
-              ),
+            // ── Installment context card ──────────────────────────────────
+            _InstallmentContextCard(
+              installmentName: widget.installmentName,
+              totalAmount: widget.totalAmount,
+              outstandingAmount: outstanding,
+              dueDate: widget.dueDate,
+              isOverdue: isOverdue,
+              fmt: _fmt,
+              fmtDate: _fmtDate,
+            ),
 
-            if (widget.totalAmount != null)
-              const SizedBox(height: AppDimensions.space24),
+            const SizedBox(height: 20),
 
-            // ── Form card ──────────────────────────────────────────────────
+            // ── Payment form card ─────────────────────────────────────────
             Container(
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                border: Border.all(color: AppColors.surface200),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0B1F3A).withValues(alpha: 0.05),
-                    blurRadius: 12,
+                    color: AppColors.navyDeep.withValues(alpha: 0.06),
+                    blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.space16,
-                      vertical: _space14,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Amount
+                    _SectionLabel(label: 'Payment Amount'),
+                    const SizedBox(height: 10),
+                    _AmountField(
+                      controller: _amountCtrl,
+                      outstandingAmount: outstanding,
                     ),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface50,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(AppDimensions.radiusLarge),
-                        topRight: Radius.circular(AppDimensions.radiusLarge),
-                      ),
+                    const SizedBox(height: 20),
+
+                    // Payment Mode
+                    _SectionLabel(label: 'Payment Method'),
+                    const SizedBox(height: 10),
+                    _PaymentModeGrid(
+                      selected: _selectedMode,
+                      onChanged: (m) => setState(() => _selectedMode = m),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: AppColors.navyDeep.withValues(alpha: 0.07),
-                            borderRadius: BorderRadius.circular(
-                                AppDimensions.radiusSmall),
-                          ),
-                          child: const Icon(
-                            Icons.payments_rounded,
-                            size: 16,
-                            color: AppColors.navyMedium,
-                          ),
-                        ),
-                        const SizedBox(width: AppDimensions.space12),
-                        Text(
-                          'Payment Details',
-                          style: AppTypography.titleSmall.copyWith(
-                            color: AppColors.navyDeep,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 20),
+
+                    // Payment Date
+                    _SectionLabel(label: 'Payment Date'),
+                    const SizedBox(height: 10),
+                    _DatePickerTile(
+                      date: _paymentDate,
+                      formatted: _fmtDate(_paymentDate),
+                      onTap: _pickDate,
                     ),
-                  ),
+                    const SizedBox(height: 20),
 
-                  Padding(
-                    padding: const EdgeInsets.all(AppDimensions.space16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Amount
-                        AppTextField(
-                          label: 'Amount (₹)',
-                          hint: '0.00',
-                          controller: _amountCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d+\.?\d{0,2}')),
-                          ],
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Amount is required';
-                            }
-                            final d = double.tryParse(v.trim());
-                            if (d == null || d <= 0) {
-                              return 'Enter a valid positive amount';
-                            }
-                            if (widget.outstandingAmount != null &&
-                                d > widget.outstandingAmount! + 0.01) {
-                              return 'Amount exceeds outstanding balance';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: AppDimensions.space20),
-
-                        // Payment Mode label
-                        Text(
-                          'Payment Mode',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.grey700,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: _space10),
-                        _PaymentModeGrid(
-                          selected: _selectedMode,
-                          onChanged: (m) => setState(() => _selectedMode = m),
-                        ),
-
-                        const SizedBox(height: AppDimensions.space20),
-
-                        // Payment Date label
-                        Text(
-                          'Payment Date',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.grey700,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: AppDimensions.space8),
-                        _DatePickerTile(
-                          date: _paymentDate,
-                          formatted: _fmtDate(_paymentDate),
-                          onTap: _pickDate,
-                        ),
-
-                        const SizedBox(height: AppDimensions.space20),
-
-                        // Reference
-                        AppTextField(
-                          label: 'Reference Number (optional)',
-                          hint: 'Transaction ID, cheque no., etc.',
-                          controller: _refCtrl,
-                          keyboardType: TextInputType.text,
-                        ),
-                      ],
+                    // Reference Number
+                    _SectionLabel(label: 'Transaction Reference (optional)'),
+                    const SizedBox(height: 10),
+                    AppTextField(
+                      label: '',
+                      hint: 'UTR No., Cheque No., Transaction ID...',
+                      controller: _refCtrl,
+                      keyboardType: TextInputType.text,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
-            const SizedBox(height: AppDimensions.space24),
+            const SizedBox(height: 24),
 
-            // Submit
+            // ── Pay Now CTA ───────────────────────────────────────────────
             AppButton.primary(
-              label: 'Record Payment',
+              label: state.isLoading
+                  ? 'Processing...'
+                  : 'Pay Now  ${_amountCtrl.text.isNotEmpty && double.tryParse(_amountCtrl.text) != null ? _fmt(double.parse(_amountCtrl.text)) : ''}',
               onTap: state.isLoading ? () {} : _submit,
               isLoading: state.isLoading,
             ),
+
+            if (outstanding > 0) ...[
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'Outstanding balance: ${_fmt(outstanding)}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -326,95 +283,127 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
+// ── Installment Context Card ──────────────────────────────────────────────────
 
-class _ContextBanner extends StatelessWidget {
-  const _ContextBanner({
-    required this.totalAmount,
+class _InstallmentContextCard extends StatelessWidget {
+  const _InstallmentContextCard({
     required this.outstandingAmount,
+    required this.isOverdue,
     required this.fmt,
+    required this.fmtDate,
+    this.installmentName,
+    this.totalAmount,
+    this.dueDate,
   });
 
-  final double totalAmount;
+  final String? installmentName;
+  final double? totalAmount;
   final double outstandingAmount;
+  final String? dueDate;
+  final bool isOverdue;
   final String Function(double) fmt;
+  final String Function(DateTime) fmtDate;
 
   @override
   Widget build(BuildContext context) {
+    final dueDateParsed = dueDate != null ? DateTime.tryParse(dueDate!) : null;
+
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.space16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppColors.navyDeep,
-            AppColors.navyMedium,
-          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: isOverdue
+              ? [_kRed, const Color(0xFF8B1A1A)]
+              : [const Color(0xFF0B1F3A), const Color(0xFF1A3558)],
         ),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: 0.2),
-            blurRadius: 16,
+            color: (isOverdue ? _kRed : const Color(0xFF0B1F3A))
+                .withValues(alpha: 0.25),
+            blurRadius: 18,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            ),
-            child: const Icon(
-              Icons.account_balance_wallet_outlined,
-              color: AppColors.white,
-              size: AppDimensions.iconMD,
-            ),
-          ),
-          const SizedBox(width: AppDimensions.space16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Outstanding Balance',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: AppDimensions.space2),
-                Text(
-                  fmt(outstandingAmount),
-                  style: AppTypography.headlineSmall.copyWith(
-                    color: AppColors.warningAmber,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(
-                'Total',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.white.withValues(alpha: 0.5),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isOverdue
+                      ? Icons.warning_amber_rounded
+                      : Icons.account_balance_wallet_outlined,
+                  color: AppColors.white,
+                  size: 22,
                 ),
               ),
-              Text(
-                fmt(totalAmount),
-                style: AppTypography.titleSmall.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      installmentName ?? 'Fee Payment',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (dueDateParsed != null)
+                      Text(
+                        isOverdue
+                            ? 'OVERDUE · Due: ${fmtDate(dueDateParsed)}'
+                            : 'Due: ${fmtDate(dueDateParsed)}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              if (totalAmount != null)
+                Expanded(
+                  child: _WhiteStat(
+                      label: 'Total', value: fmt(totalAmount!)),
+                ),
+              Expanded(
+                child: _WhiteStat(
+                  label: 'Outstanding',
+                  value: fmt(outstandingAmount),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: totalAmount != null && totalAmount! > 0
+                  ? ((totalAmount! - outstandingAmount) / totalAmount!)
+                      .clamp(0.0, 1.0)
+                  : 0.0,
+              minHeight: 7,
+              backgroundColor: AppColors.white.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.successGreen),
+            ),
           ),
         ],
       ),
@@ -422,118 +411,165 @@ class _ContextBanner extends StatelessWidget {
   }
 }
 
-class _DatePickerTile extends StatelessWidget {
-  const _DatePickerTile({
-    required this.date,
-    required this.formatted,
-    required this.onTap,
-  });
-
-  final DateTime date;
-  final String formatted;
-  final VoidCallback onTap;
+class _WhiteStat extends StatelessWidget {
+  const _WhiteStat({required this.label, required this.value});
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.space16,
-          vertical: _space14,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surface50,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-          border: Border.all(
-            color: AppColors.surface200,
-            width: AppDimensions.borderMedium,
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.calendar_today_outlined,
-              size: AppDimensions.iconSM,
-              color: AppColors.grey400,
-            ),
-            const SizedBox(width: AppDimensions.space12),
-            Text(
-              formatted,
-              style: AppTypography.bodyMedium.copyWith(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: AppTypography.caption
+                .copyWith(color: AppColors.white.withValues(alpha: 0.6))),
+        const SizedBox(height: 2),
+        Text(value,
+            style: AppTypography.titleSmall.copyWith(
+                color: AppColors.white, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+// ── Amount Field ──────────────────────────────────────────────────────────────
+
+class _AmountField extends StatelessWidget {
+  const _AmountField(
+      {required this.controller, required this.outstandingAmount});
+  final TextEditingController controller;
+  final double outstandingAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Text('₹',
+              style: AppTypography.headlineMedium.copyWith(
                 color: AppColors.navyDeep,
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: AppTypography.headlineMedium.copyWith(
+                color: AppColors.navyDeep,
+                fontWeight: FontWeight.w700,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: '0.00',
+                hintStyle: AppTypography.headlineMedium.copyWith(
+                  color: AppColors.grey300,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Amount is required';
+                }
+                final d = double.tryParse(v.trim());
+                if (d == null || d <= 0) {
+                  return 'Enter a valid positive amount';
+                }
+                if (outstandingAmount > 0 && d > outstandingAmount + 0.01) {
+                  return 'Amount exceeds outstanding (${outstandingAmount.toStringAsFixed(2)})';
+                }
+                return null;
+              },
+            ),
+          ),
+          if (outstandingAmount > 0)
+            GestureDetector(
+              onTap: () {
+                controller.text = outstandingAmount.toStringAsFixed(2);
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _kGreenBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Full',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: _kGreen,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-            const Spacer(),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.grey400,
-              size: AppDimensions.iconSM,
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _PaymentModeGrid extends StatelessWidget {
-  const _PaymentModeGrid({
-    required this.selected,
-    required this.onChanged,
-  });
+// ── Payment Mode Grid ─────────────────────────────────────────────────────────
 
+class _PaymentModeGrid extends StatelessWidget {
+  const _PaymentModeGrid({required this.selected, required this.onChanged});
   final PaymentMode selected;
   final ValueChanged<PaymentMode> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: AppDimensions.space8,
-      runSpacing: AppDimensions.space8,
+      spacing: 8,
+      runSpacing: 8,
       children: PaymentMode.values.map((mode) {
-        final isSelected = mode == selected;
+        final isSelected = selected == mode;
         return GestureDetector(
           onTap: () => onChanged(mode),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.space12,
-              vertical: _space10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.navyDeep : AppColors.white,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              color: isSelected ? AppColors.navyDeep : AppColors.surface50,
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected ? AppColors.navyDeep : AppColors.surface200,
-                width: isSelected
-                    ? AppDimensions.borderMedium
-                    : AppDimensions.borderThin,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: AppColors.navyDeep.withValues(alpha: 0.15),
+                        color: AppColors.navyDeep.withValues(alpha: 0.2),
                         blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
+                        offset: const Offset(0, 2),
+                      )
                     ]
-                  : null,
+                  : [],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  mode.icon,
-                  size: 15,
+                  _modeIcon(mode),
+                  size: 16,
                   color: isSelected ? AppColors.white : AppColors.grey500,
                 ),
-                const SizedBox(width: AppDimensions.space6),
+                const SizedBox(width: 6),
                 Text(
                   mode.label,
                   style: AppTypography.labelMedium.copyWith(
                     color: isSelected ? AppColors.white : AppColors.grey700,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
               ],
@@ -543,8 +579,80 @@ class _PaymentModeGrid extends StatelessWidget {
       }).toList(),
     );
   }
+
+  IconData _modeIcon(PaymentMode mode) {
+    switch (mode) {
+      case PaymentMode.cash:
+        return Icons.payments_rounded;
+      case PaymentMode.upi:
+        return Icons.qr_code_rounded;
+      case PaymentMode.online:
+        return Icons.credit_card_rounded;
+      case PaymentMode.cheque:
+        return Icons.account_balance_rounded;
+      case PaymentMode.bankTransfer:
+        return Icons.account_balance_wallet_rounded;
+    }
+  }
 }
 
-// Local spacing constants
-const double _space10 = 10.0;
-const double _space14 = 14.0;
+// ── Date Picker Tile ──────────────────────────────────────────────────────────
+
+class _DatePickerTile extends StatelessWidget {
+  const _DatePickerTile({
+    required this.date,
+    required this.formatted,
+    required this.onTap,
+  });
+  final DateTime date;
+  final String formatted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.surface200),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                size: 18, color: AppColors.navyMedium),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                formatted,
+                style: AppTypography.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.expand_more_rounded,
+                size: 18, color: AppColors.grey400),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: AppTypography.labelMedium.copyWith(
+        color: AppColors.grey700,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+}

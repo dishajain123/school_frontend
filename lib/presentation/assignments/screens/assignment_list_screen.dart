@@ -244,78 +244,78 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
               },
             )
           : null,
-      body: assignmentsState.when(
-        loading: () => _buildShimmer(),
-        error: (e, _) => AppErrorState(
-          message: e.toString(),
-          onRetry: () => ref.read(assignmentsProvider.notifier).refresh(),
-        ),
-        data: (state) {
-          final filtered = switch (_activeFilter) {
-            'active' =>
-              state.items.where((a) => a.isActive && !a.isOverdue).toList(),
-            'overdue' =>
-              state.items.where((a) => a.isActive && a.isOverdue).toList(),
-            'submitted' => state.items,
-            _ => state.items,
-          };
+      body: Column(
+        children: [
+          if (isTeacher && classOptions.isNotEmpty)
+            _TeacherClassFilterBar(
+              classOptions: classOptions,
+              selectedClassKey: _selectedClassKey,
+              onSelect: (classKey) {
+                setState(() => _selectedClassKey = classKey);
+                ref
+                    .read(assignmentsProvider.notifier)
+                    .applyFilters(_buildFiltersForCurrentState(
+                      scopedSubjectId: null,
+                      scopedStandardId: null,
+                    ));
+              },
+            ),
+          if ((isStudent || isParent) && scopedSubjectOptions.isNotEmpty)
+            _StudentSubjectFilterBar(
+              subjectOptions: scopedSubjectOptions,
+              selectedSubjectId: _selectedScopedSubjectId,
+              onSelect: (subjectId) {
+                setState(() => _selectedScopedSubjectId = subjectId);
+                ref.read(assignmentsProvider.notifier).applyFilters(
+                      _buildFiltersForCurrentState(
+                        scopedSubjectId: _selectedScopedSubjectId,
+                        scopedStandardId: scopedStandardId,
+                      ),
+                    );
+              },
+            ),
+          Expanded(
+            child: assignmentsState.when(
+              loading: () => _buildShimmer(),
+              error: (e, _) => AppErrorState(
+                message: e.toString(),
+                onRetry: () => ref.read(assignmentsProvider.notifier).refresh(),
+              ),
+              data: (state) {
+                final filtered = switch (_activeFilter) {
+                  'active' =>
+                    state.items.where((a) => a.isActive && !a.isOverdue).toList(),
+                  'overdue' =>
+                    state.items.where((a) => a.isActive && a.isOverdue).toList(),
+                  'submitted' => state.items,
+                  _ => state.items,
+                };
 
-          if (filtered.isEmpty && !state.isLoadingMore) {
-            return AppEmptyState(
-              icon: Icons.assignment_outlined,
-              title: 'No assignments',
-              subtitle: _activeFilter == 'overdue'
-                  ? "You're all caught up — no overdue assignments."
-                  : _activeFilter == 'submitted'
-                      ? 'No submitted assignments found yet.'
-                      : canCreate
-                          ? 'Tap + to create the first assignment.'
-                          : 'No assignments have been posted yet.',
-              actionLabel: canCreate ? 'Create Assignment' : null,
-              onAction: canCreate
-                  ? () async {
-                      await context.push(RouteNames.createAssignment);
-                      if (!mounted) return;
-                      await ref.read(assignmentsProvider.notifier).refresh();
-                    }
-                  : null,
-            );
-          }
+                if (filtered.isEmpty && !state.isLoadingMore) {
+                  return AppEmptyState(
+                    icon: Icons.assignment_outlined,
+                    title: 'No assignments',
+                    subtitle: _activeFilter == 'overdue'
+                        ? "You're all caught up — no overdue assignments."
+                        : _activeFilter == 'submitted'
+                            ? 'No submitted assignments found yet.'
+                            : canCreate
+                                ? 'Tap + to create the first assignment.'
+                                : 'No assignments have been posted yet.',
+                    actionLabel: canCreate ? 'Create Assignment' : null,
+                    onAction: canCreate
+                        ? () async {
+                            await context.push(RouteNames.createAssignment);
+                            if (!mounted) return;
+                            await ref.read(assignmentsProvider.notifier).refresh();
+                          }
+                        : null,
+                  );
+                }
 
-          return RefreshIndicator(
-            onRefresh: () => ref.read(assignmentsProvider.notifier).refresh(),
-            color: AppColors.navyDeep,
-            child: Column(
-              children: [
-                if (isTeacher && classOptions.isNotEmpty)
-                  _TeacherClassFilterBar(
-                    classOptions: classOptions,
-                    selectedClassKey: _selectedClassKey,
-                    onSelect: (classKey) {
-                      setState(() => _selectedClassKey = classKey);
-                      ref
-                          .read(assignmentsProvider.notifier)
-                          .applyFilters(_buildFiltersForCurrentState(
-                            scopedSubjectId: null,
-                            scopedStandardId: null,
-                          ));
-                    },
-                  ),
-                if ((isStudent || isParent) && scopedSubjectOptions.isNotEmpty)
-                  _StudentSubjectFilterBar(
-                    subjectOptions: scopedSubjectOptions,
-                    selectedSubjectId: _selectedScopedSubjectId,
-                    onSelect: (subjectId) {
-                      setState(() => _selectedScopedSubjectId = subjectId);
-                      ref.read(assignmentsProvider.notifier).applyFilters(
-                            _buildFiltersForCurrentState(
-                              scopedSubjectId: _selectedScopedSubjectId,
-                              scopedStandardId: scopedStandardId,
-                            ),
-                          );
-                    },
-                  ),
-                Expanded(
+                return RefreshIndicator(
+                  onRefresh: () => ref.read(assignmentsProvider.notifier).refresh(),
+                  color: AppColors.navyDeep,
                   child: ListView.builder(
                     controller: _scrollCtrl,
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -334,8 +334,8 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                       final assignment = filtered[index];
                       return AssignmentCard(
                         assignment: assignment,
-                        onTap: () => context
-                            .push(RouteNames.assignmentDetailPath(assignment.id)),
+                        onTap: () =>
+                            context.push(RouteNames.assignmentDetailPath(assignment.id)),
                         showSubmissionAction: canViewSubmissions,
                         onViewSubmissions: canViewSubmissions
                             ? () => context
@@ -344,11 +344,11 @@ class _AssignmentListScreenState extends ConsumerState<AssignmentListScreen>
                       );
                     },
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

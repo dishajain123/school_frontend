@@ -431,7 +431,7 @@ final teacherDashboardStatsProvider =
   List<TeacherClassSubjectModel> assignments = const [];
   var overdueAssignmentsCount = 0;
   var pendingLeavesCount = 0;
-  var openComplaintsCount = 0;
+  var complaintsCount = 0;
 
   try {
     assignments = await teacherClassRepo.getMyAssignments(
@@ -464,12 +464,12 @@ final teacherDashboardStatsProvider =
   }
 
   try {
-    final openComplaints = await complaintRepo.list(
-      status: ComplaintStatus.open,
-    );
-    openComplaintsCount = openComplaints.total;
+    // Keep this aligned with the teacher complaints screen, which lists
+    // the teacher's own complaints across statuses.
+    final complaints = await complaintRepo.list();
+    complaintsCount = complaints.total;
   } on DioException {
-    openComplaintsCount = 0;
+    complaintsCount = 0;
   }
 
   Map<String, dynamic> report = <String, dynamic>{};
@@ -495,7 +495,7 @@ final teacherDashboardStatsProvider =
     myClasses: uniqueClassSections.length,
     pendingLeaves: pendingLeavesCount,
     overdueAssignments: overdueAssignmentsCount,
-    openComplaints: openComplaintsCount,
+    openComplaints: complaintsCount,
     teacherAttendancePercentage:
         _asDouble(report['teacher_attendance_percentage']),
   );
