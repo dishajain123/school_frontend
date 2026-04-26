@@ -12,7 +12,7 @@ class SubjectModel {
   final String id;
   final String name;
   final String code;
-  final String standardId;
+  final String? standardId;
   final String schoolId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -22,7 +22,7 @@ class SubjectModel {
       id: json['id'] as String,
       name: json['name'] as String,
       code: json['code'] as String,
-      standardId: json['standard_id'] as String,
+      standardId: json['standard_id'] as String?,
       schoolId: json['school_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -42,12 +42,13 @@ class SubjectModel {
   SubjectModel copyWith({
     String? name,
     String? code,
+    String? standardId,
   }) {
     return SubjectModel(
       id: id,
       name: name ?? this.name,
       code: code ?? this.code,
-      standardId: standardId,
+      standardId: standardId ?? this.standardId,
       schoolId: schoolId,
       createdAt: createdAt,
       updatedAt: updatedAt,
