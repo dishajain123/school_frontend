@@ -8,9 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
-import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../core/utils/validators.dart';
@@ -94,7 +92,7 @@ class _AdmissionScreenState extends ConsumerState<AdmissionScreen>
 
     setState(() => _isLoading = true);
     try {
-      final dio = ref.read(dioClientProvider).dio;
+      final dio = ref.read(dioClientProvider);
 
       // Step A: Create parent (if inline)
       String? resolvedParentId = _parentIdCtrl.text.trim().isEmpty

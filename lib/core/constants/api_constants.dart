@@ -247,7 +247,20 @@ class ApiConstants {
   static const String complaints = '/complaints';
   static String complaintStatus(String id) => '/complaints/$id/status';
   static const String feedback = '/complaints/feedback';
+  // ── Enrollment ────────────────────────────────────────────────────────────
+  static const String enrollmentMappings = '/enrollment/mappings';
+  static String enrollmentMappingById(String id) => '/enrollment/mappings/$id';
+  static String enrollmentExit(String id) => '/enrollment/mappings/$id/exit';
+  static String enrollmentComplete(String id) => '/enrollment/mappings/$id/complete';
+  static const String enrollmentRoster = '/enrollment/roster';
+  static const String enrollmentRollNumbers = '/enrollment/roll-numbers';
+  static String enrollmentHistory(String studentId) => '/enrollment/history/$studentId';
 
+  // ── Promotion ──────────────────────────────────────────────────────────────
+  static const String promotionPreview = '/promotion/preview';
+  static const String promotionExecute = '/promotion/execute';
+  static String promotionReenroll(String studentId) => '/promotion/reenroll/$studentId';
+  static const String promotionCopyAssignments = '/promotion/copy-assignments';
   static String _normalizeBaseUrl(String raw) {
     if (raw.endsWith('/')) return raw.substring(0, raw.length - 1);
     return raw;

@@ -235,5 +235,5 @@ class EnrollmentRepository {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 final enrollmentRepositoryProvider = Provider<EnrollmentRepository>((ref) {
-  return EnrollmentRepository(ref.read(dioClientProvider).dio);
+  return EnrollmentRepository(ref.read(dioClientProvider));
 });
