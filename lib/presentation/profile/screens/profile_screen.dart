@@ -339,7 +339,7 @@ class _TeacherAssignmentsCard extends StatelessWidget {
               ),
               const SizedBox(height: AppDimensions.space12),
               _AssignmentChipGroup(
-                label: 'Classes & Sections',
+                label: 'Class Setup',
                 values: classSections,
                 emptyLabel: 'No classes assigned',
               ),

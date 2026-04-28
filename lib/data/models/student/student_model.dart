@@ -1,3 +1,5 @@
+import '../auth/current_user.dart';
+
 class StudentModel {
   const StudentModel({
     required this.id,
@@ -15,6 +17,11 @@ class StudentModel {
     this.rollNumber,
     this.dateOfBirth,
     this.admissionDate,
+    this.email,
+    this.phone,
+    this.standardName,
+    this.academicYearName,
+    this.user,
   });
 
   final String id;
@@ -29,11 +36,17 @@ class StudentModel {
   final String admissionNumber;
   final DateTime? dateOfBirth;
   final DateTime? admissionDate;
+  final String? email;
+  final String? phone;
+  final String? standardName;
+  final String? academicYearName;
+  final CurrentUser? user;
   final bool isPromoted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
+    final userJson = json['user'];
     return StudentModel(
       id: json['id'] as String,
       userId: json['user_id'] as String?,
@@ -50,6 +63,13 @@ class StudentModel {
           : null,
       admissionDate: json['admission_date'] != null
           ? DateTime.tryParse(json['admission_date'] as String)
+          : null,
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      standardName: json['standard_name'] as String?,
+      academicYearName: json['academic_year_name'] as String?,
+      user: userJson is Map<String, dynamic>
+          ? CurrentUser.fromJson(userJson)
           : null,
       isPromoted: json['is_promoted'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -70,6 +90,11 @@ class StudentModel {
         'admission_number': admissionNumber,
         'date_of_birth': dateOfBirth?.toIso8601String(),
         'admission_date': admissionDate?.toIso8601String(),
+        'email': email,
+        'phone': phone,
+        'standard_name': standardName,
+        'academic_year_name': academicYearName,
+        'user': user?.toJson(),
         'is_promoted': isPromoted,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),

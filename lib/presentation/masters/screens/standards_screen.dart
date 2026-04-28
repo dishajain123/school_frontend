@@ -51,10 +51,10 @@ class _StandardsScreenState extends ConsumerState<StandardsScreen> {
               await ref
                   .read(standardsNotifierProvider.notifier)
                   .updateStandard(existing.id, payload);
-              if (mounted) SnackbarUtils.showSuccess(context, 'Standard updated.');
+              if (mounted) SnackbarUtils.showSuccess(context, 'Class updated.');
             } else {
               await ref.read(standardsNotifierProvider.notifier).create(payload);
-              if (mounted) SnackbarUtils.showSuccess(context, 'Standard created.');
+              if (mounted) SnackbarUtils.showSuccess(context, 'Class created.');
             }
           } catch (e) {
             if (mounted) SnackbarUtils.showError(context, 'Failed: ${e.toString()}');
@@ -67,14 +67,14 @@ class _StandardsScreenState extends ConsumerState<StandardsScreen> {
   Future<void> _confirmDelete(StandardModel standard) async {
     final confirmed = await AppDialog.destructive(
       context,
-      title: 'Delete Standard',
+      title: 'Delete Class',
       message: 'Delete "${standard.name}"? This cannot be undone.',
       confirmLabel: 'Delete',
     );
     if (confirmed == true && mounted) {
       try {
         await ref.read(standardsNotifierProvider.notifier).delete(standard.id);
-        if (mounted) SnackbarUtils.showSuccess(context, 'Standard deleted.');
+        if (mounted) SnackbarUtils.showSuccess(context, 'Class deleted.');
       } catch (e) {
         if (mounted) SnackbarUtils.showError(context, 'Failed: ${e.toString()}');
       }
@@ -87,11 +87,11 @@ class _StandardsScreenState extends ConsumerState<StandardsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(title: 'Standards'),
+      appBar: AppAppBar(title: 'Class Setup'),
       floatingActionButton: _canManage
           ? FloatingActionButton(
               onPressed: () => _showCreateSheet(),
-              tooltip: 'Add Standard',
+              tooltip: 'Add Class',
               child: const Icon(Icons.add),
             )
           : null,
@@ -104,8 +104,8 @@ class _StandardsScreenState extends ConsumerState<StandardsScreen> {
         data: (standards) {
           if (standards.isEmpty) {
             return const AppEmptyState(
-              title: 'No standards yet',
-              subtitle: 'Create your first standard to get started.',
+              title: 'No classes yet',
+              subtitle: 'Create your first class to get started.',
               icon: Icons.class_outlined,
             );
           }
@@ -240,7 +240,7 @@ class _StandardFormSheetState extends ConsumerState<_StandardFormSheet> {
             ),
             const SizedBox(height: AppDimensions.space16),
             Text(
-              widget.existing != null ? 'Edit Standard' : 'New Standard',
+              widget.existing != null ? 'Edit Class' : 'New Class',
               style: AppTypography.headlineSmall,
             ),
             const SizedBox(height: AppDimensions.space24),

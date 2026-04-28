@@ -1,129 +1,145 @@
+// lib/core/router/route_names.dart  [Mobile App]
 class RouteNames {
-  RouteNames._();
-
-  static const String splash = '/';
+  // Auth
+  static const String splash = '/splash';
   static const String login = '/login';
   static const String forgotPassword = '/forgot-password';
   static const String verifyOtp = '/verify-otp';
   static const String resetPassword = '/reset-password';
 
+  // Shell (bottom nav)
   static const String dashboard = '/dashboard';
-
   static const String profile = '/profile';
   static const String changePassword = '/profile/change-password';
-
   static const String notifications = '/notifications';
 
+  // Announcements
   static const String announcements = '/announcements';
   static const String announcementDetail = '/announcements/:id';
+  static String announcementDetailPath(String id) => '/announcements/$id';
   static const String createAnnouncement = '/announcements/create';
 
+  // Academic Years
   static const String academicYears = '/academic-years';
   static const String rollover = '/academic-years/rollover';
 
-  static const String standards = '/masters/standards';
-  static const String subjects = '/masters/subjects';
-  static const String gradeMaster = '/masters/grades';
+  // Masters
+  static const String standards = '/standards';
+  static const String subjects = '/subjects';
+  static const String gradeMaster = '/grade-master';
 
+  // Teachers
   static const String teachers = '/teachers';
   static const String teacherDetail = '/teachers/:id';
+  static String teacherDetailPath(String id) => '/teachers/$id';
   static const String createTeacher = '/teachers/create';
+  static const String teacherAnalytics = '/teachers/:id/analytics';
 
+  // Students
   static const String students = '/students';
   static const String studentDetail = '/students/:id';
+  static String studentDetailPath(String id) => '/students/$id';
   static const String createStudent = '/students/create';
 
+  // Parents
   static const String parents = '/parents';
   static const String parentDetail = '/parents/:id';
+  static String parentDetailPath(String id) => '/parents/$id';
   static const String createParent = '/parents/create';
 
-  static const String attendance = '/attendance';
-  static const String teacherAnalytics = '/teacher-analytics';
-  static const String markAttendance = '/attendance/mark';
-  static const String attendanceAnalytics = '/attendance/analytics/:studentId';
-  static const String belowThreshold = '/attendance/below-threshold';
+  // Academic History (Phase 7/14)
+  static const String academicHistory = '/academic-history';
+  static const String academicHistoryDetail = '/academic-history/:studentId';
 
+  // Teacher Schedule (Phase 4)
+  static const String mySchedule = '/my-schedule';
+
+  // Attendance
+  static const String attendance = '/attendance';
+  static const String attendanceDetail = '/attendance/:id';
+  static const String markAttendance = '/attendance/mark';
+
+  // Assignments
   static const String assignments = '/assignments';
   static const String assignmentDetail = '/assignments/:id';
+  static String assignmentDetailPath(String id) => '/assignments/$id';
   static const String createAssignment = '/assignments/create';
   static const String submissionList = '/assignments/:id/submissions';
+  static String submissionListPath(String assignmentId) =>
+      '/assignments/$assignmentId/submissions';
 
+  // Homework
   static const String homework = '/homework';
   static const String homeworkDetail = '/homework/:id';
+  static String homeworkDetailPath(String id) => '/homework/$id';
   static const String createHomework = '/homework/create';
 
+  // Diary
   static const String diary = '/diary';
   static const String createDiary = '/diary/create';
 
+  // Behaviour
+  static const String behaviourLogs = '/behaviour';
+  static String behaviourLogsPath({String? studentId}) =>
+      studentId == null ? '/behaviour' : '/behaviour?student_id=$studentId';
+  static String createBehaviourLogPath({String? studentId}) => studentId == null
+      ? '/behaviour/create'
+      : '/behaviour/create?student_id=$studentId';
+
+  // Timetable
   static const String timetable = '/timetable';
   static const String uploadTimetable = '/timetable/upload';
 
+  // Exam Schedules
   static const String examSchedules = '/exam-schedule';
   static const String examScheduleTable = '/exam-schedule/table';
   static const String createExamSeries = '/exam-schedule/create';
 
+  // Results
   static const String results = '/results';
   static const String principalResultsDistribution = '/results/distribution';
   static const String enterResults = '/results/enter';
   static const String reportCard = '/results/report-card';
   static const String principalReportDetails = '/reports/details';
 
+  // Fees
   static const String feeDashboard = '/fees';
   static const String paymentHistory = '/fees/payment-history';
   static const String recordPayment = '/fees/record-payment';
   static const String feeReceipt = '/fees/receipt';
   static const String receipt = '/fees/receipt/:id';
 
+  // Chat
   static const String conversations = '/chat';
   static const String chatRoom = '/chat/:conversationId';
+  static String chatRoomPath(String conversationId) => '/chat/$conversationId';
 
+  // Leave
   static const String leaveList = '/leave';
   static const String applyLeave = '/leave/apply';
   static const String leaveBalance = '/leave/balance';
   static const String leaveDecision = '/leave/:id/decision';
+  static String leaveDecisionPath(String id) => '/leave/$id/decision';
 
+  // Gallery
   static const String galleryAlbums = '/gallery';
   static const String albumDetail = '/gallery/:id';
+  static String albumDetailPath(String id) => '/gallery/$id';
   static const String createAlbum = '/gallery/create';
 
+  // Documents
   static const String documents = '/documents';
-  static const String requestDocument = '/documents/request';
 
-  static const String behaviourLogs = '/behaviour';
-  static const String createBehaviourLog = '/behaviour/create';
-
+  // Complaints
   static const String complaints = '/complaints';
   static const String complaintDetail = '/complaints/:id';
+  static String complaintDetailPath(String id) => '/complaints/$id';
   static const String createComplaint = '/complaints/create';
 
+  // Schools
   static const String schools = '/schools';
   static const String schoolDetail = '/schools/:id';
-  static const String createSchool = '/schools/create';
-  static const String schoolSettings = '/settings';
-
-  // ── Path helpers ──────────────────────────────────────────────────────────
-  static String announcementDetailPath(String id) => '/announcements/$id';
-  static String teacherDetailPath(String id) => '/teachers/$id';
-  static String studentDetailPath(String id) => '/students/$id';
-  static String parentDetailPath(String id) => '/parents/$id';
-  static String attendanceAnalyticsPath(String studentId) =>
-      '/attendance/analytics/$studentId';
-  static String assignmentDetailPath(String id) => '/assignments/$id';
-  static String submissionListPath(String assignmentId) =>
-      '/assignments/$assignmentId/submissions';
-  static String homeworkDetailPath(String id) => '/homework/$id';
-  static String examScheduleTablePath(String id) => '/exam-schedule/$id/table';
-  static String reportCardPath(String studentId) =>
-      '/results/report-card/$studentId';
-  static String receiptPath(String id) => '/fees/receipt/$id';
-  static String chatRoomPath(String conversationId) => '/chat/$conversationId';
-  static String leaveDecisionPath(String id) => '/leave/$id/decision';
-  static String albumDetailPath(String id) => '/gallery/$id';
-  static String behaviourLogsPath({String? studentId}) =>
-      studentId == null ? '/behaviour' : '/behaviour?student_id=$studentId';
-  static String createBehaviourLogPath({String? studentId}) => studentId == null
-      ? '/behaviour/create'
-      : '/behaviour/create?student_id=$studentId';
-  static String complaintDetailPath(String id) => '/complaints/$id';
   static String schoolDetailPath(String id) => '/schools/$id';
+  static const String createSchool = '/schools/create';
+  static const String schoolSettings = '/schools/settings';
 }
