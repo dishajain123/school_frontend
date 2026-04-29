@@ -12,21 +12,55 @@ import '../widgets/school_logo.dart';
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
+  static ({String message, bool approvalState}) _normalizeLoginMessage(
+      String raw) {
+    final text = raw.trim();
+    final lower = text.toLowerCase();
+    if (lower.contains('pending approval')) {
+      return (
+        message:
+            'Your account is waiting for school approval. Please try again later.',
+        approvalState: true
+      );
+    }
+    if (lower.contains('on hold') || lower.contains('currently on hold')) {
+      return (
+        message:
+            'Your account is currently on hold. Please contact the school office.',
+        approvalState: true
+      );
+    }
+    if (lower.contains('rejected')) {
+      return (
+        message:
+            'Your account request was rejected. Please contact the school office.',
+        approvalState: true
+      );
+    }
+    return (message: text, approvalState: false);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next.status == AuthStatus.error && next.error != null) {
+        final normalized = _normalizeLoginMessage(next.error!);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline_rounded,
+                Icon(
+                    normalized.approvalState
+                        ? Icons.info_outline_rounded
+                        : Icons.error_outline_rounded,
                     color: AppColors.white, size: 16),
                 const SizedBox(width: 8),
-                Expanded(child: Text(next.error!)),
+                Expanded(child: Text(normalized.message)),
               ],
             ),
-            backgroundColor: AppColors.errorRed,
+            backgroundColor: normalized.approvalState
+                ? AppColors.warningAmber
+                : AppColors.errorRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

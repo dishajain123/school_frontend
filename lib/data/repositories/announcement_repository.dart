@@ -8,10 +8,18 @@ class AnnouncementRepository {
   const AnnouncementRepository(this._dio);
   final Dio _dio;
 
-  Future<List<AnnouncementModel>> list({bool includeInactive = false}) async {
+  Future<List<AnnouncementModel>> list({
+    bool includeInactive = false,
+    String? targetRole,
+    String? targetStandardId,
+  }) async {
     final response = await _dio.get(
       ApiConstants.announcements,
-      queryParameters: {'include_inactive': includeInactive},
+      queryParameters: {
+        'include_inactive': includeInactive,
+        if (targetRole != null && targetRole.trim().isNotEmpty) 'target_role': targetRole,
+        if (targetStandardId != null && targetStandardId.trim().isNotEmpty) 'target_standard_id': targetStandardId,
+      },
     );
     final data = response.data as Map<String, dynamic>;
     final items = data['items'] as List<dynamic>? ?? [];
@@ -31,6 +39,19 @@ class AnnouncementRepository {
       data: payload,
     );
     return AnnouncementModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> delete(String id) async {
+    await _dio.delete(ApiConstants.announcementById(id));
+  }
+
+  Future<AnnouncementModel?> getById(String id) async {
+    try {
+      final response = await _dio.get(ApiConstants.announcementById(id));
+      return AnnouncementModel.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      return null;
+    }
   }
 }
 

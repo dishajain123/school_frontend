@@ -8,8 +8,11 @@ enum PaymentMode {
   cash,
   cheque,
   online,
-  bankTransfer,
+  dd,
+  neft,
+  rtgs,
   upi,
+  other,
 }
 
 extension PaymentModeX on PaymentMode {
@@ -21,10 +24,19 @@ extension PaymentModeX on PaymentMode {
         return PaymentMode.cheque;
       case 'ONLINE':
         return PaymentMode.online;
+      case 'DD':
+        return PaymentMode.dd;
+      case 'NEFT':
       case 'BANK_TRANSFER':
-        return PaymentMode.bankTransfer;
+      case 'BANK':
+        return PaymentMode.neft;
+      case 'RTGS':
+        return PaymentMode.rtgs;
       case 'UPI':
         return PaymentMode.upi;
+      case 'OTHER':
+      case 'CARD':
+        return PaymentMode.other;
       default:
         return PaymentMode.cash;
     }
@@ -38,10 +50,16 @@ extension PaymentModeX on PaymentMode {
         return 'CHEQUE';
       case PaymentMode.online:
         return 'ONLINE';
-      case PaymentMode.bankTransfer:
-        return 'BANK_TRANSFER';
+      case PaymentMode.dd:
+        return 'DD';
+      case PaymentMode.neft:
+        return 'NEFT';
+      case PaymentMode.rtgs:
+        return 'RTGS';
       case PaymentMode.upi:
         return 'UPI';
+      case PaymentMode.other:
+        return 'OTHER';
     }
   }
 
@@ -52,11 +70,17 @@ extension PaymentModeX on PaymentMode {
       case PaymentMode.cheque:
         return 'Cheque';
       case PaymentMode.online:
-        return 'Online Transfer';
-      case PaymentMode.bankTransfer:
-        return 'Bank Transfer';
+        return 'Online';
+      case PaymentMode.dd:
+        return 'Demand Draft';
+      case PaymentMode.neft:
+        return 'NEFT';
+      case PaymentMode.rtgs:
+        return 'RTGS';
       case PaymentMode.upi:
         return 'UPI';
+      case PaymentMode.other:
+        return 'Other';
     }
   }
 
@@ -68,10 +92,16 @@ extension PaymentModeX on PaymentMode {
         return Icons.description_outlined;
       case PaymentMode.online:
         return Icons.language_outlined;
-      case PaymentMode.bankTransfer:
+      case PaymentMode.dd:
+        return Icons.receipt_long_outlined;
+      case PaymentMode.neft:
         return Icons.account_balance_outlined;
+      case PaymentMode.rtgs:
+        return Icons.swap_horiz_outlined;
       case PaymentMode.upi:
         return Icons.smartphone_outlined;
+      case PaymentMode.other:
+        return Icons.payments_outlined;
     }
   }
 }

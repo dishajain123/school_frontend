@@ -612,16 +612,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       return;
     }
     _isRequestSheetOpen = true;
-    DocumentType? requestedType;
-    final requiredTypes = ref
-        .read(documentProvider)
-        .requiredDocuments
-        .map((e) => e.documentType)
-        .toSet();
-    final allowedTypes =
-        requiredTypes.isEmpty ? null : requiredTypes.toList(growable: false);
+    RequiredDocumentModel? requested;
+    final allowedRequirements = ref.read(documentProvider).requiredDocuments;
     try {
-      requestedType = await showModalBottomSheet<DocumentType?>(
+      requested = await showModalBottomSheet<RequiredDocumentModel?>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
@@ -630,18 +624,24 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
           heightFactor: 0.86,
           child: RequestDocumentSheet(
             studentId: _resolvedStudentId!,
-            allowedTypes: allowedTypes,
+            allowedRequirements:
+                allowedRequirements.isEmpty ? null : allowedRequirements,
           ),
         ),
       );
     } finally {
       _isRequestSheetOpen = false;
     }
-    if (!context.mounted || requestedType == null) return;
+    if (!context.mounted || requested == null) return;
+    final requestedLabel = requested.documentType == DocumentType.other
+        ? (((requested.note ?? '').trim().isNotEmpty)
+            ? requested.note!.trim()
+            : requested.documentType.label)
+        : requested.documentType.label;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${requestedType.label} requested! Generating in background.',
+          '$requestedLabel requested! Generating in background.',
         ),
         backgroundColor: AppColors.successGreen,
         behavior: SnackBarBehavior.floating,
@@ -673,21 +673,22 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    final requiredTypes = ref
-        .read(documentProvider)
-        .requiredDocuments
-        .map((e) => e.documentType)
-        .toSet();
-
-    final baseAllowed = DocumentType.values
+    final requiredDocs = ref.read(documentProvider).requiredDocuments;
+    final baseAllowedTypes = DocumentType.values
         .where((type) => _canUploadTypeForRole(user.role, type))
-        .toList(growable: false);
-    final allowedTypes =
-        (user.role == UserRole.parent || user.role == UserRole.student) &&
-                requiredTypes.isNotEmpty
-            ? baseAllowed.where((t) => requiredTypes.contains(t)).toList()
-            : baseAllowed;
-    if (allowedTypes.isEmpty) {
+        .toSet();
+    List<RequiredDocumentModel> allowedDocs;
+    if ((user.role == UserRole.parent || user.role == UserRole.student) &&
+        requiredDocs.isNotEmpty) {
+      allowedDocs = requiredDocs
+          .where((r) => baseAllowedTypes.contains(r.documentType))
+          .toList(growable: false);
+    } else {
+      allowedDocs = baseAllowedTypes
+          .map((t) => RequiredDocumentModel(documentType: t))
+          .toList(growable: false);
+    }
+    if (allowedDocs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No uploadable document types available right now.'),
@@ -697,8 +698,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       return;
     }
 
-    var selectedType = allowedTypes.first;
-    final pickedType = await showModalBottomSheet<DocumentType>(
+    var selectedDoc = allowedDocs.first;
+    final pickedDoc = await showModalBottomSheet<RequiredDocumentModel>(
       context: context,
       useSafeArea: true,
       builder: (ctx) => ListView(
@@ -707,18 +708,21 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
           const ListTile(
             title: Text('Select Document Type'),
           ),
-          ...allowedTypes.map(
-            (type) => ListTile(
-              leading: Icon(type.icon, color: type.color),
-              title: Text(type.label),
-              onTap: () => Navigator.of(ctx).pop(type),
+          ...allowedDocs.map(
+            (doc) => ListTile(
+              leading: Icon(doc.documentType.icon, color: doc.documentType.color),
+              title: Text(doc.documentType == DocumentType.other &&
+                      (doc.note ?? '').trim().isNotEmpty
+                  ? doc.note!.trim()
+                  : doc.documentType.label),
+              onTap: () => Navigator.of(ctx).pop(doc),
             ),
           ),
         ],
       ),
     );
-    if (!context.mounted || pickedType == null) return;
-    selectedType = pickedType;
+    if (!context.mounted || pickedDoc == null) return;
+    selectedDoc = pickedDoc;
 
     FilePickerResult? picked;
     try {
@@ -744,7 +748,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
 
     final ok = await ref.read(documentProvider.notifier).uploadDocument(
           studentId: _resolvedStudentId!,
-          documentType: selectedType,
+          documentType: selectedDoc.documentType,
+          note: selectedDoc.documentType == DocumentType.other
+              ? selectedDoc.note
+              : null,
           file: file,
         );
     if (!context.mounted) return;
@@ -752,7 +759,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       SnackBar(
         content: Text(
           ok
-              ? '${selectedType.label} uploaded successfully.'
+              ? '${selectedDoc.documentType == DocumentType.other && (selectedDoc.note ?? '').trim().isNotEmpty ? selectedDoc.note!.trim() : selectedDoc.documentType.label} uploaded successfully.'
               : (ref.read(documentProvider).error ?? 'Upload failed.'),
         ),
         backgroundColor: ok ? AppColors.successGreen : AppColors.errorRed,
@@ -857,19 +864,11 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
 
   Future<void> _showManageRequiredDocsSheet(BuildContext context) async {
     final current = ref.read(documentProvider).requiredDocuments;
-    final selected = current.map((e) => e.documentType).toSet();
-    final notesByType = <DocumentType, TextEditingController>{
-      for (final t in DocumentType.values)
-        t: TextEditingController(
-          text: current
-                  .firstWhere(
-                    (e) => e.documentType == t,
-                    orElse: () => RequiredDocumentModel(documentType: t),
-                  )
-                  .note ??
-              '',
-        ),
-    };
+    final rows = current.isEmpty
+        ? <RequiredDocumentModel>[
+            const RequiredDocumentModel(documentType: DocumentType.idCard),
+          ]
+        : List<RequiredDocumentModel>.from(current);
 
     final saveTapped = await showModalBottomSheet<bool>(
       context: context,
@@ -895,35 +894,86 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...DocumentType.values.map(
-                    (type) => Card(
+                  ...rows.asMap().entries.map(
+                    (entry) => Card(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
                           children: [
-                            CheckboxListTile(
-                              contentPadding: EdgeInsets.zero,
-                              value: selected.contains(type),
-                              onChanged: (checked) => setModalState(() {
-                                if (checked == true) {
-                                  selected.add(type);
-                                } else {
-                                  selected.remove(type);
-                                }
-                              }),
-                              title: Text(type.label),
-                              subtitle: Text(type.description),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<DocumentType>(
+                                    value: entry.value.documentType,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Document Type',
+                                    ),
+                                    items: DocumentType.values
+                                        .map(
+                                          (t) => DropdownMenuItem(
+                                            value: t,
+                                            child: Text(t.label),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (next) {
+                                      if (next == null) return;
+                                      setModalState(
+                                        () => rows[entry.key] =
+                                            RequiredDocumentModel(
+                                          documentType: next,
+                                          isMandatory: true,
+                                          note: entry.value.note,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: rows.length <= 1
+                                      ? null
+                                      : () => setModalState(
+                                            () => rows.removeAt(entry.key),
+                                          ),
+                                  icon: const Icon(Icons.delete_outline),
+                                ),
+                              ],
                             ),
-                            TextField(
-                              controller: notesByType[type],
-                              enabled: selected.contains(type),
-                              decoration: const InputDecoration(
-                                labelText: 'Instruction (optional)',
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              initialValue: entry.value.note ?? '',
+                              onChanged: (v) =>
+                                  rows[entry.key] = RequiredDocumentModel(
+                                documentType: rows[entry.key].documentType,
+                                isMandatory: true,
+                                note: v,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: rows[entry.key].documentType ==
+                                        DocumentType.other
+                                    ? 'Custom Document Name *'
+                                    : 'Instruction (optional)',
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setModalState(
+                        () => rows.add(
+                          const RequiredDocumentModel(
+                            documentType: DocumentType.other,
+                            isMandatory: true,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Add Document'),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -942,20 +992,29 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       ),
     );
 
-    final payload = selected
+    final payload = rows
         .map(
-          (type) => RequiredDocumentModel(
-            documentType: type,
+          (row) => RequiredDocumentModel(
+            documentType: row.documentType,
             isMandatory: true,
-            note: notesByType[type]?.text.trim(),
+            note: (row.note ?? '').trim().isEmpty ? null : row.note!.trim(),
           ),
         )
         .toList(growable: false);
-    for (final c in notesByType.values) {
-      c.dispose();
-    }
     if (saveTapped != true) return;
     if (!context.mounted) return;
+    for (final item in payload) {
+      if (item.documentType == DocumentType.other &&
+          (item.note ?? '').trim().isEmpty) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Custom name is required for Other document type.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
 
     final messenger = ScaffoldMessenger.maybeOf(context);
     final ok = await ref
@@ -1037,7 +1096,12 @@ class _RequiredDocsPanel extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(item.documentType.icon,
                     color: item.documentType.color),
-                title: Text(item.documentType.label),
+                title: Text(
+                  item.documentType == DocumentType.other &&
+                          (item.note ?? '').trim().isNotEmpty
+                      ? item.note!.trim()
+                      : item.documentType.label,
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

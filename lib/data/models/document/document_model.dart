@@ -9,6 +9,12 @@ enum DocumentType {
   bonafide,
   leavingCert,
   reportCard,
+  idProof,
+  addressProof,
+  academicCertificate,
+  transferCertificate,
+  medical,
+  other,
 }
 
 extension DocumentTypeX on DocumentType {
@@ -22,6 +28,18 @@ extension DocumentTypeX on DocumentType {
         return DocumentType.leavingCert;
       case 'REPORT_CARD':
         return DocumentType.reportCard;
+      case 'ID_PROOF':
+        return DocumentType.idProof;
+      case 'ADDRESS_PROOF':
+        return DocumentType.addressProof;
+      case 'ACADEMIC_CERTIFICATE':
+        return DocumentType.academicCertificate;
+      case 'TRANSFER_CERTIFICATE':
+        return DocumentType.transferCertificate;
+      case 'MEDICAL':
+        return DocumentType.medical;
+      case 'OTHER':
+        return DocumentType.other;
       default:
         return DocumentType.bonafide;
     }
@@ -37,6 +55,18 @@ extension DocumentTypeX on DocumentType {
         return 'LEAVING_CERT';
       case DocumentType.reportCard:
         return 'REPORT_CARD';
+      case DocumentType.idProof:
+        return 'ID_PROOF';
+      case DocumentType.addressProof:
+        return 'ADDRESS_PROOF';
+      case DocumentType.academicCertificate:
+        return 'ACADEMIC_CERTIFICATE';
+      case DocumentType.transferCertificate:
+        return 'TRANSFER_CERTIFICATE';
+      case DocumentType.medical:
+        return 'MEDICAL';
+      case DocumentType.other:
+        return 'OTHER';
     }
   }
 
@@ -50,6 +80,18 @@ extension DocumentTypeX on DocumentType {
         return 'Leaving Certificate';
       case DocumentType.reportCard:
         return 'Report Card';
+      case DocumentType.idProof:
+        return 'ID Proof';
+      case DocumentType.addressProof:
+        return 'Address Proof';
+      case DocumentType.academicCertificate:
+        return 'Academic Certificate';
+      case DocumentType.transferCertificate:
+        return 'Transfer Certificate';
+      case DocumentType.medical:
+        return 'Medical Certificate';
+      case DocumentType.other:
+        return 'Other Document';
     }
   }
 
@@ -63,6 +105,18 @@ extension DocumentTypeX on DocumentType {
         return 'Required for school transfers';
       case DocumentType.reportCard:
         return 'Academic performance summary report';
+      case DocumentType.idProof:
+        return 'Government identity proof document';
+      case DocumentType.addressProof:
+        return 'Proof of current address';
+      case DocumentType.academicCertificate:
+        return 'Academic certificate issued by school';
+      case DocumentType.transferCertificate:
+        return 'Transfer or leaving certificate';
+      case DocumentType.medical:
+        return 'Medical certificate or related document';
+      case DocumentType.other:
+        return 'Any additional requested document';
     }
   }
 
@@ -76,6 +130,18 @@ extension DocumentTypeX on DocumentType {
         return Icons.logout_rounded;
       case DocumentType.reportCard:
         return Icons.bar_chart_outlined;
+      case DocumentType.idProof:
+        return Icons.badge_outlined;
+      case DocumentType.addressProof:
+        return Icons.home_outlined;
+      case DocumentType.academicCertificate:
+        return Icons.school_outlined;
+      case DocumentType.transferCertificate:
+        return Icons.swap_horiz_outlined;
+      case DocumentType.medical:
+        return Icons.medical_information_outlined;
+      case DocumentType.other:
+        return Icons.description_outlined;
     }
   }
 
@@ -89,6 +155,18 @@ extension DocumentTypeX on DocumentType {
         return AppColors.warningAmber;
       case DocumentType.reportCard:
         return AppColors.subjectMath;
+      case DocumentType.idProof:
+        return AppColors.navyMedium;
+      case DocumentType.addressProof:
+        return AppColors.infoBlue;
+      case DocumentType.academicCertificate:
+        return AppColors.successGreen;
+      case DocumentType.transferCertificate:
+        return AppColors.warningAmber;
+      case DocumentType.medical:
+        return AppColors.errorRed;
+      case DocumentType.other:
+        return AppColors.navyDeep;
     }
   }
 }
@@ -358,17 +436,23 @@ class RequiredDocumentModel {
     required this.documentType,
     this.isMandatory = true,
     this.note,
+    this.academicYearId,
+    this.standardId,
   });
 
   final DocumentType documentType;
   final bool isMandatory;
   final String? note;
+  final String? academicYearId;
+  final String? standardId;
 
   factory RequiredDocumentModel.fromJson(Map<String, dynamic> json) {
     return RequiredDocumentModel(
       documentType: DocumentTypeX.fromString(json['document_type'] as String?),
       isMandatory: json['is_mandatory'] as bool? ?? true,
       note: json['note'] as String?,
+      academicYearId: json['academic_year_id'] as String?,
+      standardId: json['standard_id'] as String?,
     );
   }
 
@@ -376,6 +460,8 @@ class RequiredDocumentModel {
         'document_type': documentType.backendValue,
         'is_mandatory': isMandatory,
         if (note != null && note!.trim().isNotEmpty) 'note': note!.trim(),
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+        if (standardId != null) 'standard_id': standardId,
       };
 }
 
@@ -392,6 +478,8 @@ class RequiredDocumentStatusModel {
     this.reviewedBy,
     this.needsReupload = false,
     this.isCompleted = false,
+    this.academicYearId,
+    this.standardId,
   });
 
   final DocumentType documentType;
@@ -405,6 +493,8 @@ class RequiredDocumentStatusModel {
   final String? reviewedBy;
   final bool needsReupload;
   final bool isCompleted;
+  final String? academicYearId;
+  final String? standardId;
 
   factory RequiredDocumentStatusModel.fromJson(Map<String, dynamic> json) {
     return RequiredDocumentStatusModel(
@@ -425,6 +515,8 @@ class RequiredDocumentStatusModel {
       reviewedBy: json['reviewed_by'] as String?,
       needsReupload: json['needs_reupload'] as bool? ?? false,
       isCompleted: json['is_completed'] as bool? ?? false,
+      academicYearId: json['academic_year_id'] as String?,
+      standardId: json['standard_id'] as String?,
     );
   }
 }

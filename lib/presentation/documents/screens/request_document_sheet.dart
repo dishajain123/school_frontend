@@ -14,11 +14,11 @@ class RequestDocumentSheet extends ConsumerStatefulWidget {
   const RequestDocumentSheet({
     super.key,
     required this.studentId,
-    this.allowedTypes,
+    this.allowedRequirements,
   });
 
   final String studentId;
-  final List<DocumentType>? allowedTypes;
+  final List<RequiredDocumentModel>? allowedRequirements;
 
   @override
   ConsumerState<RequestDocumentSheet> createState() =>
@@ -26,12 +26,15 @@ class RequestDocumentSheet extends ConsumerStatefulWidget {
 }
 
 class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
-  DocumentType? _selected;
+  RequiredDocumentModel? _selected;
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(documentProvider);
-    final types = widget.allowedTypes ?? DocumentType.values;
+    final requirements = widget.allowedRequirements ??
+        DocumentType.values
+            .map((type) => RequiredDocumentModel(documentType: type))
+            .toList(growable: false);
     final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
 
     return Container(
@@ -115,14 +118,20 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
               ),
               child: Column(
                 children: [
-                  ...types.map(
-                    (type) => Padding(
+                  ...requirements.map(
+                    (req) => Padding(
                       padding:
                           const EdgeInsets.only(bottom: AppDimensions.space8),
                       child: DocumentTypeCard(
-                        type: type,
-                        isSelected: _selected == type,
-                        onTap: () => setState(() => _selected = type),
+                        type: req.documentType,
+                        isSelected: identical(_selected, req),
+                        titleOverride: req.documentType == DocumentType.other
+                            ? req.note
+                            : null,
+                        descriptionOverride: req.documentType == DocumentType.other
+                            ? 'Custom document requested by school'
+                            : null,
+                        onTap: () => setState(() => _selected = req),
                       ),
                     ),
                   ),
@@ -216,7 +225,10 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
     if (_selected == null) return;
     final ok = await ref.read(documentProvider.notifier).requestDocument(
           studentId: widget.studentId,
-          documentType: _selected!,
+          documentType: _selected!.documentType,
+          note: _selected!.documentType == DocumentType.other
+              ? _selected!.note
+              : null,
         );
     if (ok) {
       if (!context.mounted) return;

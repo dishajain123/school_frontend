@@ -483,9 +483,16 @@ class _PaymentCard extends StatelessWidget {
         return Icons.credit_card_rounded;
       case 'CHEQUE':
         return Icons.account_balance_rounded;
+      case 'DD':
+        return Icons.receipt_long_rounded;
+      case 'NEFT':
+      case 'RTGS':
       case 'BANK_TRANSFER':
+      case 'BANK':
       case 'ONLINE':
         return Icons.account_balance_wallet_rounded;
+      case 'OTHER':
+        return Icons.monetization_on_rounded;
       default:
         return Icons.monetization_on_rounded;
     }

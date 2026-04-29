@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/announcement/announcement_model.dart';
 import '../../../data/models/auth/current_user.dart';
@@ -27,8 +26,9 @@ class _AnnouncementListScreenState
     extends ConsumerState<AnnouncementListScreen>
     with SingleTickerProviderStateMixin {
   AnnouncementType? _selectedType;
+  String? _selectedRole;
+  String? _selectedStandardId;
   late AnimationController _fabCtrl;
-  late Animation<double> _fabScale;
 
   @override
   void initState() {
@@ -37,7 +37,6 @@ class _AnnouncementListScreenState
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _fabScale = CurvedAnimation(parent: _fabCtrl, curve: Curves.elasticOut);
     _fabCtrl.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(announcementNotifierProvider.notifier).refresh();
@@ -92,6 +91,17 @@ class _AnnouncementListScreenState
             selectedType: _selectedType,
             onSelected: (type) => setState(() => _selectedType = type),
           ),
+          announcements.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (items) => _TargetFilterBar(
+              items: items,
+              selectedRole: _selectedRole,
+              selectedStandardId: _selectedStandardId,
+              onRoleChanged: (v) => setState(() => _selectedRole = v),
+              onStandardChanged: (v) => setState(() => _selectedStandardId = v),
+            ),
+          ),
           Container(height: 1, color: AppColors.surface100),
           Expanded(
             child: announcements.when(
@@ -102,9 +112,20 @@ class _AnnouncementListScreenState
                     ref.read(announcementNotifierProvider.notifier).refresh(),
               ),
               data: (items) {
-                final filtered = _selectedType == null
-                    ? items
+                var filtered = _selectedType == null
+                    ? List<AnnouncementModel>.from(items)
                     : items.where((a) => a.type == _selectedType).toList();
+
+                if (_selectedRole != null) {
+                  filtered = filtered
+                      .where((a) => (a.targetRole ?? 'ALL') == _selectedRole)
+                      .toList();
+                }
+                if (_selectedStandardId != null) {
+                  filtered = filtered
+                      .where((a) => (a.targetStandardId ?? 'ALL') == _selectedStandardId)
+                      .toList();
+                }
 
                 if (filtered.isEmpty) {
                   return AppEmptyState(
@@ -233,6 +254,78 @@ class _TypeFilterBar extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _TargetFilterBar extends StatelessWidget {
+  const _TargetFilterBar({
+    required this.items,
+    required this.selectedRole,
+    required this.selectedStandardId,
+    required this.onRoleChanged,
+    required this.onStandardChanged,
+  });
+
+  final List<AnnouncementModel> items;
+  final String? selectedRole;
+  final String? selectedStandardId;
+  final ValueChanged<String?> onRoleChanged;
+  final ValueChanged<String?> onStandardChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = <String>{'ALL'};
+    final standards = <String>{'ALL'};
+    for (final a in items) {
+      roles.add(a.targetRole ?? 'ALL');
+      standards.add(a.targetStandardId ?? 'ALL');
+    }
+
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String?>(
+              value: selectedRole,
+              decoration: const InputDecoration(
+                labelText: 'Role',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('All Roles')),
+                ...roles.map((r) => DropdownMenuItem<String?>(
+                      value: r,
+                      child: Text(r),
+                    )),
+              ],
+              onChanged: onRoleChanged,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonFormField<String?>(
+              value: selectedStandardId,
+              decoration: const InputDecoration(
+                labelText: 'Class',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('All Classes')),
+                ...standards.map((st) => DropdownMenuItem<String?>(
+                      value: st,
+                      child: Text(st == 'ALL' ? 'All Classes' : st),
+                    )),
+              ],
+              onChanged: onStandardChanged,
+            ),
+          ),
+        ],
       ),
     );
   }

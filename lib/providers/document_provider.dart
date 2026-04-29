@@ -98,6 +98,7 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     required String studentId,
     required DocumentType documentType,
     String? academicYearId,
+    String? note,
   }) async {
     state = state.copyWith(isRequesting: true, clearError: true);
     try {
@@ -105,6 +106,7 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
         studentId: studentId,
         documentType: documentType,
         academicYearId: academicYearId,
+        note: note,
       );
       // Optimistically prepend the new document at the top of the list
       state = state.copyWith(
@@ -127,6 +129,7 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     required String studentId,
     required DocumentType documentType,
     required PlatformFile file,
+    String? note,
   }) async {
     state = state.copyWith(isUploading: true, clearError: true);
     try {
@@ -134,6 +137,7 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
         studentId: studentId,
         documentType: documentType,
         file: file,
+        note: note,
       );
       state = state.copyWith(
         documents: [doc, ...state.documents],

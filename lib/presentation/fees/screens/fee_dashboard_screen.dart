@@ -4,25 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/fee/fee_ledger_model.dart';
-import '../../../data/models/fee/fee_structure_model.dart';
-import '../../../data/repositories/fee_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../../providers/fee_provider.dart';
-import '../../../providers/masters_provider.dart';
 import '../../../providers/parent_provider.dart';
-import '../../../providers/student_provider.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_loading.dart';
-import '../../common/widgets/app_section_header.dart';
-import '../widgets/fee_ledger_card.dart';
-import '../widgets/fee_summary_bar.dart';
 
 // ── Color constants ───────────────────────────────────────────────────────────
 const _kGreen = Color(0xFF2E7D32);
@@ -31,6 +24,11 @@ const _kOrange = Color(0xFFE65100);
 const _kOrangeBg = Color(0xFFFFF3E0);
 const _kRed = Color(0xFFC62828);
 const _kRedBg = Color(0xFFFFEBEE);
+
+final myStudentIdProvider = FutureProvider<String?>((ref) async {
+  final profile = await ref.watch(myStudentProfileProvider.future);
+  return profile.id;
+});
 
 class FeeDashboardScreen extends ConsumerWidget {
   const FeeDashboardScreen({super.key, this.studentId});

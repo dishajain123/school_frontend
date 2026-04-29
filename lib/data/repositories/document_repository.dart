@@ -20,11 +20,13 @@ class DocumentRepository {
     required String studentId,
     required DocumentType documentType,
     String? academicYearId,
+    String? note,
   }) async {
     final body = <String, dynamic>{
       'student_id': studentId,
       'document_type': documentType.backendValue,
       if (academicYearId != null) 'academic_year_id': academicYearId,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     };
     final response = await _dio.post(
       ApiConstants.documentRequest,
@@ -37,6 +39,7 @@ class DocumentRepository {
     required String studentId,
     required DocumentType documentType,
     required PlatformFile file,
+    String? note,
   }) async {
     if ((file.bytes == null || file.bytes!.isEmpty) &&
         (file.path == null || file.path!.isEmpty)) {
@@ -55,6 +58,7 @@ class DocumentRepository {
     final data = FormData.fromMap({
       'student_id': studentId,
       'document_type': documentType.backendValue,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       'file': multipartFile,
     });
     final response = await _dio.post(ApiConstants.documentUpload, data: data);

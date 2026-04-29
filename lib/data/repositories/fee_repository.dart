@@ -1,3 +1,6 @@
+// lib/data/repositories/fee_repository.dart  [Mobile App]
+// Phase 8 — Fee Repository.
+// Covers: dashboard, structures, ledger generation, payments, analytics, receipts.
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,75 +9,34 @@ import '../models/fee/fee_ledger_model.dart';
 import '../models/fee/fee_structure_model.dart';
 import '../models/fee/payment_model.dart';
 
-// ── Support types ─────────────────────────────────────────────────────────────
-
-class LedgerGenerateResult {
-  const LedgerGenerateResult({required this.created, required this.skipped});
-  final int created;
-  final int skipped;
-}
-
-class FeeStructureBatchResult {
-  const FeeStructureBatchResult({
-    required this.items,
-    required this.created,
-    required this.updated,
-  });
-  final List<FeeStructureModel> items;
-  final int created;
-  final int updated;
-}
-
-class FeeStructureUpdateResult {
-  const FeeStructureUpdateResult({
-    required this.items,
-    required this.total,
-  });
-
-  final List<FeeStructureModel> items;
-  final int total;
-}
-
-// ── FeeRepository ─────────────────────────────────────────────────────────────
-
 class FeeRepository {
   const FeeRepository(this._dio);
-
   final Dio _dio;
 
   static const String _base = '/fees';
 
-  Future<FeeStructureBatchResult> createStructuresBatch(
-      Map<String, dynamic> payload) async {
-    final response = await _dio.post('$_base/structures/batch', data: payload);
-    final data = response.data as Map<String, dynamic>;
-    final itemsRaw = data['items'] as List<dynamic>? ?? const [];
-    return FeeStructureBatchResult(
-      items: itemsRaw
-          .map((e) => FeeStructureModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      created: (data['created'] as num?)?.toInt() ?? 0,
-      updated: (data['updated'] as num?)?.toInt() ?? 0,
+  // ── GET /fees?student_id={id} ──────────────────────────────────────────────
+  // Returns all ledger entries for a student with totals.
+  // STUDENT role: backend validates own studentId.
+  // PARENT role: backend validates child belongs to parent.
+
+  Future<FeeDashboardResult> getDashboard(
+    String studentId, {
+    String? academicYearId,
+  }) async {
+    final response = await _dio.get(
+      _base,
+      queryParameters: {
+        'student_id': studentId,
+        if (academicYearId != null && academicYearId.trim().isNotEmpty)
+          'academic_year_id': academicYearId,
+      },
     );
+    return FeeDashboardResult.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<FeeStructureUpdateResult> updateStructure({
-    required String structureId,
-    required Map<String, dynamic> payload,
-  }) async {
-    final response = await _dio.patch(
-      '$_base/structures/$structureId',
-      data: payload,
-    );
-    final data = response.data as Map<String, dynamic>;
-    final itemsRaw = data['items'] as List<dynamic>? ?? const [];
-    return FeeStructureUpdateResult(
-      items: itemsRaw
-          .map((e) => FeeStructureModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      total: (data['total'] as num?)?.toInt() ?? 0,
-    );
-  }
+  // ── GET /fees/structures ───────────────────────────────────────────────────
+  // Lists fee structures for a class + academic year.
 
   Future<List<FeeStructureModel>> listStructures({
     required String standardId,
@@ -109,22 +71,23 @@ class FeeRepository {
     final response = await _dio.post('$_base/ledger/generate', data: body);
     final data = response.data as Map<String, dynamic>;
     return LedgerGenerateResult(
-      created: data['created'] as int,
-      skipped: data['skipped'] as int,
+      created: (data['created'] as num?)?.toInt() ?? 0,
+      skipped: (data['skipped'] as num?)?.toInt() ?? 0,
     );
   }
 
   // ── POST /fees/payments ────────────────────────────────────────────────────
   // Permission: fee:create
-  // Records a payment against a fee ledger entry. Generates PDF receipt.
+  // Records a payment. Returns payment with receipt_key if generated.
 
   Future<PaymentModel> recordPayment({
     required String studentId,
     required String feeLedgerId,
     required double amount,
-    required String paymentMode, // PaymentMode.backendValue
-    String? paymentDate, // ISO "yyyy-MM-dd"; backend defaults to today
+    required String paymentMode,
+    String? paymentDate,
     String? referenceNumber,
+    String? transactionRef,
   }) async {
     final body = <String, dynamic>{
       'student_id': studentId,
@@ -134,31 +97,46 @@ class FeeRepository {
       if (paymentDate != null) 'payment_date': paymentDate,
       if (referenceNumber != null && referenceNumber.isNotEmpty)
         'reference_number': referenceNumber,
+      if (transactionRef != null && transactionRef.isNotEmpty)
+        'transaction_ref': transactionRef,
     };
     final response = await _dio.post('$_base/payments', data: body);
     return PaymentModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  // ── GET /fees?student_id={id} ──────────────────────────────────────────────
-  // Permission: fee:read
-  // Returns all ledger entries for a student with outstanding_amount computed.
-  // STUDENT role: backend validates own studentId.
-  // PARENT role: backend validates child belongs to parent.
+  // ── GET /fees/payments?fee_ledger_id={id} ──────────────────────────────────
+  // Lists payment history for a specific ledger entry.
 
-  Future<FeeDashboardResult> getDashboard(
-    String studentId, {
-    String? academicYearId,
+  Future<List<PaymentModel>> listPayments({
+    required String feeLedgerId,
   }) async {
     final response = await _dio.get(
-      _base,
-      queryParameters: {
-        'student_id': studentId,
-        if (academicYearId != null && academicYearId.trim().isNotEmpty)
-          'academic_year_id': academicYearId,
-      },
+      '$_base/payments',
+      queryParameters: {'fee_ledger_id': feeLedgerId},
     );
-    return FeeDashboardResult.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data;
+    final List<dynamic> raw =
+        data is List ? data : (data['items'] as List<dynamic>? ?? []);
+    return raw
+        .map((e) => PaymentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
+
+  // ── GET /fees/payments/{payment_id}/receipt ────────────────────────────────
+  // Permission: fee:read
+  // Returns a presigned MinIO URL for the PDF receipt.
+
+  Future<String> getReceiptUrl(String paymentId) async {
+    final response = await _dio.get('$_base/payments/$paymentId/receipt');
+    final url = (response.data as Map<String, dynamic>)['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw Exception('Receipt URL not available. The receipt may still be generating.');
+    }
+    return url;
+  }
+
+  // ── GET /fees/analytics ────────────────────────────────────────────────────
+  // Permission: Principal/Trustee/Superadmin
 
   Future<Map<String, dynamic>> getAnalytics({
     String? academicYearId,
@@ -167,7 +145,7 @@ class FeeRepository {
     String? studentId,
     String? reportDate,
   }) async {
-    final params = {
+    final params = <String, dynamic>{
       if (academicYearId != null) 'academic_year_id': academicYearId,
       if (standardId != null) 'standard_id': standardId,
       if (section != null && section.trim().isNotEmpty) 'section': section,
@@ -182,95 +160,45 @@ class FeeRepository {
       );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
-      final isAnalytics404 = e.response?.statusCode == 404;
-      if (!isAnalytics404) rethrow;
-
-      // Backward-compatible fallback for servers that don't have /fees/analytics yet.
-      final reportResponse = await _dio.get(
-        '/principal-reports/details',
-        queryParameters: {
-          ...params,
-          'metric': 'fees_paid',
-        },
-      );
-      final details = Map<String, dynamic>.from(reportResponse.data as Map);
-      final feesPaid = Map<String, dynamic>.from(
-        details['fees_paid'] as Map? ?? const {},
-      );
-      final feesByStudent = List<Map<String, dynamic>>.from(
-        details['fees_by_student'] as List? ?? const [],
-      );
-
-      return {
-        'academic_year_id': details['academic_year_id'],
-        'report_date': details['report_date'],
-        'filters': details['filters'] ?? const {},
-        'summary': {
-          'total_billed_amount': 0.0,
-          'total_paid_amount': (feesPaid['amount'] ?? 0),
-          'total_outstanding_amount': 0.0,
-          'collection_percentage': 0.0,
-          'total_ledgers': 0,
-          'total_students': feesByStudent.length,
-          'paid_ledgers': 0,
-          'partial_ledgers': 0,
-          'pending_ledgers': 0,
-          'overdue_ledgers': 0,
-          'payments_count': (feesPaid['count'] ?? 0),
-          'late_payments_count': 0,
-        },
-        'by_category': const <Map<String, dynamic>>[],
-        'by_status': const <Map<String, dynamic>>[],
-        'by_payment_mode': const <Map<String, dynamic>>[],
-        'by_student': feesByStudent
-            .map(
-              (r) => {
-                'student_id': r['student_id'],
-                'admission_number': r['admission_number'],
-                'standard_id': null,
-                'section': null,
-                'billed_amount': 0.0,
-                'paid_amount': (r['paid_amount'] ?? 0),
-                'outstanding_amount': 0.0,
-                'ledgers': 0,
-                'paid_ledgers': 0,
-                'partial_ledgers': 0,
-                'pending_ledgers': 0,
-                'overdue_ledgers': 0,
-                'latest_payment_date': null,
-              },
-            )
-            .toList(),
-      };
+      // Backward-compatible fallback if analytics endpoint unavailable.
+      if (e.response?.statusCode == 404 || e.response?.statusCode == 403) {
+        return {
+          'summary': {
+            'total_billed_amount': 0.0,
+            'total_paid_amount': 0.0,
+            'total_outstanding_amount': 0.0,
+            'collection_percentage': 0.0,
+            'total_ledgers': 0,
+            'total_students': 0,
+            'defaulters_count': 0,
+          },
+          'by_class': <Map<String, dynamic>>[],
+          'by_category': <Map<String, dynamic>>[],
+          'by_status': <Map<String, dynamic>>[],
+          'by_payment_mode': <Map<String, dynamic>>[],
+          'by_student': <Map<String, dynamic>>[],
+          'by_installment': <Map<String, dynamic>>[],
+        };
+      }
+      rethrow;
     }
   }
 
-  // ── GET /fees/payments/{payment_id}/receipt ────────────────────────────────
-  // Permission: fee:read
-  // Returns a presigned MinIO URL for the PDF receipt.
-  // URL is short-lived — do not cache.
+  // ── GET /fees/defaulters ───────────────────────────────────────────────────
 
-  Future<String> getReceiptUrl(String paymentId) async {
-    final response = await _dio.get('$_base/payments/$paymentId/receipt');
-    return (response.data as Map<String, dynamic>)['url'] as String;
-  }
-
-  // ── GET /fees/payments?fee_ledger_id={id} ──────────────────────────────────
-  // Lists payment history for a specific ledger entry.
-
-  Future<List<PaymentModel>> listPayments({
-    required String feeLedgerId,
+  Future<List<Map<String, dynamic>>> getDefaulters({
+    String? academicYearId,
+    String? standardId,
   }) async {
     final response = await _dio.get(
-      '$_base/payments',
-      queryParameters: {'fee_ledger_id': feeLedgerId},
+      '$_base/defaulters',
+      queryParameters: {
+        if (academicYearId != null) 'academic_year_id': academicYearId,
+        if (standardId != null) 'standard_id': standardId,
+      },
     );
-    final data = response.data;
-    // Support both { items: [...] } wrapper and direct list
-    final List<dynamic> raw =
-        data is List ? data : (data['items'] as List<dynamic>? ?? []);
-    return raw
-        .map((e) => PaymentModel.fromJson(e as Map<String, dynamic>))
+    return ((response.data as Map<String, dynamic>)['defaulters'] as List<dynamic>? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
   }
 }
@@ -280,3 +208,11 @@ class FeeRepository {
 final feeRepositoryProvider = Provider<FeeRepository>((ref) {
   return FeeRepository(ref.read(dioClientProvider));
 });
+
+// ── Result types ──────────────────────────────────────────────────────────────
+
+class LedgerGenerateResult {
+  const LedgerGenerateResult({required this.created, required this.skipped});
+  final int created;
+  final int skipped;
+}

@@ -50,6 +50,7 @@ class RouteNames {
   // Academic History (Phase 7/14)
   static const String academicHistory = '/academic-history';
   static const String academicHistoryDetail = '/academic-history/:studentId';
+  static String academicHistoryDetailPath(String id) => '/academic-history/$id';
 
   // Teacher Schedule (Phase 4)
   static const String mySchedule = '/my-schedule';
@@ -91,7 +92,7 @@ class RouteNames {
   static const String uploadTimetable = '/timetable/upload';
 
   // Exam Schedules
-  static const String examSchedules = '/exam-schedule';
+  static const String examSchedules = '/exam-schedules';
   static const String examScheduleTable = '/exam-schedule/table';
   static const String createExamSeries = '/exam-schedule/create';
 
@@ -104,6 +105,8 @@ class RouteNames {
 
   // Fees
   static const String feeDashboard = '/fees';
+  static String feeDashboardForStudent(String studentId) =>
+      '/fees?student_id=$studentId';
   static const String paymentHistory = '/fees/payment-history';
   static const String recordPayment = '/fees/record-payment';
   static const String feeReceipt = '/fees/receipt';
@@ -129,6 +132,9 @@ class RouteNames {
 
   // Documents
   static const String documents = '/documents';
+
+  // Audit Logs
+  static const String auditLogs = '/audit-logs';
 
   // Complaints
   static const String complaints = '/complaints';

@@ -34,6 +34,11 @@ import '../../presentation/parents/screens/create_parent_screen.dart';
 import '../../presentation/attendance/screens/attendance_list_screen.dart';
 import '../../presentation/academic_year/screens/student_academic_history_screen.dart';
 import '../../presentation/teacher_schedule/screens/teacher_schedule_screen.dart';
+import '../../presentation/fees/screens/fee_dashboard_screen.dart';
+import '../../presentation/fees/screens/payment_history_screen.dart';
+import '../../presentation/fees/screens/record_payment_screen.dart';
+import '../../presentation/fees/screens/fee_receipt_screen.dart';
+import '../../presentation/audit/screens/audit_logs_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/auth/current_user.dart';
 import '../../data/models/teacher/teacher_model.dart';
@@ -180,10 +185,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: ':id',
                 builder: (context, state) {
                   final announcement = state.extra as AnnouncementModel?;
-                  if (announcement == null) {
-                    return const PlaceholderScreen('Announcement', showBack: true);
-                  }
-                  return AnnouncementDetailScreen(announcement: announcement);
+                  return AnnouncementDetailScreen(
+                    announcementId: state.pathParameters['id']!,
+                    initialAnnouncement: announcement,
+                  );
                 },
               ),
             ],
@@ -362,7 +367,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.feeDashboard,
-            builder: (_, __) => const PlaceholderScreen('Fees'),
+            builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              return FeeDashboardScreen(studentId: studentId);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.paymentHistory,
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is Map<String, dynamic>) {
+                return PaymentHistoryScreen.fromExtras(extra);
+              }
+              final ledgerId = state.uri.queryParameters['ledger_id'] ?? '';
+              return PaymentHistoryScreen(ledgerId: ledgerId);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.recordPayment,
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is Map<String, dynamic>) {
+                return RecordPaymentScreen.fromExtras(extra);
+              }
+              final studentId = state.uri.queryParameters['student_id'] ?? '';
+              final ledgerId = state.uri.queryParameters['ledger_id'];
+              return RecordPaymentScreen(studentId: studentId, ledgerId: ledgerId);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.feeReceipt,
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is Map<String, dynamic>) {
+                return FeeReceiptScreen.fromExtras(extra);
+              }
+              final paymentId = state.uri.queryParameters['payment_id'] ?? '';
+              return FeeReceiptScreen(paymentId: paymentId);
+            },
           ),
           GoRoute(
             path: RouteNames.conversations,
@@ -379,6 +421,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.documents,
             builder: (_, __) => const PlaceholderScreen('Documents'),
+          ),
+          GoRoute(
+            path: RouteNames.auditLogs,
+            builder: (_, __) => const AuditLogsScreen(),
           ),
           GoRoute(
             path: RouteNames.complaints,

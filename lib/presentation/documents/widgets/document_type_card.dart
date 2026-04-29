@@ -14,11 +14,15 @@ class DocumentTypeCard extends StatefulWidget {
     required this.type,
     required this.isSelected,
     required this.onTap,
+    this.titleOverride,
+    this.descriptionOverride,
   });
 
   final DocumentType type;
   final bool isSelected;
   final VoidCallback onTap;
+  final String? titleOverride;
+  final String? descriptionOverride;
 
   @override
   State<DocumentTypeCard> createState() => _DocumentTypeCardState();
@@ -46,23 +50,16 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
     super.dispose();
   }
 
-  String _description(DocumentType type) {
-    switch (type) {
-      case DocumentType.idCard:
-        return 'Official student identity card';
-      case DocumentType.bonafide:
-        return 'Certificate confirming enrollment status';
-      case DocumentType.leavingCert:
-        return 'Required for school transfers';
-      case DocumentType.reportCard:
-        return 'Academic performance report';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isSelected = widget.isSelected;
     final type = widget.type;
+    final title = (widget.titleOverride ?? '').trim().isNotEmpty
+        ? widget.titleOverride!.trim()
+        : type.label;
+    final desc = (widget.descriptionOverride ?? '').trim().isNotEmpty
+        ? widget.descriptionOverride!.trim()
+        : type.description;
 
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
@@ -123,7 +120,7 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      type.label,
+                      title,
                       style: AppTypography.titleSmall.copyWith(
                         color: isSelected ? type.color : AppColors.grey800,
                         fontWeight: FontWeight.w600,
@@ -131,7 +128,7 @@ class _DocumentTypeCardState extends State<DocumentTypeCard>
                     ),
                     const SizedBox(height: AppDimensions.space2),
                     Text(
-                      _description(type),
+                      desc,
                       style: AppTypography.caption.copyWith(
                         color: isSelected
                             ? type.color.withValues(alpha: 0.65)

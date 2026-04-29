@@ -224,6 +224,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             size: 14, color: AppColors.grey400),
                         onTap: () => context.push(RouteNames.changePassword),
                       ),
+                      if (authUser != null &&
+                          (authUser.role == UserRole.principal ||
+                              authUser.role == UserRole.superadmin ||
+                              authUser.role == UserRole.trustee))
+                        const Divider(height: 1, color: AppColors.surface100),
+                      if (authUser != null &&
+                          (authUser.role == UserRole.principal ||
+                              authUser.role == UserRole.superadmin ||
+                              authUser.role == UserRole.trustee))
+                        ListTile(
+                          leading: const Icon(Icons.history_outlined,
+                              color: AppColors.grey600),
+                          title: Text(
+                            'Audit Logs',
+                            style: AppTypography.bodyMedium
+                                .copyWith(color: AppColors.grey800),
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                              size: 14, color: AppColors.grey400),
+                          onTap: () => context.push(RouteNames.auditLogs),
+                        ),
                     ],
                   ),
                 ),

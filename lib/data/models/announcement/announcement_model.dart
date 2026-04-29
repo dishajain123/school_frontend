@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
 enum AnnouncementType {
+  general,
+  urgent,
+  fee,
   exam,
   event,
   holiday,
-  general,
 }
 
 extension AnnouncementTypeX on AnnouncementType {
   static AnnouncementType fromString(String? value) {
     switch ((value ?? '').toUpperCase()) {
+      case 'GENERAL':
+        return AnnouncementType.general;
+      case 'URGENT':
+        return AnnouncementType.urgent;
+      case 'FEE':
+        return AnnouncementType.fee;
       case 'EXAM':
         return AnnouncementType.exam;
       case 'EVENT':
@@ -24,53 +32,69 @@ extension AnnouncementTypeX on AnnouncementType {
 
   String get backendValue {
     switch (this) {
+      case AnnouncementType.general:
+        return 'GENERAL';
+      case AnnouncementType.urgent:
+        return 'URGENT';
+      case AnnouncementType.fee:
+        return 'FEE';
       case AnnouncementType.exam:
         return 'EXAM';
       case AnnouncementType.event:
         return 'EVENT';
       case AnnouncementType.holiday:
         return 'HOLIDAY';
-      case AnnouncementType.general:
-        return 'GENERAL';
     }
   }
 
   String get label {
     switch (this) {
+      case AnnouncementType.general:
+        return 'General';
+      case AnnouncementType.urgent:
+        return 'Urgent';
+      case AnnouncementType.fee:
+        return 'Fee';
       case AnnouncementType.exam:
         return 'Exam';
       case AnnouncementType.event:
         return 'Event';
       case AnnouncementType.holiday:
         return 'Holiday';
-      case AnnouncementType.general:
-        return 'General';
     }
   }
 
   IconData get icon {
     switch (this) {
+      case AnnouncementType.general:
+        return Icons.campaign_outlined;
+      case AnnouncementType.urgent:
+        return Icons.warning_outlined;
+      case AnnouncementType.fee:
+        return Icons.payments_outlined;
       case AnnouncementType.exam:
         return Icons.quiz_outlined;
       case AnnouncementType.event:
         return Icons.event_outlined;
       case AnnouncementType.holiday:
         return Icons.beach_access_outlined;
-      case AnnouncementType.general:
-        return Icons.campaign_outlined;
     }
   }
 
   Color get color {
     switch (this) {
+      case AnnouncementType.general:
+        return AppColors.navyMedium;
+      case AnnouncementType.urgent:
+        return AppColors.errorRed;
+      case AnnouncementType.fee:
+        return AppColors.warningAmber;
       case AnnouncementType.exam:
         return AppColors.subjectMath;
       case AnnouncementType.event:
         return AppColors.infoBlue;
       case AnnouncementType.holiday:
         return AppColors.successGreen;
-      case AnnouncementType.general:
-        return AppColors.navyMedium;
     }
   }
 }

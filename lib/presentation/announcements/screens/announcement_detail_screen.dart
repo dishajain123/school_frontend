@@ -7,17 +7,63 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/announcement/announcement_model.dart';
 import '../../../data/models/auth/current_user.dart';
+import '../../../providers/announcement_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
+import '../../common/widgets/app_error_state.dart';
+import '../../common/widgets/app_loading.dart';
 
-class AnnouncementDetailScreen extends ConsumerWidget {
+class AnnouncementDetailScreen extends ConsumerStatefulWidget {
   const AnnouncementDetailScreen({
     super.key,
-    required this.announcement,
+    required this.announcementId,
+    this.initialAnnouncement,
   });
 
-  final AnnouncementModel announcement;
+  final String announcementId;
+  final AnnouncementModel? initialAnnouncement;
+
+  @override
+  ConsumerState<AnnouncementDetailScreen> createState() =>
+      _AnnouncementDetailScreenState();
+}
+
+class _AnnouncementDetailScreenState
+    extends ConsumerState<AnnouncementDetailScreen> {
+  AnnouncementModel? _announcement;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAnnouncement != null) {
+      _announcement = widget.initialAnnouncement;
+    } else {
+      _loadAnnouncement();
+    }
+  }
+
+  Future<void> _loadAnnouncement() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final announcement = await ref.read(announcementNotifierProvider.notifier).getById(widget.announcementId);
+      if (announcement != null) {
+        setState(() => _announcement = announcement);
+      } else {
+        setState(() => _error = 'Announcement not found');
+      }
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   bool _canEdit(CurrentUser? user) {
     if (user == null) return false;
@@ -25,8 +71,29 @@ class AnnouncementDetailScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.surface50,
+        appBar: const AppAppBar(title: 'Announcement', showBack: true),
+        body: AppLoading.fullPage(),
+      );
+    }
+
+    if (_error != null || _announcement == null) {
+      return Scaffold(
+        backgroundColor: AppColors.surface50,
+        appBar: const AppAppBar(title: 'Announcement', showBack: true),
+        body: AppErrorState(
+          message: _error ?? 'Announcement not found',
+          onRetry: _loadAnnouncement,
+        ),
+      );
+    }
+
+    final announcement = _announcement!;
     final color = announcement.type.color;
 
     return Scaffold(
@@ -93,6 +160,29 @@ class AnnouncementDetailScreen extends ConsumerWidget {
   }
 }
 
+void _showAttachmentDialog(BuildContext context, String url) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Download Attachment'),
+      content: const Text('Open attachment in browser?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            // TODO: Implement download/open functionality
+            Navigator.of(ctx).pop();
+          },
+          child: const Text('Open'),
+        ),
+      ],
+    ),
+  );
+}
+
 class _AnnouncementHero extends StatelessWidget {
   const _AnnouncementHero({
     required this.announcement,
@@ -153,7 +243,7 @@ class _AnnouncementHero extends StatelessWidget {
                   child: Text(
                     'For: ${announcement.targetRole}',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.7),
+                      color: AppColors.white.withValues(alpha: 0.6),
                       fontSize: 11,
                     ),
                   ),
@@ -171,14 +261,14 @@ class _AnnouncementHero extends StatelessWidget {
               letterSpacing: -0.3,
             ),
           ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 13,
-                    color: AppColors.white.withValues(alpha: 0.6),
-                  ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                Icons.schedule_rounded,
+                size: 13,
+                color: AppColors.white.withValues(alpha: 0.6),
+              ),
               const SizedBox(width: 5),
               Text(
                 DateFormatter.formatDateTime(announcement.publishedAt),
@@ -189,11 +279,11 @@ class _AnnouncementHero extends StatelessWidget {
               ),
               if (announcement.attachmentUrl != null) ...[
                 const SizedBox(width: 12),
-                    Icon(
-                      Icons.attach_file_rounded,
-                      size: 13,
-                      color: AppColors.white.withValues(alpha: 0.6),
-                    ),
+                Icon(
+                  Icons.attach_file_rounded,
+                  size: 13,
+                  color: AppColors.white.withValues(alpha: 0.6),
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Has attachment',
@@ -213,6 +303,7 @@ class _AnnouncementHero extends StatelessWidget {
 
 class _BodyCard extends StatelessWidget {
   const _BodyCard({required this.announcement});
+
   final AnnouncementModel announcement;
 
   @override
@@ -225,49 +316,32 @@ class _BodyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: 0.06),
+            color: AppColors.navyDeep.withValues(alpha: 0.08),
             blurRadius: 12,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Text(
-        announcement.body,
-        style: AppTypography.bodyLarge.copyWith(
-          height: 1.75,
-          color: AppColors.grey700,
-          fontSize: 15,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Content',
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.grey700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            announcement.body,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.grey800,
+              height: 1.6,
+            ),
+          ),
+        ],
       ),
     );
   }
-}
-
-void _showAttachmentDialog(BuildContext context, String url) {
-  showDialog<void>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Attachment Link'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Copy this link and open it in your browser to download the attachment:',
-          ),
-          const SizedBox(height: 8),
-          SelectableText(
-            url,
-            style: AppTypography.bodySmall.copyWith(fontSize: 12),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
 }

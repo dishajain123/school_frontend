@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/fee/payment_model.dart';
 import '../../../providers/fee_provider.dart';
@@ -17,7 +16,6 @@ import '../../common/widgets/app_text_field.dart';
 const _kGreen = Color(0xFF2E7D32);
 const _kGreenBg = Color(0xFFE8F5E9);
 const _kRed = Color(0xFFC62828);
-const _kRedBg = Color(0xFFFFEBEE);
 
 class RecordPaymentScreen extends ConsumerStatefulWidget {
   const RecordPaymentScreen({
@@ -590,7 +588,13 @@ class _PaymentModeGrid extends StatelessWidget {
         return Icons.credit_card_rounded;
       case PaymentMode.cheque:
         return Icons.account_balance_rounded;
-      case PaymentMode.bankTransfer:
+      case PaymentMode.dd:
+        return Icons.receipt_long_rounded;
+      case PaymentMode.neft:
+        return Icons.account_balance_wallet_rounded;
+      case PaymentMode.rtgs:
+        return Icons.swap_horiz_rounded;
+      case PaymentMode.other:
         return Icons.account_balance_wallet_rounded;
     }
   }

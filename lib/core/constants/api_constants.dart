@@ -240,6 +240,11 @@ class ApiConstants {
   static String documentDownload(String id) => '/documents/$id/download';
   static String documentVerify(String id) => '/documents/$id/verify';
 
+  // ── Audit Logs ────────────────────────────────────────────────────────────
+  static const String auditLogs = '/audit-logs';
+  static const String auditLogActions = '/audit-logs/actions';
+  static const String auditLogEntityTypes = '/audit-logs/entity-types';
+
   // ── Behaviour ─────────────────────────────────────────────────────────────
   static const String behaviour = '/behaviour';
 
