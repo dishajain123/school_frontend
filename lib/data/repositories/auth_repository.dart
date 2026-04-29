@@ -87,6 +87,30 @@ class AuthRepository {
     final response = await _dio.get(ApiConstants.authMe);
     return CurrentUser.fromJson(response.data as Map<String, dynamic>);
   }
+
+  /// POST /registrations/self
+  Future<void> registerSelf({
+    required String fullName,
+    String? email,
+    String? phone,
+    required String password,
+    required UserRole role,
+    String? schoolId,
+    Map<String, dynamic>? submittedData,
+  }) async {
+    await _dio.post(
+      ApiConstants.registrationsSelf,
+      data: <String, dynamic>{
+        'full_name': fullName.trim(),
+        if (email != null && email.isNotEmpty) 'email': email.trim(),
+        if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+        'password': password,
+        'role': role.backendValue,
+        if (schoolId != null && schoolId.isNotEmpty) 'school_id': schoolId.trim(),
+        if (submittedData != null) 'submitted_data': submittedData,
+      },
+    );
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

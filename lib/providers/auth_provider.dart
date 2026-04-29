@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/auth/auth_logout_bus.dart';
@@ -106,6 +107,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final user = await _authRepo.getMe().timeout(const Duration(seconds: 8));
+      if (user.role == UserRole.superadmin) {
+        await _clearLocalData();
+        state = const AuthState(status: AuthStatus.unauthenticated);
+        return;
+      }
       await _persistUser(user);
       state = AuthState(status: AuthStatus.authenticated, currentUser: user);
     } on TimeoutException {
@@ -138,6 +144,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _secureStorage.writeRefreshToken(tokenResponse.refreshToken);
 
       final user = await _authRepo.getMe();
+      if (user.role == UserRole.superadmin) {
+        await _clearLocalData();
+        state = const AuthState(
+          status: AuthStatus.error,
+          error:
+              'Super Admin accounts are only available in Admin Console, not in the mobile app.',
+        );
+        return;
+      }
       await _persistUser(user);
 
       state = AuthState(
@@ -148,6 +163,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState(
         status: AuthStatus.error,
         error: e.message,
+      );
+    } on DioException catch (e) {
+      final nested = e.error;
+      final message = nested is AppException
+          ? nested.message
+          : (e.message?.trim().isNotEmpty ?? false)
+              ? e.message!.trim()
+              : 'An unexpected error occurred. Please try again.';
+      state = AuthState(
+        status: AuthStatus.error,
+        error: message,
       );
     } catch (_) {
       state = const AuthState(

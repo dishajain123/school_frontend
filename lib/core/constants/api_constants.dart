@@ -52,6 +52,7 @@ class ApiConstants {
   static const String verifyOtp = '/auth/verify-otp';
   static const String resetPassword = '/auth/reset-password';
   static const String authMe = '/auth/me';
+  static const String registrationsSelf = '/registrations/self';
 
   // ── Users ─────────────────────────────────────────────────────────────────
   static const String users = '/users';

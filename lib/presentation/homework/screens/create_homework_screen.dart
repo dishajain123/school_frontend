@@ -33,6 +33,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
   final _descCtrl = TextEditingController();
 
   String? _selectedStandardId;
+  String? _selectedSection;
   String? _selectedSubjectId;
   DateTime _selectedDate = _today();
   PlatformFile? _pickedFile;
@@ -93,7 +94,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
   Future<void> _submit(List<TeacherClassSubjectModel> assignments) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_selectedStandardId == null) {
-      SnackbarUtils.showError(context, 'Please select a class');
+      SnackbarUtils.showError(context, 'Please select class and section');
       return;
     }
     if (_selectedSubjectId == null) {
@@ -225,13 +226,16 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
                 descCtrl: _descCtrl,
                 assignments: assignments,
                 selectedStandardId: _selectedStandardId,
+                selectedSection: _selectedSection,
                 selectedSubjectId: _selectedSubjectId,
                 selectedDate: _selectedDate,
                 pickedFile: _pickedFile,
                 isSubmitting: _isSubmitting,
                 onStandardChanged: (id) {
                   setState(() {
-                    _selectedStandardId = id;
+                    final parts = (id ?? '').split('::');
+                    _selectedStandardId = parts.isNotEmpty ? parts.first : null;
+                    _selectedSection = parts.length > 1 ? parts[1] : null;
                     _selectedSubjectId = null;
                   });
                 },
@@ -256,6 +260,7 @@ class _HomeworkForm extends StatelessWidget {
     required this.descCtrl,
     required this.assignments,
     required this.selectedStandardId,
+    required this.selectedSection,
     required this.selectedSubjectId,
     required this.selectedDate,
     required this.pickedFile,
@@ -272,6 +277,7 @@ class _HomeworkForm extends StatelessWidget {
   final TextEditingController descCtrl;
   final List<TeacherClassSubjectModel> assignments;
   final String? selectedStandardId;
+  final String? selectedSection;
   final String? selectedSubjectId;
   final DateTime selectedDate;
   final PlatformFile? pickedFile;
@@ -283,10 +289,11 @@ class _HomeworkForm extends StatelessWidget {
   final VoidCallback onRemoveFile;
   final VoidCallback onSubmit;
 
-  Map<String, String> get _uniqueStandards {
+  Map<String, String> get _uniqueClassSections {
     final map = <String, String>{};
     for (final a in assignments) {
-      map.putIfAbsent(a.standardId, () => a.classLabel);
+      final key = '${a.standardId}::${a.section}';
+      map.putIfAbsent(key, () => a.classLabel);
     }
     return map;
   }
@@ -295,7 +302,7 @@ class _HomeworkForm extends StatelessWidget {
     if (selectedStandardId == null) return {};
     final map = <String, String>{};
     for (final a in assignments) {
-      if (a.standardId == selectedStandardId) {
+      if (a.standardId == selectedStandardId && a.section == (selectedSection ?? '')) {
         map.putIfAbsent(a.subjectId, () => a.subjectLabel);
       }
     }
@@ -304,7 +311,7 @@ class _HomeworkForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final standards = _uniqueStandards;
+    final standards = _uniqueClassSections;
     final subjects = _subjectsForStandard;
 
     return Form(
@@ -321,7 +328,7 @@ class _HomeworkForm extends StatelessWidget {
                     title: 'Class & Subject',
                     icon: Icons.school_outlined,
                     children: [
-                      _FieldLabel('Class'),
+                      _FieldLabel('Class & Section'),
                       const SizedBox(height: 8),
                       _StyledDropdown<String>(
                         hint: 'Select class',

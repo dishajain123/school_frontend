@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../presentation/auth/screens/splash_screen.dart';
 import '../../presentation/auth/screens/login_screen.dart';
+import '../../presentation/auth/screens/register_screen.dart';
+import '../../presentation/auth/screens/enrollment_pending_screen.dart';
 import '../../presentation/auth/screens/forgot_password_screen.dart';
 import '../../presentation/auth/screens/verify_otp_screen.dart';
 import '../../presentation/auth/screens/reset_password_screen.dart';
@@ -86,16 +88,21 @@ String _roleToBackendValue(UserRole role) {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Rebuild router when auth state changes so redirect logic re-evaluates.
+  final authState = ref.watch(authNotifierProvider);
+
   return GoRouter(
     initialLocation: RouteNames.splash,
     redirect: (context, state) {
-      final authState = ref.read(authNotifierProvider);
       final isLoggedIn = authState.isAuthenticated;
       final loc = state.matchedLocation;
+      final enrollmentPending = authState.currentUser?.enrollmentPending ?? false;
 
       final publicRoutes = {
         RouteNames.splash,
         RouteNames.login,
+        RouteNames.register,
+        RouteNames.enrollmentPending,
         RouteNames.forgotPassword,
         RouteNames.verifyOtp,
         RouteNames.resetPassword,
@@ -104,7 +111,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!isLoggedIn && !publicRoutes.contains(loc)) {
         return RouteNames.login;
       }
-      if (isLoggedIn && publicRoutes.contains(loc) && loc != RouteNames.splash) {
+      // Always leave splash after auth initialization completes.
+      if (loc == RouteNames.splash && authState.isInitialized) {
+        if (!isLoggedIn) return RouteNames.login;
+        return enrollmentPending ? RouteNames.enrollmentPending : RouteNames.dashboard;
+      }
+      if (isLoggedIn && enrollmentPending && loc != RouteNames.enrollmentPending) {
+        return RouteNames.enrollmentPending;
+      }
+      if (isLoggedIn && !enrollmentPending && loc == RouteNames.enrollmentPending) {
+        return RouteNames.dashboard;
+      }
+      if (isLoggedIn &&
+          publicRoutes.contains(loc) &&
+          loc != RouteNames.splash &&
+          loc != RouteNames.enrollmentPending) {
         return RouteNames.dashboard;
       }
       return null;
@@ -118,6 +139,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.login,
         builder: (_, __) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.register,
+        builder: (_, __) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.enrollmentPending,
+        builder: (_, __) => const EnrollmentPendingScreen(),
       ),
       GoRoute(
         path: RouteNames.forgotPassword,

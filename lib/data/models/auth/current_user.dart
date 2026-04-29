@@ -57,6 +57,10 @@ class CurrentUser {
     this.schoolId,
     this.parentId,
     this.isActive = true,
+    this.profileCreated = false,
+    this.enrollmentCompleted = false,
+    this.enrollmentPending = true,
+    this.onboardingMessage,
   });
 
   final String id;
@@ -68,6 +72,10 @@ class CurrentUser {
   final String? schoolId;
   final String? parentId;
   final bool isActive;
+  final bool profileCreated;
+  final bool enrollmentCompleted;
+  final bool enrollmentPending;
+  final String? onboardingMessage;
 
   bool hasPermission(String permission) => permissions.contains(permission);
 
@@ -89,6 +97,10 @@ class CurrentUser {
       schoolId: (json['school_id'] ?? json['schoolId']) as String?,
       parentId: (json['parent_id'] ?? json['parentId']) as String?,
       isActive: json['is_active'] as bool? ?? true,
+      profileCreated: json['profile_created'] as bool? ?? false,
+      enrollmentCompleted: json['enrollment_completed'] as bool? ?? false,
+      enrollmentPending: json['enrollment_pending'] as bool? ?? true,
+      onboardingMessage: json['onboarding_message'] as String?,
     );
   }
 
@@ -103,6 +115,10 @@ class CurrentUser {
       'school_id': schoolId,
       'parent_id': parentId,
       'is_active': isActive,
+      'profile_created': profileCreated,
+      'enrollment_completed': enrollmentCompleted,
+      'enrollment_pending': enrollmentPending,
+      'onboarding_message': onboardingMessage,
     };
   }
 
@@ -116,6 +132,10 @@ class CurrentUser {
     String? schoolId,
     String? parentId,
     bool? isActive,
+    bool? profileCreated,
+    bool? enrollmentCompleted,
+    bool? enrollmentPending,
+    String? onboardingMessage,
   }) {
     return CurrentUser(
       id: id ?? this.id,
@@ -127,6 +147,10 @@ class CurrentUser {
       schoolId: schoolId ?? this.schoolId,
       parentId: parentId ?? this.parentId,
       isActive: isActive ?? this.isActive,
+      profileCreated: profileCreated ?? this.profileCreated,
+      enrollmentCompleted: enrollmentCompleted ?? this.enrollmentCompleted,
+      enrollmentPending: enrollmentPending ?? this.enrollmentPending,
+      onboardingMessage: onboardingMessage ?? this.onboardingMessage,
     );
   }
 }

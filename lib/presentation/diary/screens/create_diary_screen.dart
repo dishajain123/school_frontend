@@ -32,6 +32,7 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
   final _homeworkNoteCtrl = TextEditingController();
 
   String? _selectedStandardId;
+  String? _selectedSection;
   String? _selectedSubjectId;
   DateTime _selectedDate = _today();
   bool _isSubmitting = false;
@@ -81,7 +82,7 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (_selectedStandardId == null || _selectedStandardId!.trim().isEmpty) {
-      SnackbarUtils.showError(context, 'Please select a class');
+      SnackbarUtils.showError(context, 'Please select class and section');
       return;
     }
     if (_selectedSubjectId == null || _selectedSubjectId!.trim().isEmpty) {
@@ -203,12 +204,15 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
             homeworkNoteCtrl: _homeworkNoteCtrl,
             assignments: assignments,
             selectedStandardId: _selectedStandardId,
+            selectedSection: _selectedSection,
             selectedSubjectId: _selectedSubjectId,
             selectedDate: _selectedDate,
             isSubmitting: _isSubmitting,
             onStandardChanged: (id) {
               setState(() {
-                _selectedStandardId = id;
+                final parts = (id ?? '').split('::');
+                _selectedStandardId = parts.isNotEmpty ? parts.first : null;
+                _selectedSection = parts.length > 1 ? parts[1] : null;
                 _selectedSubjectId = null; // reset subject on class change
               });
             },
@@ -231,6 +235,7 @@ class _DiaryForm extends StatelessWidget {
     required this.homeworkNoteCtrl,
     required this.assignments,
     required this.selectedStandardId,
+    required this.selectedSection,
     required this.selectedSubjectId,
     required this.selectedDate,
     required this.isSubmitting,
@@ -245,6 +250,7 @@ class _DiaryForm extends StatelessWidget {
   final TextEditingController homeworkNoteCtrl;
   final List<TeacherClassSubjectModel> assignments;
   final String? selectedStandardId;
+  final String? selectedSection;
   final String? selectedSubjectId;
   final DateTime selectedDate;
   final bool isSubmitting;
@@ -253,10 +259,11 @@ class _DiaryForm extends StatelessWidget {
   final VoidCallback onDateTap;
   final VoidCallback onSubmit;
 
-  Map<String, String> get _uniqueStandards {
+  Map<String, String> get _uniqueClassSections {
     final map = <String, String>{};
     for (final a in assignments) {
-      map.putIfAbsent(a.standardId, () => a.classLabel);
+      final key = '${a.standardId}::${a.section}';
+      map.putIfAbsent(key, () => a.classLabel);
     }
     return map;
   }
@@ -265,7 +272,7 @@ class _DiaryForm extends StatelessWidget {
     if (selectedStandardId == null) return {};
     final map = <String, String>{};
     for (final a in assignments) {
-      if (a.standardId == selectedStandardId) {
+      if (a.standardId == selectedStandardId && a.section == (selectedSection ?? '')) {
         map.putIfAbsent(a.subjectId, () => a.subjectLabel);
       }
     }
@@ -274,7 +281,7 @@ class _DiaryForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final standards = _uniqueStandards;
+    final standards = _uniqueClassSections;
     final subjects = _subjectsForStandard;
 
     return Form(
@@ -289,7 +296,7 @@ class _DiaryForm extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Class selector ──────────────────────────────
-                  _SectionLabel('Class'),
+                  _SectionLabel('Class & Section'),
                   const SizedBox(height: AppDimensions.space8),
                   _StyledDropdown<String>(
                     hint: 'Select class',

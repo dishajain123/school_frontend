@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
@@ -178,6 +177,13 @@ class _LoginFormState extends ConsumerState<LoginForm>
             label: 'Contact Administrator',
             onTap: () {},
             icon: Icons.support_agent_outlined,
+          ),
+          const SizedBox(height: 8),
+          AppButton.text(
+            label: 'New user? Apply for access',
+            onTap: () => context.push(RouteNames.register),
+            icon: Icons.app_registration_rounded,
+            fullWidth: true,
           ),
           const SizedBox(height: 8),
         ],
