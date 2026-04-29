@@ -49,10 +49,10 @@ class TeacherDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.markAttendance),
       ),
       QuickActionItem(
-        icon: Icons.assignment_outlined,
-        label: 'Assignment',
+        icon: Icons.class_outlined,
+        label: 'Classroom',
         color: AppColors.infoBlue,
-        onTap: () => context.go(RouteNames.assignments),
+        onTap: () => context.go(RouteNames.teacherMyClass),
       ),
       QuickActionItem(
         icon: Icons.home_work_outlined,
@@ -181,12 +181,12 @@ class _StatsGrid extends StatelessWidget {
           children: [
             Expanded(
               child: StatCard(
-                label: 'My Classes',
+                label: 'Classroom',
                 value: (stats?.myClasses ?? 0).toString(),
                 icon: Icons.class_outlined,
                 iconColor: AppColors.navyMedium,
                 isLoading: isLoading,
-                onTap: () => context.go(RouteNames.attendance),
+                onTap: () => context.go(RouteNames.teacherMyClass),
               ),
             ),
             const SizedBox(width: AppDimensions.space12),

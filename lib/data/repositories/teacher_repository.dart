@@ -124,17 +124,6 @@ class TeacherClassSubjectRepository {
       if (e.response?.statusCode != 404) rethrow;
     }
 
-    try {
-      // Backward compatibility for older backend route naming.
-      final fallback = await _dio.get(
-        '/teacher-class-subjects/mine',
-        queryParameters: query,
-      );
-      return _parseList(fallback.data);
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 404) rethrow;
-    }
-
     // Last fallback for setups that expose this via /teachers module.
     final legacy = await _dio.get(
       '/teachers/me/assignments',
@@ -177,12 +166,9 @@ class TeacherClassSubjectRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode != 404) rethrow;
     }
-
-    final legacy = await _dio.get(
-      '/teacher-class-subjects',
-      queryParameters: query,
+    throw Exception(
+      'Teacher assignments endpoint not available for class filter.',
     );
-    return _parseList(legacy.data);
   }
 
   Future<TeacherClassSubjectModel> createAssignment({

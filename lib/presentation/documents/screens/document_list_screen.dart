@@ -105,8 +105,11 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             user.role == UserRole.parent ||
             user.role == UserRole.teacher) &&
         (canGenerate || canManage);
-    // In this workflow, documents are uploaded by student/parent and verified by principal.
-    const canRequest = false;
+    // Students/parents can request documents (e.g., ID card) from admin.
+    final canRequest = _resolvedStudentId != null &&
+        user != null &&
+        (user.role == UserRole.student || user.role == UserRole.parent) &&
+        (canGenerate || canManage);
     final canVerify = user != null &&
         canManage &&
         (user.role == UserRole.principal || user.role == UserRole.superadmin);

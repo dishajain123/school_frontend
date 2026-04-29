@@ -65,10 +65,10 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.attendance),
       ),
       QuickActionItem(
-        icon: Icons.campaign_outlined,
-        label: 'Announce',
+        icon: Icons.class_outlined,
+        label: 'Classroom',
         color: AppColors.subjectChem,
-        onTap: () => context.go(RouteNames.announcements),
+        onTap: () => context.go(RouteNames.classroomMonitor),
       ),
     ];
 

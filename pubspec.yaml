@@ -49,6 +49,9 @@ dependencies:
   # Permissions
   permission_handler: ^11.3.1
 
+  # URL Launcher
+  url_launcher: ^6.3.1
+
   # Icons (extended material icons)
   cupertino_icons: ^1.0.8
 

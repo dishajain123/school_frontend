@@ -55,6 +55,14 @@ class RouteNames {
   // Teacher Schedule (Phase 4)
   static const String mySchedule = '/my-schedule';
 
+  // 🔥 NEW — My Class (student/parent read view)
+  static const String myClass = '/my-class';
+
+  // 🔥 NEW — Teacher My Class (teacher content management)
+  // Decision #5: separate route (NOT inside schedule screen)
+  static const String teacherMyClass = '/teacher/my-class';
+  static const String classroomMonitor = '/classroom-monitor';
+
   // Attendance
   static const String attendance = '/attendance';
   static const String attendanceDetail = '/attendance/:id';

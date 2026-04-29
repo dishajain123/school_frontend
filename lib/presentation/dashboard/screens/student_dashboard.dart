@@ -67,10 +67,20 @@ class StudentDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.attendance),
       ),
       QuickActionItem(
-        icon: Icons.assignment_outlined,
-        label: 'Assignments',
+        icon: Icons.class_outlined,
+        label: 'Classroom',
         color: AppColors.infoBlue,
-        onTap: () => context.go(RouteNames.assignments),
+        onTap: () {
+          final me = meAsync.valueOrNull;
+          context.go(
+            RouteNames.myClass,
+            extra: {
+              'standardId': me?.standardId,
+              'academicYearId': me?.academicYearId,
+              'sectionName': me?.section,
+            },
+          );
+        },
       ),
       QuickActionItem(
         icon: Icons.home_work_outlined,

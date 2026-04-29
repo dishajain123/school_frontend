@@ -34,6 +34,9 @@ import '../../presentation/parents/screens/create_parent_screen.dart';
 import '../../presentation/attendance/screens/attendance_list_screen.dart';
 import '../../presentation/academic_year/screens/student_academic_history_screen.dart';
 import '../../presentation/teacher_schedule/screens/teacher_schedule_screen.dart';
+import '../../presentation/my_class/screens/subject_list_screen.dart';
+import '../../presentation/my_class/screens/teacher_my_class_screen.dart';
+import '../../presentation/my_class/screens/classroom_monitor_screen.dart';
 import '../../presentation/fees/screens/fee_dashboard_screen.dart';
 import '../../presentation/fees/screens/payment_history_screen.dart';
 import '../../presentation/fees/screens/record_payment_screen.dart';
@@ -259,6 +262,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.mySchedule,
             builder: (_, __) => const TeacherScheduleScreen(),
+          ),
+
+          // ── My Class (Student/Parent read view) ───────────────────────
+          GoRoute(
+            path: RouteNames.myClass,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return MyClassSubjectListScreen(
+                childId: extra?['childId'] as String?,
+                initialStandardId: extra?['standardId'] as String?,
+                initialSectionId: extra?['sectionId'] as String?,
+                initialSectionName: extra?['sectionName'] as String?,
+                initialAcademicYearId: extra?['academicYearId'] as String?,
+              );
+            },
+          ),
+
+          // ── Teacher My Class (content management) ─────────────────────
+          GoRoute(
+            path: RouteNames.teacherMyClass,
+            builder: (_, __) => const TeacherMyClassScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.classroomMonitor,
+            builder: (_, __) => const ClassroomMonitorScreen(),
           ),
 
           // ── Students ───────────────────────────────────────────────────

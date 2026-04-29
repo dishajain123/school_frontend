@@ -275,6 +275,27 @@ class ApiConstants {
     return raw;
   }
 
+
+    // ── My Class ──────────────────────────────────────────────────────────────
+  // Decision #4: parent access uses ?child_id= query param
+  static const String myClassSubjects = '/my-class/subjects';
+  static const String myClassChapters = '/my-class/chapters';
+  static String myClassChapterById(String id) => '/my-class/chapters/$id';
+  static const String myClassTopics = '/my-class/topics';
+  static String myClassTopicById(String id) => '/my-class/topics/$id';
+  static const String myClassContent = '/my-class/content';
+  static String myClassContentById(String id) => '/my-class/content/$id';
+  static const String myClassQuizzes = '/my-class/quizzes';
+  static String myClassQuizById(String id) => '/my-class/quizzes/$id';
+  static const String myClassQuestions = '/my-class/questions';
+  static String myClassQuestionById(String id) => '/my-class/questions/$id';
+  static String myClassQuizAttempt(String quizId) =>
+      '/my-class/quizzes/$quizId/attempt';
+  static String myClassMyAttempts(String quizId) =>
+      '/my-class/quizzes/$quizId/attempts/mine';
+  static String myClassAllAttempts(String quizId) =>
+      '/my-class/quizzes/$quizId/attempts';
+
   static String _httpToWsBaseUrl(String httpBaseUrl) {
     final normalized = _normalizeBaseUrl(httpBaseUrl);
     if (normalized.startsWith('https://')) {

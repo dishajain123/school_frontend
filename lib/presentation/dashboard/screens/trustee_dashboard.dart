@@ -66,12 +66,10 @@ class TrusteeDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.feeDashboard),
       ),
       QuickActionItem(
-        icon: Icons.bar_chart_outlined,
-        label: 'Reports',
+        icon: Icons.class_outlined,
+        label: 'Classroom',
         color: AppColors.subjectScience,
-        onTap: () => context.go(
-          '${RouteNames.principalReportDetails}?metric=student_attendance',
-        ),
+        onTap: () => context.go(RouteNames.classroomMonitor),
       ),
     ];
 

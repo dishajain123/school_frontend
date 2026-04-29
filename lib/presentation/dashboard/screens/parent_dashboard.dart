@@ -261,10 +261,20 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
         onTap: () => context.go(RouteNames.feeDashboard),
       ),
       QuickActionItem(
-        icon: Icons.assignment_outlined,
-        label: 'Assignments',
+        icon: Icons.class_outlined,
+        label: 'Classroom',
         color: AppColors.infoBlue,
-        onTap: () => context.go(RouteNames.assignments),
+        onTap: () {
+          context.go(
+            RouteNames.myClass,
+            extra: {
+              'childId': selectedChild?.id,
+              'standardId': selectedChild?.standardId,
+              'academicYearId': selectedChild?.academicYearId,
+              'sectionName': selectedChild?.section,
+            },
+          );
+        },
       ),
     ];
 
