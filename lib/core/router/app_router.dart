@@ -39,16 +39,42 @@ import '../../presentation/teacher_schedule/screens/teacher_schedule_screen.dart
 import '../../presentation/my_class/screens/subject_list_screen.dart';
 import '../../presentation/my_class/screens/teacher_my_class_screen.dart';
 import '../../presentation/my_class/screens/classroom_monitor_screen.dart';
+import '../../presentation/homework/screens/homework_list_screen.dart';
+import '../../presentation/homework/screens/homework_detail_screen.dart';
+import '../../presentation/homework/screens/create_homework_screen.dart';
+import '../../presentation/diary/screens/diary_list_screen.dart';
+import '../../presentation/diary/screens/create_diary_screen.dart';
+import '../../presentation/chat/screens/conversation_list_screen.dart';
+import '../../presentation/chat/screens/chat_screen.dart';
 import '../../presentation/fees/screens/fee_dashboard_screen.dart';
 import '../../presentation/fees/screens/payment_history_screen.dart';
 import '../../presentation/fees/screens/record_payment_screen.dart';
 import '../../presentation/fees/screens/fee_receipt_screen.dart';
+import '../../presentation/results/screens/result_list_screen.dart';
+import '../../presentation/results/screens/report_card_screen.dart';
+import '../../presentation/timetable/screens/timetable_view_screen.dart';
+import '../../presentation/timetable/screens/upload_timetable_screen.dart';
+import '../../presentation/leave/screens/leave_list_screen.dart';
+import '../../presentation/leave/screens/apply_leave_screen.dart';
+import '../../presentation/leave/screens/leave_balance_screen.dart';
+import '../../presentation/leave/screens/leave_decision_screen.dart';
+import '../../presentation/documents/screens/document_list_screen.dart';
+import '../../presentation/complaints/screens/complaint_list_screen.dart';
+import '../../presentation/complaints/screens/create_complaint_screen.dart';
+import '../../presentation/complaints/screens/complaint_detail_screen.dart';
+import '../../presentation/superadmin/screens/schools_list_screen.dart';
+import '../../presentation/superadmin/screens/school_detail_screen.dart';
+import '../../presentation/superadmin/screens/create_school_screen.dart';
+import '../../presentation/settings/screens/school_settings_screen.dart';
 import '../../presentation/audit/screens/audit_logs_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
 import '../../data/models/auth/current_user.dart';
 import '../../data/models/teacher/teacher_model.dart';
 import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
+import '../../data/models/chat/conversation_model.dart';
+import '../../data/models/complaint/complaint_model.dart';
+import '../../data/models/school/school_model.dart';
 import '../../providers/auth_provider.dart';
 import 'route_names.dart';
 
@@ -404,15 +430,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.homework,
-            builder: (_, __) => const PlaceholderScreen('Homework'),
+            builder: (_, __) => const HomeworkListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateHomeworkScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => HomeworkDetailScreen(
+                  homeworkId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.diary,
-            builder: (_, __) => const PlaceholderScreen('Diary'),
+            builder: (_, __) => const DiaryListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateDiaryScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.timetable,
-            builder: (_, __) => const PlaceholderScreen('Timetable'),
+            builder: (_, __) => const TimetableViewScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.uploadTimetable,
+            builder: (context, state) {
+              final standardId = state.uri.queryParameters['standard_id'];
+              final section = state.uri.queryParameters['section'];
+              return UploadTimetableScreen(
+                initialStandardId: standardId,
+                initialSection: section,
+              );
+            },
           ),
           GoRoute(
             path: RouteNames.examSchedules,
@@ -420,7 +475,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.results,
-            builder: (_, __) => const PlaceholderScreen('Results'),
+            builder: (_, __) => const ResultListScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.reportCard,
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is Map<String, dynamic>) {
+                final studentId = (extra['studentId'] ?? '').toString();
+                final examId = (extra['examId'] ?? '').toString();
+                if (studentId.isNotEmpty && examId.isNotEmpty) {
+                  return ReportCardScreen(studentId: studentId, examId: examId);
+                }
+              }
+              final studentId = state.uri.queryParameters['student_id'] ?? '';
+              final examId = state.uri.queryParameters['exam_id'] ?? '';
+              return ReportCardScreen(studentId: studentId, examId: examId);
+            },
           ),
           GoRoute(
             path: RouteNames.feeDashboard,
@@ -465,11 +536,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.conversations,
-            builder: (_, __) => const PlaceholderScreen('Chat'),
+            builder: (_, __) => const ConversationListScreen(),
+            routes: [
+              GoRoute(
+                path: ':conversationId',
+                builder: (context, state) {
+                  return ChatScreen(
+                    conversationId: state.pathParameters['conversationId']!,
+                    conversation: state.extra as ConversationModel?,
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.leaveList,
-            builder: (_, __) => const PlaceholderScreen('Leave'),
+            builder: (_, __) => const LeaveListScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.applyLeave,
+            builder: (_, __) => const ApplyLeaveScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.leaveBalance,
+            builder: (_, __) => const LeaveBalanceScreen(),
+          ),
+          GoRoute(
+            path: '/leave/:id/decision',
+            builder: (context, state) => LeaveDecisionScreen(
+              leaveId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: RouteNames.galleryAlbums,
@@ -477,7 +573,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.documents,
-            builder: (_, __) => const PlaceholderScreen('Documents'),
+            builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              return DocumentListScreen(studentId: studentId);
+            },
           ),
           GoRoute(
             path: RouteNames.auditLogs,
@@ -485,7 +584,52 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.complaints,
-            builder: (_, __) => const PlaceholderScreen('Complaints'),
+            builder: (_, __) => const ComplaintListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateComplaintScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => ComplaintDetailScreen(
+                  complaintId: state.pathParameters['id']!,
+                  initialComplaint: state.extra as ComplaintModel?,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.schools,
+            builder: (_, __) => const SchoolsListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateSchoolScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => SchoolDetailScreen(
+                  schoolId: state.pathParameters['id']!,
+                  initialSchool: state.extra as SchoolModel?,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) {
+                      final school = state.extra as SchoolModel?;
+                      return CreateSchoolScreen(
+                        existingSchool: school,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.schoolSettings,
+            builder: (_, __) => const SchoolSettingsScreen(),
           ),
         ],
       ),
