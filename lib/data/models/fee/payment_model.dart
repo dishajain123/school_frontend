@@ -125,6 +125,7 @@ class PaymentModel {
     this.receiptKey,
     this.recordedBy,
     this.originalDueDate,
+    this.transactionRef,
   });
 
   final String id;
@@ -136,6 +137,7 @@ class PaymentModel {
   final String? referenceNumber;
   final String? receiptKey;
   final String? recordedBy;
+  final String? transactionRef;
   final bool lateFeeApplied;
   final DateTime? originalDueDate;
   final String schoolId;
@@ -153,6 +155,7 @@ class PaymentModel {
       paymentDate: DateTime.parse(json['payment_date'] as String),
       paymentMode: PaymentModeX.fromString(json['payment_mode'] as String?),
       referenceNumber: json['reference_number'] as String?,
+      transactionRef: json['transaction_ref'] as String?,
       receiptKey: json['receipt_key'] as String?,
       recordedBy: json['recorded_by'] as String?,
       lateFeeApplied: json['late_fee_applied'] as bool? ?? false,

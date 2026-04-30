@@ -35,7 +35,7 @@ class RouteNames {
   static const String teacherDetail = '/teachers/:id';
   static String teacherDetailPath(String id) => '/teachers/$id';
   static const String createTeacher = '/teachers/create';
-  static const String teacherAnalytics = '/teachers/:id/analytics';
+  static const String teacherAnalytics = '/teacher-analytics';
 
   // Students
   static const String students = '/students';
@@ -53,6 +53,9 @@ class RouteNames {
   static const String academicHistory = '/academic-history';
   static const String academicHistoryDetail = '/academic-history/:studentId';
   static String academicHistoryDetailPath(String id) => '/academic-history/$id';
+  static const String reenrollment = '/enrollment/reenroll/:studentId';
+  static String reenrollmentPath(String studentId) =>
+      '/enrollment/reenroll/$studentId';
 
   // Teacher Schedule (Phase 4)
   static const String mySchedule = '/my-schedule';
@@ -69,6 +72,7 @@ class RouteNames {
   static const String attendance = '/attendance';
   static const String attendanceDetail = '/attendance/:id';
   static const String markAttendance = '/attendance/mark';
+  static const String attendanceOverview = '/attendance/overview';
 
   // Assignments
   static const String assignments = '/assignments';

@@ -196,7 +196,8 @@ class _PrimaryActionTileState extends State<_PrimaryActionTile>
               decoration: BoxDecoration(
                 color: item.color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: item.color.withValues(alpha: 0.18), width: 1),
+                border: Border.all(
+                    color: item.color.withValues(alpha: 0.18), width: 1),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
@@ -231,27 +232,6 @@ class _PrimaryActionTileState extends State<_PrimaryActionTile>
                       fontSize: fontSize,
                       maxLines: maxLines,
                       isTight: isTight,
-                    ),
-                  if (item.badge != null)
-                    Positioned(
-                      top: -4,
-                      right: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.errorRed,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          item.badge!,
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textScaler: TextScaler.noScaling,
-                        ),
-                      ),
                     ),
                 ],
               ),
@@ -409,7 +389,8 @@ class _AttendanceRingState extends State<AttendanceRing>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
     _anim = Tween<double>(begin: 0, end: widget.percentage / 100)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     _ctrl.forward();

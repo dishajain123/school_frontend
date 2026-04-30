@@ -280,6 +280,12 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
 
     final secondaryActions = [
       QuickActionItem(
+        icon: Icons.assignment_outlined,
+        label: 'Assignments',
+        color: AppColors.subjectEnglish,
+        onTap: () => context.go(RouteNames.assignments),
+      ),
+      QuickActionItem(
         icon: Icons.quiz_outlined,
         label: 'Exams',
         color: AppColors.subjectPhysics,

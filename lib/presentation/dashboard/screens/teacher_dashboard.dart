@@ -91,7 +91,7 @@ class TeacherDashboard extends ConsumerWidget {
         icon: Icons.grading_outlined,
         label: 'Results',
         color: AppColors.subjectChem,
-        onTap: () => context.go(RouteNames.principalResultsDistribution),
+        onTap: () => context.go(RouteNames.results),
       ),
       QuickActionItem(
         icon: Icons.edit_note_outlined,

@@ -98,12 +98,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.loading);
 
     try {
+      final cachedUser = _readCachedUser();
       final token = await _secureStorage
           .readToken()
           .timeout(const Duration(seconds: 3), onTimeout: () => null);
       if (token == null || token.isEmpty) {
+        if (cachedUser != null && cachedUser.role != UserRole.superadmin) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            currentUser: cachedUser,
+          );
+          return;
+        }
         state = const AuthState(status: AuthStatus.unauthenticated);
         return;
+      }
+
+      // Keep existing session on app refresh/restart even if /auth/me is slow.
+      if (cachedUser != null && cachedUser.role != UserRole.superadmin) {
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          currentUser: cachedUser,
+        );
       }
 
       final user = await _authRepo.getMe().timeout(const Duration(seconds: 8));
@@ -115,14 +131,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _persistUser(user);
       state = AuthState(status: AuthStatus.authenticated, currentUser: user);
     } on TimeoutException {
-      await _clearLocalData();
-      state = const AuthState(status: AuthStatus.unauthenticated);
-    } on AppException {
-      await _clearLocalData();
-      state = const AuthState(status: AuthStatus.unauthenticated);
+      final cachedUser = _readCachedUser();
+      state = cachedUser != null
+          ? AuthState(status: AuthStatus.authenticated, currentUser: cachedUser)
+          : const AuthState(status: AuthStatus.unauthenticated);
+    } on AppException catch (appError) {
+      if (appError.statusCode == 401 || appError.statusCode == 403) {
+        await _clearLocalData();
+        state = const AuthState(status: AuthStatus.unauthenticated);
+      } else {
+        final cachedUser = _readCachedUser();
+        state = cachedUser != null
+            ? AuthState(
+                status: AuthStatus.authenticated, currentUser: cachedUser)
+            : const AuthState(status: AuthStatus.unauthenticated);
+      }
     } catch (_) {
-      await _clearLocalData();
-      state = const AuthState(status: AuthStatus.unauthenticated);
+      final cachedUser = _readCachedUser();
+      state = cachedUser != null
+          ? AuthState(status: AuthStatus.authenticated, currentUser: cachedUser)
+          : const AuthState(status: AuthStatus.unauthenticated);
     }
   }
 
@@ -221,6 +249,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _localStorage.setString(StorageKeys.userRole, user.role.backendValue);
     await _localStorage.setStringList(
         StorageKeys.userPermissions, user.permissions);
+  }
+
+  CurrentUser? _readCachedUser() {
+    final raw = _localStorage.getString(StorageKeys.currentUser);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final json = jsonDecode(raw);
+      if (json is! Map<String, dynamic>) return null;
+      return CurrentUser.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _clearLocalData() async {

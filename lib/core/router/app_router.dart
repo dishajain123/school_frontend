@@ -34,11 +34,14 @@ import '../../presentation/parents/screens/parent_list_screen.dart';
 import '../../presentation/parents/screens/parent_detail_screen.dart';
 import '../../presentation/parents/screens/create_parent_screen.dart';
 import '../../presentation/attendance/screens/attendance_list_screen.dart';
+import '../../presentation/attendance/screens/principal_attendance_overview_screen.dart';
+import '../../presentation/attendance/screens/mark_attendance_screen.dart';
 import '../../presentation/academic_year/screens/student_academic_history_screen.dart';
 import '../../presentation/teacher_schedule/screens/teacher_schedule_screen.dart';
 import '../../presentation/my_class/screens/subject_list_screen.dart';
 import '../../presentation/my_class/screens/teacher_my_class_screen.dart';
 import '../../presentation/my_class/screens/classroom_monitor_screen.dart';
+import '../../presentation/enrollment/screens/reenrollment_screen.dart';
 import '../../presentation/homework/screens/homework_list_screen.dart';
 import '../../presentation/homework/screens/homework_detail_screen.dart';
 import '../../presentation/homework/screens/create_homework_screen.dart';
@@ -52,6 +55,13 @@ import '../../presentation/fees/screens/record_payment_screen.dart';
 import '../../presentation/fees/screens/fee_receipt_screen.dart';
 import '../../presentation/results/screens/result_list_screen.dart';
 import '../../presentation/results/screens/report_card_screen.dart';
+import '../../presentation/results/screens/principal_results_distribution_screen.dart';
+import '../../presentation/results/screens/enter_results_screen.dart';
+import '../../presentation/exam_schedule/screens/exam_schedule_list_screen.dart';
+import '../../presentation/exam_schedule/screens/exam_schedule_table_screen.dart';
+import '../../presentation/behaviour/screens/behaviour_log_list_screen.dart';
+import '../../presentation/behaviour/screens/create_behaviour_log_screen.dart';
+import '../../presentation/reports/screens/principal_report_details_screen.dart';
 import '../../presentation/timetable/screens/timetable_view_screen.dart';
 import '../../presentation/timetable/screens/upload_timetable_screen.dart';
 import '../../presentation/leave/screens/leave_list_screen.dart';
@@ -125,7 +135,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.isAuthenticated;
       final loc = state.matchedLocation;
-      final enrollmentPending = authState.currentUser?.enrollmentPending ?? false;
+      final enrollmentPending =
+          authState.currentUser?.enrollmentPending ?? false;
       final profileCreated = authState.currentUser?.profileCreated ?? false;
       final shouldBlockForOnboarding = enrollmentPending && !profileCreated;
 
@@ -145,12 +156,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Always leave splash after auth initialization completes.
       if (loc == RouteNames.splash && authState.isInitialized) {
         if (!isLoggedIn) return RouteNames.login;
-        return shouldBlockForOnboarding ? RouteNames.enrollmentPending : RouteNames.dashboard;
+        return shouldBlockForOnboarding
+            ? RouteNames.enrollmentPending
+            : RouteNames.dashboard;
       }
-      if (isLoggedIn && shouldBlockForOnboarding && loc != RouteNames.enrollmentPending) {
+      if (isLoggedIn &&
+          shouldBlockForOnboarding &&
+          loc != RouteNames.enrollmentPending) {
         return RouteNames.enrollmentPending;
       }
-      if (isLoggedIn && !shouldBlockForOnboarding && loc == RouteNames.enrollmentPending) {
+      if (isLoggedIn &&
+          !shouldBlockForOnboarding &&
+          loc == RouteNames.enrollmentPending) {
         return RouteNames.dashboard;
       }
       if (isLoggedIn &&
@@ -323,6 +340,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: RouteNames.mySchedule,
             builder: (_, __) => const TeacherScheduleScreen(),
           ),
+          GoRoute(
+            path: RouteNames.teacherAnalytics,
+            builder: (_, __) => const TeacherAnalyticsScreen(),
+          ),
 
           // ── My Class (Student/Parent read view) ───────────────────────
           GoRoute(
@@ -390,6 +411,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               return StudentAcademicHistoryScreen(studentId: studentId);
             },
           ),
+          GoRoute(
+            path: '/enrollment/reenroll/:studentId',
+            builder: (context, state) {
+              final studentId = state.pathParameters['studentId']!;
+              final extra = state.extra as Map<String, dynamic>?;
+              return ReenrollmentScreen(
+                studentId: studentId,
+                studentName: (extra?['studentName'] as String?) ?? 'Student',
+                admissionNumber:
+                    (extra?['admissionNumber'] as String?) ?? '—',
+              );
+            },
+          ),
 
           // ── Parents ────────────────────────────────────────────────────
           GoRoute(
@@ -426,6 +460,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RouteNames.attendance,
             builder: (_, __) => const AttendanceListScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.attendanceOverview,
+            builder: (_, __) => const PrincipalAttendanceOverviewScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.markAttendance,
+            builder: (_, __) => const MarkAttendanceScreen(),
           ),
 
           // ── All other screens (placeholders kept for backward compat) ──
@@ -476,11 +518,78 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.examSchedules,
-            builder: (_, __) => const PlaceholderScreen('Exam Schedule'),
+            builder: (_, __) => const ExamScheduleListScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.examScheduleTable,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              final standardId = (extra?['standard_id'] as String?) ??
+                  state.uri.queryParameters['standard_id'] ??
+                  '';
+              final seriesId = (extra?['series_id'] as String?) ??
+                  state.uri.queryParameters['series_id'];
+              if (standardId.isEmpty) {
+                return const PlaceholderScreen(
+                  'Class is required to view exam schedule',
+                  showBack: true,
+                );
+              }
+              return ExamScheduleTableScreen(
+                standardId: standardId,
+                seriesId: seriesId,
+              );
+            },
+          ),
+          GoRoute(
+            path: RouteNames.createExamSeries,
+            builder: (_, __) =>
+                const PlaceholderScreen('Create Exam Series', showBack: true),
           ),
           GoRoute(
             path: RouteNames.results,
             builder: (_, __) => const ResultListScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.enterResults,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return EnterResultsScreen(
+                examId: extra?['examId'] as String?,
+                standardId: extra?['standardId'] as String?,
+                section: extra?['section'] as String?,
+              );
+            },
+          ),
+          GoRoute(
+            path: RouteNames.principalReportDetails,
+            builder: (context, state) {
+              final metric =
+                  state.uri.queryParameters['metric'] ?? 'student_attendance';
+              return PrincipalReportDetailsScreen(initialMetric: metric);
+            },
+          ),
+          GoRoute(
+            path: RouteNames.principalResultsDistribution,
+            builder: (_, __) => const PrincipalResultsDistributionScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.behaviourLogs,
+            builder: (context, state) {
+              final studentId = state.uri.queryParameters['student_id'];
+              return BehaviourLogListScreen(studentId: studentId);
+            },
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (context, state) {
+                  final studentId = state.uri.queryParameters['student_id'];
+                  return CreateBehaviourLogScreen(
+                    initialStudentId: studentId,
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.reportCard,
@@ -525,7 +634,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               }
               final studentId = state.uri.queryParameters['student_id'] ?? '';
               final ledgerId = state.uri.queryParameters['ledger_id'];
-              return RecordPaymentScreen(studentId: studentId, ledgerId: ledgerId);
+              return RecordPaymentScreen(
+                  studentId: studentId, ledgerId: ledgerId);
             },
           ),
           GoRoute(

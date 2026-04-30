@@ -113,6 +113,7 @@ class AnnouncementModel {
     this.createdBy,
     this.targetRole,
     this.targetStandardId,
+    this.targetSection,
     this.attachmentKey,
     this.attachmentUrl,
   });
@@ -129,6 +130,7 @@ class AnnouncementModel {
   final String? createdBy;
   final String? targetRole;
   final String? targetStandardId;
+  final String? targetSection;
   final String? attachmentKey;
   final String? attachmentUrl;
 
@@ -146,6 +148,7 @@ class AnnouncementModel {
       createdBy: json['created_by'] as String?,
       targetRole: json['target_role'] as String?,
       targetStandardId: json['target_standard_id'] as String?,
+      targetSection: json['target_section'] as String?,
       attachmentKey: json['attachment_key'] as String?,
       attachmentUrl: json['attachment_url'] as String?,
     );
@@ -164,6 +167,7 @@ class AnnouncementModel {
         'created_by': createdBy,
         'target_role': targetRole,
         'target_standard_id': targetStandardId,
+        'target_section': targetSection,
         'attachment_key': attachmentKey,
         'attachment_url': attachmentUrl,
       };

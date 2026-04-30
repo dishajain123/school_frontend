@@ -4,18 +4,95 @@ import '../../errors/app_exception.dart';
 /// Maps HTTP status codes to typed [AppException] subclasses.
 /// Handles both legacy and envelope-shaped error responses.
 class ErrorInterceptor extends Interceptor {
+  ErrorInterceptor({Dio Function()? dioProvider}) : _dioProvider = dioProvider;
+
+  final Dio Function()? _dioProvider;
+
+  static const String _localRetryKey = '_local_retry_attempted';
+
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    final appException = _mapToAppException(err);
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    var effectiveErr = err;
+    if (_isRetryableConnectionError(err) &&
+        !_didAttemptLocalRetry(err.requestOptions)) {
+      try {
+        final retried = await _retryWithAlternateLocalHosts(err.requestOptions);
+        if (retried != null) {
+          handler.resolve(retried);
+          return;
+        }
+      } on DioException catch (retryErr) {
+        effectiveErr = retryErr;
+      }
+    }
+
+    final appException = _mapToAppException(effectiveErr);
     handler.next(
       DioException(
-        requestOptions: err.requestOptions,
-        response: err.response,
-        type: err.type,
+        requestOptions: effectiveErr.requestOptions,
+        response: effectiveErr.response,
+        type: effectiveErr.type,
         error: appException,
         message: appException.message,
       ),
     );
+  }
+
+  bool _isRetryableConnectionError(DioException err) =>
+      err.type == DioExceptionType.connectionTimeout ||
+      err.type == DioExceptionType.receiveTimeout ||
+      err.type == DioExceptionType.sendTimeout ||
+      err.type == DioExceptionType.connectionError;
+
+  bool _didAttemptLocalRetry(RequestOptions requestOptions) =>
+      requestOptions.extra[_localRetryKey] == true;
+
+  Future<Response<dynamic>?> _retryWithAlternateLocalHosts(
+    RequestOptions requestOptions,
+  ) async {
+    final dio = _dioProvider?.call();
+    if (dio == null) return null;
+
+    final baseUri = Uri.tryParse(requestOptions.baseUrl);
+    final currentHost = baseUri?.host.toLowerCase();
+    if (currentHost == null || !_isLocalApi(currentHost)) return null;
+
+    final fallbackHosts = _localHostFallbacks(currentHost);
+    if (fallbackHosts.isEmpty) return null;
+
+    for (final host in fallbackHosts) {
+      final retryBaseUrl = baseUri!.replace(host: host).toString();
+      final retryOptions = requestOptions.copyWith(
+        baseUrl: retryBaseUrl,
+        extra: {
+          ...requestOptions.extra,
+          _localRetryKey: true,
+          'local_retry_host': host,
+        },
+      );
+      try {
+        return await dio.fetch<dynamic>(retryOptions);
+      } on DioException catch (retryErr) {
+        if (_isRetryableConnectionError(retryErr)) {
+          continue;
+        }
+        rethrow;
+      }
+    }
+    return null;
+  }
+
+  List<String> _localHostFallbacks(String currentHost) {
+    const order = <String>[
+      'localhost',
+      '127.0.0.1',
+      '10.0.2.2',
+      'host.docker.internal',
+    ];
+    return order.where((h) => h != currentHost).toList();
   }
 
   AppException _mapToAppException(DioException err) {

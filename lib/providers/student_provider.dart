@@ -178,13 +178,9 @@ class StudentNotifier extends AsyncNotifier<StudentState> {
     return updated;
   }
 
-  Future<StudentModel?> getById(String id) async {
-    try {
-      final repo = ref.read(studentRepositoryProvider);
-      return await repo.getById(id);
-    } catch (_) {
-      return null;
-    }
+  Future<StudentModel> getById(String id) async {
+    final repo = ref.read(studentRepositoryProvider);
+    return repo.getById(id);
   }
 
   Future<StudentModel> updatePromotionStatus(

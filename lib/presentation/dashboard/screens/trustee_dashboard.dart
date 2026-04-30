@@ -90,7 +90,6 @@ class TrusteeDashboard extends ConsumerWidget {
         icon: Icons.feedback_outlined,
         label: 'Complaints',
         color: AppColors.errorRed,
-        badge: openComplaints > 0 ? openComplaints.toString() : null,
         onTap: () => context.go(RouteNames.complaints),
       ),
       QuickActionItem(

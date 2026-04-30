@@ -14,7 +14,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/network/dio_client.dart';
@@ -95,7 +97,9 @@ class _MyClassSubjectListScreenState
           final prefilledId = widget.initialAcademicYearId;
           _selectedYear = years.firstWhere(
             (y) => prefilledId != null ? y.id == prefilledId : y.isActive,
-            orElse: () => years.isNotEmpty ? years.first : _AcademicYear(id: '', name: '', isActive: false),
+            orElse: () => years.isNotEmpty
+                ? years.first
+                : _AcademicYear(id: '', name: '', isActive: false),
           );
           _loadingYears = false;
           _resolvedSectionId = widget.initialSectionId;
@@ -106,8 +110,6 @@ class _MyClassSubjectListScreenState
       if (mounted) setState(() => _loadingYears = false);
     }
   }
-
-
 
   Future<void> _resolveSectionIdIfNeeded(String yearId) async {
     if ((widget.initialSectionId ?? '').isNotEmpty) {
@@ -145,6 +147,7 @@ class _MyClassSubjectListScreenState
       // keep unresolved; UI will show empty-state until context is available
     }
   }
+
   bool get _isCurrentYear => _selectedYear?.isActive == true;
 
   @override
@@ -153,24 +156,25 @@ class _MyClassSubjectListScreenState
     final sectionId = widget.initialSectionId ?? _resolvedSectionId ?? '';
     final yearId = _selectedYear?.id ?? '';
 
-    final subjectsAsync = (standardId.isNotEmpty && sectionId.isNotEmpty && yearId.isNotEmpty)
-        ? ref.watch(myClassSubjectsProvider((
-            standardId: standardId,
-            sectionId: sectionId,
-            academicYearId: yearId,
-            childId: widget.childId,
-          )))
-        : const AsyncValue<List<SubjectSummary>>.loading();
+    final subjectsAsync =
+        (standardId.isNotEmpty && sectionId.isNotEmpty && yearId.isNotEmpty)
+            ? ref.watch(myClassSubjectsProvider((
+                standardId: standardId,
+                sectionId: sectionId,
+                academicYearId: yearId,
+                childId: widget.childId,
+              )))
+            : const AsyncValue<List<SubjectSummary>>.loading();
 
-    final selectedYearValue = _years.any((y) => y.id == _selectedYear?.id)
-        ? _selectedYear
-        : null;
+    final selectedYearValue =
+        _years.any((y) => y.id == _selectedYear?.id) ? _selectedYear : null;
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
       appBar: AppAppBar(
         title: 'My Class',
         showBack: true,
+        onBackPressed: () => context.go(RouteNames.dashboard),
         actions: [
           if (!_loadingYears && _years.isNotEmpty)
             Padding(
@@ -238,7 +242,8 @@ class _MyClassSubjectListScreenState
               color: AppColors.warningAmber.withOpacity(0.1),
               child: Row(
                 children: [
-                  const Icon(Icons.lock_outline, size: 14, color: AppColors.warningAmber),
+                  const Icon(Icons.lock_outline,
+                      size: 14, color: AppColors.warningAmber),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -257,7 +262,8 @@ class _MyClassSubjectListScreenState
               error: (e, _) => Center(
                 child: Text(
                   e.toString(),
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.errorRed),
                 ),
               ),
               data: (subjects) {
@@ -265,7 +271,8 @@ class _MyClassSubjectListScreenState
                   return Center(
                     child: Text(
                       'No subjects found for this class and year.',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.grey500),
                     ),
                   );
                 }
@@ -277,12 +284,11 @@ class _MyClassSubjectListScreenState
                     padding: const EdgeInsets.all(16),
                     itemCount: subjects.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) =>
-                        _SubjectCard(
-                          subject: subjects[i],
-                          isReadOnly: !_isCurrentYear,
-                          childId: widget.childId,
-                        ),
+                    itemBuilder: (context, i) => _SubjectCard(
+                      subject: subjects[i],
+                      isReadOnly: !_isCurrentYear,
+                      childId: widget.childId,
+                    ),
                   ),
                 );
               },
@@ -352,8 +358,8 @@ class _SubjectCard extends StatelessWidget {
                               .copyWith(color: AppColors.grey500)),
                     Text(
                       '${subject.chapterCount} chapter${subject.chapterCount == 1 ? '' : 's'}',
-                      style:
-                          AppTypography.caption.copyWith(color: AppColors.grey500),
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.grey500),
                     ),
                   ],
                 ),

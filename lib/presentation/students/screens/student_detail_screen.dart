@@ -127,6 +127,41 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
                                   fontSize: 13, color: Colors.black54),
                             ),
                           ),
+                          if (currentUser?.hasPermission('enrollment:create') ==
+                                  true ||
+                              currentUser?.hasPermission('student:promote') ==
+                                  true) ...[
+                            const SizedBox(height: 12),
+                            _SectionCard(
+                              title: 'Re-enroll Student',
+                              icon: Icons.how_to_reg_outlined,
+                              iconColor: Colors.deepPurple,
+                              onTap: () async {
+                                final result = await context.push(
+                                  RouteNames.reenrollmentPath(widget.studentId),
+                                  extra: {
+                                    'studentName':
+                                        _student?.user?.fullName ??
+                                            _student?.displayName ??
+                                            'Student',
+                                    'admissionNumber':
+                                        _student?.admissionNumber ?? '—',
+                                  },
+                                );
+                                if (result != null && mounted) {
+                                  await _load();
+                                }
+                              },
+                              child: const Text(
+                                'Create a new academic-year enrollment for this student '
+                                'without recreating profile, admission number, or parent link.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 12),
 
                           // ── Basic Info ────────────────────────────────
@@ -189,10 +224,85 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          _InfoCard(
+                            title: 'Behaviour Overview',
+                            rows: [
+                              _InfoRow(
+                                label: 'Latest Behaviour',
+                                value: _formatIncident(
+                                      _student!
+                                          .behaviourSummary?.latestIncidentType,
+                                    ) ??
+                                    'No logs yet',
+                              ),
+                              _InfoRow(
+                                label: 'Latest Comment',
+                                value: _student!
+                                        .behaviourSummary?.latestDescription ??
+                                    '—',
+                              ),
+                              _InfoRow(
+                                label: 'Positive',
+                                value: (_student!
+                                            .behaviourSummary?.positiveCount ??
+                                        0)
+                                    .toString(),
+                              ),
+                              _InfoRow(
+                                label: 'Negative',
+                                value: (_student!
+                                            .behaviourSummary?.negativeCount ??
+                                        0)
+                                    .toString(),
+                              ),
+                              _InfoRow(
+                                label: 'Neutral',
+                                value:
+                                    (_student!.behaviourSummary?.neutralCount ??
+                                            0)
+                                        .toString(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _InfoCard(
+                            title: 'Parent Details',
+                            rows: [
+                              _InfoRow(
+                                label: 'Name',
+                                value: _student!.parent?.fullName ?? '—',
+                              ),
+                              _InfoRow(
+                                label: 'Relation',
+                                value: _student!.parent?.relation ?? '—',
+                              ),
+                              _InfoRow(
+                                label: 'Phone',
+                                value: _student!.parent?.phone ?? '—',
+                              ),
+                              _InfoRow(
+                                label: 'Email',
+                                value: _student!.parent?.email ?? '—',
+                              ),
+                              _InfoRow(
+                                label: 'Occupation',
+                                value: _student!.parent?.occupation ?? '—',
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
     );
+  }
+
+  String? _formatIncident(String? incident) {
+    if (incident == null || incident.trim().isEmpty) return null;
+    final value = incident.trim().toUpperCase();
+    if (value == 'POSITIVE') return 'Positive';
+    if (value == 'NEGATIVE') return 'Negative';
+    return 'Neutral';
   }
 }
 

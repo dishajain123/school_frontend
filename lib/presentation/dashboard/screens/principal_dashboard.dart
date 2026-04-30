@@ -62,17 +62,23 @@ class PrincipalDashboard extends ConsumerWidget {
         icon: Icons.bar_chart_outlined,
         label: 'Attendance',
         color: AppColors.successGreen,
-        onTap: () => context.go(RouteNames.attendance),
+        onTap: () => context.go(RouteNames.attendanceOverview),
       ),
+      QuickActionItem(
+        icon: Icons.feedback_outlined,
+        label: 'Complaints',
+        color: AppColors.errorRed,
+        onTap: () => context.go(RouteNames.complaints),
+      ),
+    ];
+
+    final secondaryActions = [
       QuickActionItem(
         icon: Icons.class_outlined,
         label: 'Classroom',
         color: AppColors.subjectChem,
         onTap: () => context.go(RouteNames.classroomMonitor),
       ),
-    ];
-
-    final secondaryActions = [
       QuickActionItem(
         icon: Icons.family_restroom_outlined,
         label: 'Parents',
@@ -98,12 +104,6 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.principalResultsDistribution),
       ),
       QuickActionItem(
-        icon: Icons.fact_check_outlined,
-        label: 'Behaviour',
-        color: AppColors.subjectHistory,
-        onTap: () => context.go(RouteNames.behaviourLogs),
-      ),
-      QuickActionItem(
         icon: Icons.campaign_outlined,
         label: 'Announcements',
         color: AppColors.subjectChem,
@@ -120,12 +120,6 @@ class PrincipalDashboard extends ConsumerWidget {
         label: 'Leave',
         color: AppColors.warningAmber,
         onTap: () => context.go(RouteNames.leaveList),
-      ),
-      QuickActionItem(
-        icon: Icons.feedback_outlined,
-        label: 'Complaints',
-        color: AppColors.errorRed,
-        onTap: () => context.go(RouteNames.complaints),
       ),
     ];
 

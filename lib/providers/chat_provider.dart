@@ -12,9 +12,12 @@ import 'auth_provider.dart';
 
 // ── Conversation List ─────────────────────────────────────────────────────────
 
-class ConversationNotifier extends AsyncNotifier<List<ConversationModel>> {
+class ConversationNotifier
+    extends AutoDisposeAsyncNotifier<List<ConversationModel>> {
   @override
   Future<List<ConversationModel>> build() async {
+    // Bind conversation cache to authenticated user to prevent cross-user leaks.
+    ref.watch(currentUserProvider);
     return _fetch();
   }
 
@@ -86,7 +89,7 @@ class ConversationNotifier extends AsyncNotifier<List<ConversationModel>> {
 }
 
 final conversationNotifierProvider =
-    AsyncNotifierProvider<ConversationNotifier, List<ConversationModel>>(
+    AsyncNotifierProvider.autoDispose<ConversationNotifier, List<ConversationModel>>(
   ConversationNotifier.new,
 );
 

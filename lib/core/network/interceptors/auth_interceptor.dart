@@ -4,7 +4,7 @@ import '../../storage/secure_storage.dart';
 
 /// Attaches Bearer token to every request.
 /// On 401, attempts a silent token refresh and retries the original request.
-/// On refresh failure, clears tokens and triggers logout.
+/// Do not force logout automatically; logout is user-driven from Profile.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required this.secureStorage,
@@ -46,7 +46,6 @@ class AuthInterceptor extends Interceptor {
       try {
         final refreshToken = await secureStorage.readRefreshToken();
         if (refreshToken == null || refreshToken.isEmpty) {
-          _handleLogout();
           return handler.next(err);
         }
 
@@ -66,7 +65,6 @@ class AuthInterceptor extends Interceptor {
 
         final newAccessToken = response.data['access_token'] as String?;
         if (newAccessToken == null) {
-          _handleLogout();
           return handler.next(err);
         }
 
@@ -93,17 +91,11 @@ class AuthInterceptor extends Interceptor {
         final retryResponse = await retryDio.fetch(retryOptions);
         return handler.resolve(retryResponse);
       } catch (_) {
-        _handleLogout();
         return handler.next(err);
       } finally {
         _isRefreshing = false;
       }
     }
     return handler.next(err);
-  }
-
-  void _handleLogout() {
-    secureStorage.clearAll();
-    onLogout();
   }
 }

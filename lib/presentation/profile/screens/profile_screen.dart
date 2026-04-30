@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../providers/dashboard_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/user_provider.dart';
@@ -98,9 +99,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final displayUser = user;
           final name = authUser?.email?.split('@').first ?? 'User';
           final isTeacher = authUser?.role == UserRole.teacher;
+          final isStudent = authUser?.role == UserRole.student;
           final myAssignmentsAsync = isTeacher
               ? ref.watch(myTeacherAssignmentsProvider(null))
               : const AsyncData<List<TeacherClassSubjectModel>>([]);
+          final AsyncValue<dynamic> myStudentProfileAsync = isStudent
+              ? ref.watch(myStudentProfileProvider)
+              : const AsyncData<dynamic>(null);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppDimensions.pageHorizontal),
@@ -187,12 +192,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         label: 'Phone',
                         value: displayUser?.phone ?? authUser?.phone ?? '—',
                       ),
-                      const Divider(height: 1, color: AppColors.surface100),
-                      ProfileInfoRow(
-                        icon: Icons.business_outlined,
-                        label: 'School ID',
-                        value: authUser?.schoolId ?? '—',
-                      ),
                     ],
                   ),
                 ),
@@ -200,6 +199,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (isTeacher) ...[
                   const SizedBox(height: AppDimensions.space16),
                   _TeacherAssignmentsCard(assignmentsAsync: myAssignmentsAsync),
+                ],
+                if (isStudent) ...[
+                  const SizedBox(height: AppDimensions.space16),
+                  _LinkedParentCard(studentProfileAsync: myStudentProfileAsync),
                 ],
 
                 const SizedBox(height: AppDimensions.space16),
@@ -226,13 +229,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       if (authUser != null &&
                           (authUser.role == UserRole.principal ||
-                              authUser.role == UserRole.superadmin ||
-                              authUser.role == UserRole.trustee))
+                              authUser.role == UserRole.superadmin))
                         const Divider(height: 1, color: AppColors.surface100),
                       if (authUser != null &&
                           (authUser.role == UserRole.principal ||
-                              authUser.role == UserRole.superadmin ||
-                              authUser.role == UserRole.trustee))
+                              authUser.role == UserRole.superadmin))
                         ListTile(
                           leading: const Icon(Icons.history_outlined,
                               color: AppColors.grey600),
@@ -432,6 +433,114 @@ class _AssignmentChipGroup extends StatelessWidget {
                 .toList(),
           ),
       ],
+    );
+  }
+}
+
+class _LinkedParentCard extends StatelessWidget {
+  const _LinkedParentCard({required this.studentProfileAsync});
+
+  final AsyncValue<dynamic> studentProfileAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      padding: const EdgeInsets.all(AppDimensions.space16),
+      child: studentProfileAsync.when(
+        loading: () => const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppDimensions.space12),
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        error: (_, __) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Parent Details',
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.grey800,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.space8),
+            Text(
+              'Unable to load linked parent details.',
+              style: AppTypography.bodySmall.copyWith(color: AppColors.grey600),
+            ),
+          ],
+        ),
+        data: (student) {
+          final parent = student?.parent;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Parent Details',
+                style: AppTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.grey800,
+                ),
+              ),
+              const SizedBox(height: AppDimensions.space12),
+              if (parent == null) ...[
+                Text(
+                  'No linked parent details found.',
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.grey600),
+                ),
+              ] else ...[
+                _ParentInfoLine(label: 'Name', value: parent.fullName),
+                _ParentInfoLine(label: 'Relation', value: parent.relation),
+                _ParentInfoLine(label: 'Phone', value: parent.phone),
+                _ParentInfoLine(label: 'Email', value: parent.email),
+                _ParentInfoLine(label: 'Occupation', value: parent.occupation),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ParentInfoLine extends StatelessWidget {
+  const _ParentInfoLine({required this.label, required this.value});
+
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimensions.space8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.grey600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              (value == null || value!.trim().isEmpty) ? '—' : value!,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.grey800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

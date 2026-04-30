@@ -20,6 +20,7 @@ import '../data/repositories/result_repository.dart';
 import '../data/repositories/student_repository.dart';
 import '../data/repositories/teacher_repository.dart';
 import 'academic_year_provider.dart';
+import 'auth_provider.dart';
 
 class PrincipalDashboardStats {
   const PrincipalDashboardStats({
@@ -420,6 +421,7 @@ final principalDashboardStatsProvider =
 
 final teacherDashboardStatsProvider =
     FutureProvider<TeacherDashboardStats>((ref) async {
+  ref.watch(currentUserProvider);
   final activeYearId = ref.watch(activeYearProvider)?.id;
 
   final teacherClassRepo = ref.read(teacherClassSubjectRepositoryProvider);
@@ -511,6 +513,7 @@ typedef TeacherAnalyticsParams = ({
 final teacherAnalyticsProvider =
     FutureProvider.family<TeacherAnalyticsData, TeacherAnalyticsParams>(
   (ref, params) async {
+    ref.watch(currentUserProvider);
     final dio = ref.read(dioClientProvider);
     final response = await dio.get(
       '/teachers/me/analytics',

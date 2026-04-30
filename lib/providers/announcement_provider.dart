@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/announcement/announcement_model.dart';
 import '../data/repositories/announcement_repository.dart';
+import 'auth_provider.dart';
 
 class AnnouncementNotifier extends AsyncNotifier<List<AnnouncementModel>> {
   @override
   Future<List<AnnouncementModel>> build() async {
+    // Make announcement cache user-scoped to avoid cross-account bleed.
+    ref.watch(currentUserProvider);
     return _fetch();
   }
 
@@ -43,7 +46,8 @@ class AnnouncementNotifier extends AsyncNotifier<List<AnnouncementModel>> {
     state = AsyncData([created, ...current]);
   }
 
-  Future<void> updateAnnouncement(String id, Map<String, dynamic> payload) async {
+  Future<void> updateAnnouncement(
+      String id, Map<String, dynamic> payload) async {
     final repo = ref.read(announcementRepositoryProvider);
     final updated = await repo.update(id, payload);
     final current = state.valueOrNull ?? [];

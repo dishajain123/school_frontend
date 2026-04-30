@@ -36,7 +36,7 @@ final _myStudentProfileProvider =
   try {
     return await repo.getMyProfile();
   } catch (_) {
-    return ref.read(studentNotifierProvider.notifier).getById(user.id);
+    return await ref.read(studentNotifierProvider.notifier).getById(user.id);
   }
 });
 
@@ -241,13 +241,12 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
 
                 if (!confirm) return;
 
-                final success = await ref
-                    .read(timetableDeleteProvider.notifier)
-                    .delete(
-                      standardId: standardId,
-                      academicYearId: widget.academicYearId,
-                      section: _loadedSection,
-                    );
+                final success =
+                    await ref.read(timetableDeleteProvider.notifier).delete(
+                          standardId: standardId,
+                          academicYearId: widget.academicYearId,
+                          section: _loadedSection,
+                        );
                 if (!context.mounted) return;
 
                 if (success) {
@@ -295,9 +294,10 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                           final allowedStandards = standards
                               .where((s) => allowedStandardIds.contains(s.id))
                               .toList();
-                          final safeValue = allowedStandardIds.contains(_selectedStandardId)
-                              ? _selectedStandardId
-                              : null;
+                          final safeValue =
+                              allowedStandardIds.contains(_selectedStandardId)
+                                  ? _selectedStandardId
+                                  : null;
                           return _ClassFilterField(
                             standards: allowedStandards,
                             value: safeValue,

@@ -26,8 +26,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/dio_client.dart';
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/my_class/my_class_models.dart';
@@ -93,6 +95,12 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
   bool _loading = false;
   String? _error;
 
+  int get _selectedChapterNumber {
+    if (_selectedChapter == null) return 1;
+    final idx = _chapters.indexWhere((c) => c.id == _selectedChapter!.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -120,7 +128,7 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
           standardId: stdId,
           standardName: e['standard']?['name']?.toString() ?? '',
           section: e['section']?.toString() ?? '',
-          sectionId: '', // resolved on selection (see _resolveSectionId)
+          sectionId: e['section_id']?.toString() ?? '',
           subjectId: subId,
           subjectName: e['subject']?['name']?.toString() ?? '',
           academicYearId: yearId,
@@ -138,26 +146,38 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
     }
   }
 
+  String _normalizeSectionName(String value) {
+    final trimmed = value.trim().toUpperCase();
+    if (trimmed.startsWith('SECTION ')) {
+      return trimmed.substring('SECTION '.length).trim();
+    }
+    return trimmed;
+  }
+
   /// Resolve section UUID from masters/sections for the selected assignment.
   Future<String> _resolveSectionId(_AssignmentContext ctx) async {
+    if (ctx.sectionId.trim().isNotEmpty) {
+      return ctx.sectionId.trim();
+    }
     final dio = ref.read(dioClientProvider);
     final resp = await dio.get<Map<String, dynamic>>(
       '/masters/sections',
       queryParameters: {
         'standard_id': ctx.standardId,
         'academic_year_id': ctx.academicYearId,
-        'name': ctx.section,
       },
     );
     final raw = resp.data?['data'] ?? resp.data;
     final items = (raw?['items'] as List?) ?? (raw is List ? raw : []);
+    final wanted = _normalizeSectionName(ctx.section);
     for (final item in items) {
-      if ((item['name']?.toString() ?? '').toUpperCase() ==
-          ctx.section.toUpperCase()) {
+      final itemName = _normalizeSectionName(item['name']?.toString() ?? '');
+      if (itemName == wanted) {
         return item['id']?.toString() ?? '';
       }
     }
-    throw Exception('Section not found');
+    throw Exception(
+        'Section not found for ${ctx.standardName} (${ctx.section})');
   }
 
   Future<void> _selectAssignment(_AssignmentContext ctx) async {
@@ -240,6 +260,14 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
   }
 
   void _goBack() {
+    if (_step == _Step.selectAssignment) {
+      if (_error != null) {
+        setState(() => _error = null);
+        return;
+      }
+      context.go(RouteNames.dashboard);
+      return;
+    }
     setState(() {
       _error = null;
       switch (_step) {
@@ -256,14 +284,14 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
           _selectedTopic = null;
           break;
         case _Step.selectAssignment:
-          Navigator.of(context).pop();
           break;
       }
     });
   }
 
   Future<void> _showCreateChapterDialog() async {
-    final title = await _showInputDialog(context, 'New Chapter', 'Chapter title');
+    final title =
+        await _showInputDialog(context, 'New Chapter', 'Chapter title');
     if (title == null || title.isEmpty) return;
     setState(() => _loading = true);
     try {
@@ -392,7 +420,8 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(_error!,
-                style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
             TextButton(
@@ -417,22 +446,22 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
           emptyText: 'No chapters yet. Tap + to create one.',
           labelBuilder: (c) => c.title,
           subtitleBuilder: (c) => '${c.topicCount} topics',
+          itemPrefixBuilder: (index) => '${index + 1}',
           onTap: (c) => _selectChapter(c),
         );
       case _Step.topics:
         return _ListViewWithBreadcrumb<TopicModel>(
-          breadcrumb:
-              '${_selected!.subjectName} › ${_selectedChapter!.title}',
+          breadcrumb: '${_selected!.subjectName} › ${_selectedChapter!.title}',
           items: _topics,
           emptyText: 'No topics yet. Tap + to create one.',
           labelBuilder: (t) => t.title,
           subtitleBuilder: (t) => '${t.contentCount} items',
+          itemPrefixBuilder: (index) => '$_selectedChapterNumber.${index + 1}',
           onTap: (t) => _selectTopic(t),
         );
       case _Step.content:
         return _ContentListView(
-          breadcrumb:
-              '${_selectedChapter!.title} › ${_selectedTopic!.title}',
+          breadcrumb: '${_selectedChapter!.title} › ${_selectedTopic!.title}',
           contents: _contents,
         );
     }
@@ -457,7 +486,8 @@ class _SelectAssignmentView extends StatelessWidget {
     if (assignments.isEmpty) {
       return Center(
           child: Text('No class assignments found.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.grey500)));
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.grey500)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -467,7 +497,8 @@ class _SelectAssignmentView extends StatelessWidget {
         final a = assignments[i];
         return Card(
           elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
             title: Text(a.subjectName,
                 style: AppTypography.labelLarge
@@ -492,6 +523,7 @@ class _ListViewWithBreadcrumb<T> extends StatelessWidget {
     required this.emptyText,
     required this.labelBuilder,
     required this.subtitleBuilder,
+    this.itemPrefixBuilder,
     required this.onTap,
   });
   final String breadcrumb;
@@ -499,6 +531,7 @@ class _ListViewWithBreadcrumb<T> extends StatelessWidget {
   final String emptyText;
   final String Function(T) labelBuilder;
   final String Function(T) subtitleBuilder;
+  final String Function(int index)? itemPrefixBuilder;
   final void Function(T) onTap;
 
   @override
@@ -510,8 +543,7 @@ class _ListViewWithBreadcrumb<T> extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           color: AppColors.surface100,
           child: Text(breadcrumb,
-              style:
-                  AppTypography.caption.copyWith(color: AppColors.grey600)),
+              style: AppTypography.caption.copyWith(color: AppColors.grey600)),
         ),
         Expanded(
           child: items.isEmpty
@@ -525,12 +557,15 @@ class _ListViewWithBreadcrumb<T> extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (_, i) {
                     final item = items[i];
+                    final prefix = itemPrefixBuilder?.call(i);
+                    final titleText = labelBuilder(item);
                     return Card(
                       elevation: 1,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                       child: ListTile(
-                        title: Text(labelBuilder(item),
+                        title: Text(
+                            prefix == null ? titleText : '$prefix  $titleText',
                             style: AppTypography.labelLarge
                                 .copyWith(fontWeight: FontWeight.w600)),
                         subtitle: Text(subtitleBuilder(item),
@@ -549,8 +584,7 @@ class _ListViewWithBreadcrumb<T> extends StatelessWidget {
 }
 
 class _ContentListView extends ConsumerWidget {
-  const _ContentListView(
-      {required this.breadcrumb, required this.contents});
+  const _ContentListView({required this.breadcrumb, required this.contents});
   final String breadcrumb;
   final List<ContentItemModel> contents;
 
@@ -563,8 +597,7 @@ class _ContentListView extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           color: AppColors.surface100,
           child: Text(breadcrumb,
-              style:
-                  AppTypography.caption.copyWith(color: AppColors.grey600)),
+              style: AppTypography.caption.copyWith(color: AppColors.grey600)),
         ),
         Expanded(
           child: contents.isEmpty
@@ -594,9 +627,10 @@ class _ContentListView extends ConsumerWidget {
                         subtitle: Text(item.contentType.toUpperCase(),
                             style: AppTypography.caption
                                 .copyWith(color: AppColors.grey500)),
-                        trailing: item.contentType == 'quiz' && item.quizId != null
-                            ? const Icon(Icons.insights_outlined)
-                            : null,
+                        trailing:
+                            item.contentType == 'quiz' && item.quizId != null
+                                ? const Icon(Icons.insights_outlined)
+                                : null,
                         onTap: item.contentType == 'quiz' && item.quizId != null
                             ? () async {
                                 final attempts = await ref
@@ -614,17 +648,21 @@ class _ContentListView extends ConsumerWidget {
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Quiz Analytics',
-                                          style: AppTypography.titleMedium.copyWith(
+                                          style: AppTypography.titleMedium
+                                              .copyWith(
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                         const SizedBox(height: 10),
-                                        Text('Total Attempts: ${attempts.total}'),
-                                        Text('Best Score: ${attempts.bestScore ?? 0}'),
+                                        Text(
+                                            'Total Attempts: ${attempts.total}'),
+                                        Text(
+                                            'Best Score: ${attempts.bestScore ?? 0}'),
                                         if (attempts.items.isNotEmpty)
                                           Text(
                                             'Latest Score: ${attempts.items.first.score}/${attempts.items.first.totalMarks}',
@@ -687,8 +725,7 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
   String _type = 'note';
   final _titleCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-  final _linkUrlCtrl = TextEditingController();
-  final _linkTitleCtrl = TextEditingController();
+  final List<_LinkDraftControllers> _linkDrafts = [];
   final _quizTitleCtrl = TextEditingController();
   final _quizDurationCtrl = TextEditingController();
   final List<_QuestionDraft> _questions = [];
@@ -697,11 +734,18 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _linkDrafts.add(_LinkDraftControllers());
+  }
+
+  @override
   void dispose() {
     _titleCtrl.dispose();
     _noteCtrl.dispose();
-    _linkUrlCtrl.dispose();
-    _linkTitleCtrl.dispose();
+    for (final draft in _linkDrafts) {
+      draft.dispose();
+    }
     _quizTitleCtrl.dispose();
     _quizDurationCtrl.dispose();
     super.dispose();
@@ -730,26 +774,46 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: qCtrl, decoration: const InputDecoration(labelText: 'Question')),
-              TextField(controller: o1, decoration: const InputDecoration(labelText: 'Option 1')),
-              TextField(controller: o2, decoration: const InputDecoration(labelText: 'Option 2')),
-              TextField(controller: o3, decoration: const InputDecoration(labelText: 'Option 3')),
-              TextField(controller: o4, decoration: const InputDecoration(labelText: 'Option 4')),
-              TextField(controller: aCtrl, decoration: const InputDecoration(labelText: 'Correct Answer')),
-              TextField(controller: marksCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Marks')),
+              TextField(
+                  controller: qCtrl,
+                  decoration: const InputDecoration(labelText: 'Question')),
+              TextField(
+                  controller: o1,
+                  decoration: const InputDecoration(labelText: 'Option 1')),
+              TextField(
+                  controller: o2,
+                  decoration: const InputDecoration(labelText: 'Option 2')),
+              TextField(
+                  controller: o3,
+                  decoration: const InputDecoration(labelText: 'Option 3')),
+              TextField(
+                  controller: o4,
+                  decoration: const InputDecoration(labelText: 'Option 4')),
+              TextField(
+                  controller: aCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Correct Answer')),
+              TextField(
+                  controller: marksCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Marks')),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               final question = qCtrl.text.trim();
               final answer = aCtrl.text.trim();
               if (question.isEmpty || answer.isEmpty) return;
-              final opts = [o1.text.trim(), o2.text.trim(), o3.text.trim(), o4.text.trim()]
-                  .where((e) => e.isNotEmpty)
-                  .toList();
+              final opts = [
+                o1.text.trim(),
+                o2.text.trim(),
+                o3.text.trim(),
+                o4.text.trim()
+              ].where((e) => e.isNotEmpty).toList();
               setState(() {
                 _questions.add(
                   _QuestionDraft(
@@ -786,9 +850,11 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
       String? fileName;
       String? fileMimeType;
       String? quizId;
+      final createdItems = <ContentItemModel>[];
 
       if (_type == 'file') {
-        if (_pickedFile == null || (_pickedFile!.bytes == null && _pickedFile!.path == null)) {
+        if (_pickedFile == null ||
+            (_pickedFile!.bytes == null && _pickedFile!.path == null)) {
           throw Exception('Please pick a file');
         }
         final multipart = _pickedFile!.bytes != null
@@ -796,15 +862,17 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
                 _pickedFile!.bytes!,
                 filename: _pickedFile!.name,
               )
-            : await MultipartFile.fromFile(_pickedFile!.path!, filename: _pickedFile!.name);
+            : await MultipartFile.fromFile(_pickedFile!.path!,
+                filename: _pickedFile!.name);
 
-        final uploaded = await ref.read(myClassRepositoryProvider).uploadMyClassFile(
-              standardId: widget.standardId,
-              sectionId: widget.sectionId,
-              subjectId: widget.subjectId,
-              academicYearId: widget.academicYearId,
-              file: multipart,
-            );
+        final uploaded =
+            await ref.read(myClassRepositoryProvider).uploadMyClassFile(
+                  standardId: widget.standardId,
+                  sectionId: widget.sectionId,
+                  subjectId: widget.subjectId,
+                  academicYearId: widget.academicYearId,
+                  file: multipart,
+                );
         fileKey = uploaded['file_key'];
         fileName = uploaded['file_name'];
         fileMimeType = uploaded['file_mime_type'];
@@ -834,24 +902,58 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
         }
       }
 
-      final item = await ref.read(myClassRepositoryProvider).addContent(
-            topicId: widget.topicId,
-            contentType: _type,
-            academicYearId: widget.academicYearId,
-            standardId: widget.standardId,
-            sectionId: widget.sectionId,
-            subjectId: widget.subjectId,
-            title: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
-            noteText: _type == 'note' ? _noteCtrl.text : null,
-            linkUrl: _type == 'link' ? _linkUrlCtrl.text.trim() : null,
-            linkTitle: _type == 'link' ? _linkTitleCtrl.text.trim() : null,
-            fileKey: _type == 'file' ? fileKey : null,
-            fileName: _type == 'file' ? fileName : null,
-            fileMimeType: _type == 'file' ? fileMimeType : null,
-            quizId: _type == 'quiz' ? quizId : null,
-            orderIndex: widget.orderIndex,
-          );
-      widget.onAdded(item);
+      if (_type == 'link') {
+        final links = _linkDrafts
+            .map((d) => (
+                  url: d.urlCtrl.text.trim(),
+                  title: d.titleCtrl.text.trim(),
+                ))
+            .where((l) => l.url.isNotEmpty)
+            .toList();
+        if (links.isEmpty) {
+          throw Exception('Please add at least one link');
+        }
+        var nextOrder = widget.orderIndex;
+        for (final link in links) {
+          final item = await ref.read(myClassRepositoryProvider).addContent(
+                topicId: widget.topicId,
+                contentType: 'link',
+                academicYearId: widget.academicYearId,
+                standardId: widget.standardId,
+                sectionId: widget.sectionId,
+                subjectId: widget.subjectId,
+                title: _titleCtrl.text.trim().isEmpty
+                    ? (link.title.isEmpty ? null : link.title)
+                    : _titleCtrl.text.trim(),
+                linkUrl: link.url,
+                linkTitle: link.title.isEmpty ? null : link.title,
+                orderIndex: nextOrder++,
+              );
+          createdItems.add(item);
+        }
+      } else {
+        final item = await ref.read(myClassRepositoryProvider).addContent(
+              topicId: widget.topicId,
+              contentType: _type,
+              academicYearId: widget.academicYearId,
+              standardId: widget.standardId,
+              sectionId: widget.sectionId,
+              subjectId: widget.subjectId,
+              title: _titleCtrl.text.trim().isEmpty
+                  ? null
+                  : _titleCtrl.text.trim(),
+              noteText: _type == 'note' ? _noteCtrl.text : null,
+              fileKey: _type == 'file' ? fileKey : null,
+              fileName: _type == 'file' ? fileName : null,
+              fileMimeType: _type == 'file' ? fileMimeType : null,
+              quizId: _type == 'quiz' ? quizId : null,
+              orderIndex: widget.orderIndex,
+            );
+        createdItems.add(item);
+      }
+      for (final item in createdItems) {
+        widget.onAdded(item);
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -863,8 +965,8 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -882,16 +984,15 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
                 ButtonSegment(value: 'quiz', label: Text('Quiz')),
               ],
               selected: {_type},
-              onSelectionChanged: (s) =>
-                  setState(() => _type = s.first),
+              onSelectionChanged: (s) => setState(() => _type = s.first),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _titleCtrl,
               decoration: InputDecoration(
                 labelText: 'Title (optional)',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
             const SizedBox(height: 10),
@@ -906,21 +1007,76 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
                 ),
               ),
             if (_type == 'link') ...[
-              TextField(
-                controller: _linkUrlCtrl,
-                decoration: InputDecoration(
-                  labelText: 'URL *',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
+              Text(
+                'Attach one or more links',
+                style: AppTypography.caption.copyWith(color: AppColors.grey600),
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _linkTitleCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Link title',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
+              const SizedBox(height: 8),
+              ..._linkDrafts.asMap().entries.map((entry) {
+                final index = entry.key;
+                final draft = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.surface200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Link ${index + 1}',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.grey700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_linkDrafts.length > 1)
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _linkDrafts.removeAt(index).dispose();
+                                  });
+                                },
+                                icon: const Icon(Icons.close, size: 18),
+                              ),
+                          ],
+                        ),
+                        TextField(
+                          controller: draft.urlCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'URL *',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: draft.titleCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Link title',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      setState(() => _linkDrafts.add(_LinkDraftControllers())),
+                  icon: const Icon(Icons.add_link),
+                  label: const Text('Add another link'),
                 ),
               ),
             ],
@@ -928,7 +1084,8 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
               OutlinedButton.icon(
                 onPressed: _pickFile,
                 icon: const Icon(Icons.upload_file_outlined),
-                label: Text(_pickedFile == null ? 'Pick File' : _pickedFile!.name),
+                label:
+                    Text(_pickedFile == null ? 'Pick File' : _pickedFile!.name),
               ),
             ],
             if (_type == 'quiz') ...[
@@ -936,7 +1093,8 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
                 controller: _quizTitleCtrl,
                 decoration: InputDecoration(
                   labelText: 'Quiz title *',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -945,7 +1103,8 @@ class _AddContentSheetState extends ConsumerState<_AddContentSheet> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Duration (minutes, optional)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -1033,4 +1192,18 @@ class _QuestionDraft {
   final String correctAnswer;
   final List<String> options;
   final int marks;
+}
+
+class _LinkDraftControllers {
+  _LinkDraftControllers()
+      : urlCtrl = TextEditingController(),
+        titleCtrl = TextEditingController();
+
+  final TextEditingController urlCtrl;
+  final TextEditingController titleCtrl;
+
+  void dispose() {
+    urlCtrl.dispose();
+    titleCtrl.dispose();
+  }
 }

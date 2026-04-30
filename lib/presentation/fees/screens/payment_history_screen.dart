@@ -58,8 +58,7 @@ class PaymentHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final paymentsAsync = ref.watch(paymentListProvider(ledgerId));
     final status = FeeStatusX.fromString(statusLabel);
-    final dueDateParsed =
-        dueDate != null ? DateTime.tryParse(dueDate!) : null;
+    final dueDateParsed = dueDate != null ? DateTime.tryParse(dueDate!) : null;
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
@@ -135,8 +134,7 @@ class PaymentHistoryScreen extends ConsumerWidget {
                                   'paymentId': payments[i].id,
                                   'amount': payments[i].amount,
                                   'paymentDate': payments[i].paymentDate,
-                                  'paymentMode':
-                                      payments[i].paymentMode.label,
+                                  'paymentMode': payments[i].paymentMode.label,
                                 },
                               )
                           : null,
@@ -191,17 +189,26 @@ class _InstallmentSummaryCard extends StatelessWidget {
 
   String _fmtDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final pct = totalAmount > 0
-        ? (paidAmount / totalAmount).clamp(0.0, 1.0)
-        : 0.0;
+    final pct =
+        totalAmount > 0 ? (paidAmount / totalAmount).clamp(0.0, 1.0) : 0.0;
     final isOverdue = status == FeeStatus.overdue;
 
     return Container(
@@ -263,8 +270,8 @@ class _InstallmentSummaryCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -301,8 +308,8 @@ class _InstallmentSummaryCard extends StatelessWidget {
               value: pct,
               minHeight: 7,
               backgroundColor: AppColors.white.withValues(alpha: 0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.successGreen),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
             ),
           ),
         ],
@@ -326,8 +333,8 @@ class _WhiteStat extends StatelessWidget {
                 .copyWith(color: AppColors.white.withValues(alpha: 0.6))),
         const SizedBox(height: 2),
         Text(value,
-            style: AppTypography.titleSmall.copyWith(
-                color: AppColors.white, fontWeight: FontWeight.w700)),
+            style: AppTypography.titleSmall
+                .copyWith(color: AppColors.white, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -345,8 +352,18 @@ class _PaymentCard extends StatelessWidget {
 
   String _fmtDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
@@ -392,8 +409,8 @@ class _PaymentCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _fmtDate(payment.paymentDate),
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.grey500),
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.grey500),
                 ),
                 if (payment.referenceNumber != null &&
                     payment.referenceNumber!.isNotEmpty) ...[
@@ -404,11 +421,20 @@ class _PaymentCard extends StatelessWidget {
                         .copyWith(color: AppColors.grey400, fontSize: 10),
                   ),
                 ],
+                if (payment.transactionRef != null &&
+                    payment.transactionRef!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Notes: ${payment.transactionRef}',
+                    style: AppTypography.caption
+                        .copyWith(color: AppColors.grey400, fontSize: 10),
+                  ),
+                ],
                 if (payment.lateFeeApplied) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _kOrangeBg,
                       borderRadius: BorderRadius.circular(6),
@@ -441,8 +467,8 @@ class _PaymentCard extends StatelessWidget {
                 GestureDetector(
                   onTap: onViewReceipt,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.navyDeep,
                       borderRadius: BorderRadius.circular(8),

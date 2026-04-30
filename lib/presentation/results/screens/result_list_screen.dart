@@ -18,6 +18,7 @@ import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
+import 'principal_results_distribution_screen.dart';
 
 class ResultListScreen extends ConsumerWidget {
   const ResultListScreen({
@@ -30,6 +31,9 @@ class ResultListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
+    if (currentUser?.role == UserRole.teacher) {
+      return const PrincipalResultsDistributionScreen();
+    }
     final selectedChild = ref.watch(selectedChildProvider);
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
     final activeYear = ref.watch(activeYearProvider);

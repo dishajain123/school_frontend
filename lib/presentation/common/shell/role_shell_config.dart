@@ -51,16 +51,10 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.dashboard,
     ),
     ShellTabItem(
-      icon: Icons.school_outlined,
-      activeIcon: Icons.school,
-      label: 'Students',
-      rootPath: RouteNames.students,
-    ),
-    ShellTabItem(
-      icon: Icons.co_present_outlined,
-      activeIcon: Icons.co_present,
-      label: 'Teachers',
-      rootPath: RouteNames.teachers,
+      icon: Icons.class_outlined,
+      activeIcon: Icons.class_,
+      label: 'Classroom',
+      rootPath: RouteNames.classroomMonitor,
     ),
     ShellTabItem(
       icon: Icons.bar_chart_outlined,
@@ -96,22 +90,16 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.dashboard,
     ),
     ShellTabItem(
-      icon: Icons.school_outlined,
-      activeIcon: Icons.school,
-      label: 'Students',
-      rootPath: RouteNames.students,
-    ),
-    ShellTabItem(
-      icon: Icons.co_present_outlined,
-      activeIcon: Icons.co_present,
-      label: 'Teachers',
-      rootPath: RouteNames.teachers,
-    ),
-    ShellTabItem(
       icon: Icons.bar_chart_outlined,
       activeIcon: Icons.bar_chart,
       label: 'Reports',
-      rootPath: RouteNames.attendance,
+      rootPath: RouteNames.principalReportDetails,
+    ),
+    ShellTabItem(
+      icon: Icons.account_balance_wallet_outlined,
+      activeIcon: Icons.account_balance_wallet,
+      label: 'Fees',
+      rootPath: RouteNames.feeDashboard,
     ),
     ShellTabItem(
       icon: Icons.chat_bubble_outline,
@@ -217,18 +205,6 @@ abstract final class RoleShellConfig {
       activeIcon: Icons.dashboard,
       label: 'Dashboard',
       rootPath: RouteNames.dashboard,
-    ),
-    ShellTabItem(
-      icon: Icons.fact_check_outlined,
-      activeIcon: Icons.fact_check,
-      label: 'Attendance',
-      rootPath: RouteNames.attendance,
-    ),
-    ShellTabItem(
-      icon: Icons.home_work_outlined,
-      activeIcon: Icons.home_work,
-      label: 'Homework',
-      rootPath: RouteNames.homework,
     ),
     ShellTabItem(
       icon: Icons.account_balance_wallet_outlined,

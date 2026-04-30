@@ -52,7 +52,9 @@ class _AnnouncementDetailScreenState
     });
 
     try {
-      final announcement = await ref.read(announcementNotifierProvider.notifier).getById(widget.announcementId);
+      final announcement = await ref
+          .read(announcementNotifierProvider.notifier)
+          .getById(widget.announcementId);
       if (announcement != null) {
         setState(() => _announcement = announcement);
       } else {
@@ -210,7 +212,8 @@ class _AnnouncementHero extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
@@ -235,13 +238,34 @@ class _AnnouncementHero extends StatelessWidget {
               if (announcement.targetRole != null) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'For: ${announcement.targetRole}',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.6),
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+              if (announcement.targetStandardId != null ||
+                  announcement.targetSection != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Class ${announcement.targetStandardId ?? 'All'}'
+                    '${announcement.targetSection != null ? ' • Sec ${announcement.targetSection}' : ''}',
                     style: AppTypography.labelSmall.copyWith(
                       color: AppColors.white.withValues(alpha: 0.6),
                       fontSize: 11,

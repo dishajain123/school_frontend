@@ -5,9 +5,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
-import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/my_class/my_class_models.dart';
@@ -44,25 +41,23 @@ class ChapterListScreen extends ConsumerWidget {
         showBack: true,
         showNotificationBell: false,
         onBackPressed: () {
-          if (context.canPop()) {
-            context.pop();
-            return;
-          }
-          context.go(RouteNames.myClass);
+          Navigator.of(context).maybePop();
         },
       ),
       body: chaptersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text(e.toString(),
-              style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
+              style:
+                  AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
         ),
         data: (chapters) {
           if (chapters.isEmpty) {
             return Center(
               child: Text(
                 'No chapters yet.',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.grey500),
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.grey500),
               ),
             );
           }
@@ -156,7 +151,8 @@ class _ChapterTile extends StatelessWidget {
                 ),
               ),
               if (chapter.isLocked)
-                const Icon(Icons.lock_outline, size: 16, color: AppColors.grey400)
+                const Icon(Icons.lock_outline,
+                    size: 16, color: AppColors.grey400)
               else
                 const Icon(Icons.chevron_right, color: AppColors.grey400),
             ],

@@ -89,7 +89,7 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
   Widget build(BuildContext context) {
     final yearsAsync = ref.watch(academicYearNotifierProvider);
     final years = yearsAsync.valueOrNull ?? [];
-    final standardsAsync = ref.watch(standardsNotifierProvider);
+    final standardsAsync = ref.watch(standardsProvider(_selectedYearId));
     final standards = standardsAsync.valueOrNull ?? [];
 
     return Scaffold(

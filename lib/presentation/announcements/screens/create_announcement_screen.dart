@@ -6,7 +6,12 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/announcement/announcement_model.dart';
+import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/teacher/teacher_class_subject_model.dart';
+import '../../../providers/academic_year_provider.dart';
 import '../../../providers/announcement_provider.dart';
+import '../../../providers/attendance_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
@@ -28,6 +33,8 @@ class _CreateAnnouncementScreenState
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   AnnouncementType _selectedType = AnnouncementType.general;
+  String? _targetRole;
+  String? _selectedClassSectionKey;
   bool _isLoading = false;
 
   late AnimationController _animCtrl;
@@ -52,7 +59,24 @@ class _CreateAnnouncementScreenState
       _titleController.text = widget.existing!.title;
       _bodyController.text = widget.existing!.body;
       _selectedType = widget.existing!.type;
+      _targetRole = widget.existing!.targetRole;
+      final standardId = widget.existing!.targetStandardId;
+      final section = widget.existing!.targetSection;
+      if (standardId != null && standardId.isNotEmpty) {
+        _selectedClassSectionKey = '$standardId::${section ?? ''}';
+      }
     }
+  }
+
+  List<(String, TeacherClassSubjectModel)> _teacherClassSectionOptions(
+    List<TeacherClassSubjectModel> assignments,
+  ) {
+    final unique = <String, TeacherClassSubjectModel>{};
+    for (final assignment in assignments) {
+      final key = '${assignment.standardId}::${assignment.section.trim()}';
+      unique.putIfAbsent(key, () => assignment);
+    }
+    return unique.entries.map((entry) => (entry.key, entry.value)).toList();
   }
 
   @override
@@ -68,10 +92,34 @@ class _CreateAnnouncementScreenState
     setState(() => _isLoading = true);
 
     try {
+      final currentUser = ref.read(currentUserProvider);
+      final isTeacher = currentUser?.role == UserRole.teacher;
+      String? targetStandardId;
+      String? targetSection;
+      if (_selectedClassSectionKey != null &&
+          _selectedClassSectionKey!.contains('::')) {
+        final parts = _selectedClassSectionKey!.split('::');
+        targetStandardId = parts.first;
+        final resolvedSection = parts.length > 1 ? parts[1].trim() : '';
+        targetSection = resolvedSection.isEmpty ? null : resolvedSection;
+      }
+      if (isTeacher && (targetStandardId == null || targetStandardId.isEmpty)) {
+        SnackbarUtils.showError(
+          context,
+          'Please select assigned class and section.',
+        );
+        return;
+      }
       final payload = {
         'title': _titleController.text.trim(),
         'body': _bodyController.text.trim(),
         'type': _selectedType.backendValue,
+        if (_targetRole != null && _targetRole!.trim().isNotEmpty)
+          'target_role': _targetRole,
+        if (targetStandardId != null && targetStandardId.isNotEmpty)
+          'target_standard_id': targetStandardId,
+        if (targetSection != null && targetSection.isNotEmpty)
+          'target_section': targetSection,
       };
 
       if (isEditing) {
@@ -100,6 +148,17 @@ class _CreateAnnouncementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final activeYearId = ref.watch(activeYearProvider)?.id;
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final assignmentsAsync = isTeacher
+        ? ref.watch(myTeacherAssignmentsProvider(activeYearId))
+        : const AsyncValue<List<TeacherClassSubjectModel>>.data(
+            <TeacherClassSubjectModel>[],
+          );
+    final classSectionOptions =
+        _teacherClassSectionOptions(assignmentsAsync.valueOrNull ?? const []);
+
     return Scaffold(
       backgroundColor: AppColors.surface50,
       appBar: AppAppBar(
@@ -183,7 +242,8 @@ class _CreateAnnouncementScreenState
                                       boxShadow: isSelected
                                           ? [
                                               BoxShadow(
-                                                color: color.withValues(alpha: 0.15),
+                                                color: color.withValues(
+                                                    alpha: 0.15),
                                                 blurRadius: 6,
                                                 offset: const Offset(0, 2),
                                               )
@@ -201,8 +261,8 @@ class _CreateAnnouncementScreenState
                                         const SizedBox(width: 6),
                                         Text(
                                           type.label,
-                                          style:
-                                              AppTypography.labelMedium.copyWith(
+                                          style: AppTypography.labelMedium
+                                              .copyWith(
                                             color: isSelected
                                                 ? color
                                                 : AppColors.grey400,
@@ -218,6 +278,62 @@ class _CreateAnnouncementScreenState
                                 );
                               }).toList(),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _FormCard(
+                          title: 'Audience',
+                          icon: Icons.groups_outlined,
+                          children: [
+                            DropdownButtonFormField<String?>(
+                              value: _targetRole,
+                              decoration: const InputDecoration(
+                                labelText: 'Send To',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('All'),
+                                ),
+                                DropdownMenuItem<String?>(
+                                  value: 'STUDENT',
+                                  child: Text('Students'),
+                                ),
+                                DropdownMenuItem<String?>(
+                                  value: 'PARENT',
+                                  child: Text('Parents'),
+                                ),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _targetRole = value),
+                            ),
+                            if (isTeacher) ...[
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: classSectionOptions.any(
+                                  (entry) =>
+                                      entry.$1 == _selectedClassSectionKey,
+                                )
+                                    ? _selectedClassSectionKey
+                                    : null,
+                                decoration: const InputDecoration(
+                                  labelText: 'Assigned Class & Section',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: classSectionOptions
+                                    .map(
+                                      (entry) => DropdownMenuItem<String>(
+                                        value: entry.$1,
+                                        child: Text(entry.$2.classLabel),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) => setState(
+                                  () => _selectedClassSectionKey = value,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 16),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -21,8 +23,7 @@ class TeacherAnalyticsScreen extends ConsumerStatefulWidget {
       _TeacherAnalyticsScreenState();
 }
 
-class _TeacherAnalyticsScreenState
-    extends ConsumerState<TeacherAnalyticsScreen>
+class _TeacherAnalyticsScreenState extends ConsumerState<TeacherAnalyticsScreen>
     with SingleTickerProviderStateMixin {
   String? _selectedStandardId;
   String? _selectedSection;
@@ -62,9 +63,10 @@ class _TeacherAnalyticsScreenState
     final analyticsAsync = ref.watch(teacherAnalyticsProvider(params));
 
     return AppScaffold(
-      appBar: const AppAppBar(
+      appBar: AppAppBar(
         title: 'Analytics',
         showBack: true,
+        onBackPressed: () => context.go(RouteNames.dashboard),
       ),
       body: RefreshIndicator(
         color: AppColors.navyDeep,
@@ -612,7 +614,8 @@ class _AssignmentCard extends StatelessWidget {
           _ProgressMetric(
             label: 'On-time Rate',
             value: onTimeRate,
-            valueText: '${a.onTimeSubmissions} on-time · ${a.lateSubmissions} late',
+            valueText:
+                '${a.onTimeSubmissions} on-time · ${a.lateSubmissions} late',
             color: const Color(0xFF10B981),
           ),
         ],
@@ -658,8 +661,7 @@ class _AttendanceCard extends StatelessWidget {
                       value: pct,
                       strokeWidth: 7,
                       backgroundColor: progressColor.withOpacity(0.12),
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(progressColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                     ),
                     Text(
                       '${a.attendancePercentage.toStringAsFixed(0)}%',
@@ -1221,8 +1223,8 @@ class _BarLegend extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration:
-              BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(width: 4),
         Text(

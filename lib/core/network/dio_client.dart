@@ -38,7 +38,7 @@ final dioClientProvider = Provider<Dio>((ref) {
       },
     ),
     EnvelopeInterceptor(),
-    ErrorInterceptor(),
+    ErrorInterceptor(dioProvider: () => dio),
   ]);
 
   if (kDebugMode) {

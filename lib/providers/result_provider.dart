@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../data/models/result/result_model.dart';
 import '../data/repositories/result_repository.dart';
+import 'auth_provider.dart';
 
 // ── Params ────────────────────────────────────────────────────────────────────
 
@@ -46,8 +47,11 @@ final resultListProvider =
   },
 );
 
-final examListProvider = FutureProvider.family<List<ExamModel>, ExamListParams>(
+final examListProvider =
+    FutureProvider.autoDispose.family<List<ExamModel>, ExamListParams>(
   (ref, params) async {
+    // Ensure cached exam lists are always scoped to current session user.
+    ref.watch(currentUserProvider);
     final repo = ref.read(resultRepositoryProvider);
     return repo.listExams(
       studentId: params.studentId,

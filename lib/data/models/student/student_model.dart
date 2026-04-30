@@ -1,5 +1,65 @@
 import '../auth/current_user.dart';
 
+class StudentParentSummary {
+  const StudentParentSummary({
+    required this.id,
+    this.relation,
+    this.fullName,
+    this.email,
+    this.phone,
+    this.occupation,
+  });
+
+  final String id;
+  final String? relation;
+  final String? fullName;
+  final String? email;
+  final String? phone;
+  final String? occupation;
+
+  factory StudentParentSummary.fromJson(Map<String, dynamic> json) {
+    return StudentParentSummary(
+      id: (json['id'] ?? '').toString(),
+      relation: json['relation'] as String?,
+      fullName: json['full_name'] as String?,
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      occupation: json['occupation'] as String?,
+    );
+  }
+}
+
+class StudentBehaviourSummary {
+  const StudentBehaviourSummary({
+    this.latestIncidentType,
+    this.latestDescription,
+    this.latestIncidentDate,
+    this.positiveCount = 0,
+    this.negativeCount = 0,
+    this.neutralCount = 0,
+  });
+
+  final String? latestIncidentType;
+  final String? latestDescription;
+  final DateTime? latestIncidentDate;
+  final int positiveCount;
+  final int negativeCount;
+  final int neutralCount;
+
+  factory StudentBehaviourSummary.fromJson(Map<String, dynamic> json) {
+    return StudentBehaviourSummary(
+      latestIncidentType: json['latest_incident_type']?.toString(),
+      latestDescription: json['latest_description'] as String?,
+      latestIncidentDate: json['latest_incident_date'] != null
+          ? DateTime.tryParse(json['latest_incident_date'].toString())
+          : null,
+      positiveCount: (json['positive_count'] as num?)?.toInt() ?? 0,
+      negativeCount: (json['negative_count'] as num?)?.toInt() ?? 0,
+      neutralCount: (json['neutral_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class StudentModel {
   const StudentModel({
     required this.id,
@@ -22,6 +82,8 @@ class StudentModel {
     this.standardName,
     this.academicYearName,
     this.user,
+    this.parent,
+    this.behaviourSummary,
   });
 
   final String id;
@@ -41,6 +103,8 @@ class StudentModel {
   final String? standardName;
   final String? academicYearName;
   final CurrentUser? user;
+  final StudentParentSummary? parent;
+  final StudentBehaviourSummary? behaviourSummary;
   final bool isPromoted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -70,6 +134,16 @@ class StudentModel {
       academicYearName: json['academic_year_name'] as String?,
       user: userJson is Map<String, dynamic>
           ? CurrentUser.fromJson(userJson)
+          : null,
+      parent: json['parent'] is Map<String, dynamic>
+          ? StudentParentSummary.fromJson(
+              json['parent'] as Map<String, dynamic>,
+            )
+          : null,
+      behaviourSummary: json['behaviour_summary'] is Map<String, dynamic>
+          ? StudentBehaviourSummary.fromJson(
+              json['behaviour_summary'] as Map<String, dynamic>,
+            )
           : null,
       isPromoted: json['is_promoted'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),

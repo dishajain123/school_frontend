@@ -79,8 +79,18 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
 
   String _fmtDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
@@ -132,18 +142,6 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     if (!mounted) return;
 
     if (payment != null) {
-      // Navigate to receipt
-      context.push(
-        RouteNames.feeReceipt,
-        extra: {
-          'paymentId': payment.id,
-          'amount': payment.amount,
-          'paymentDate': payment.paymentDate,
-          'paymentMode': payment.paymentMode.label,
-          'installmentName': widget.installmentName,
-        },
-      );
-      // Also pop this screen
       context.pop(payment);
     }
   }
@@ -377,8 +375,7 @@ class _InstallmentContextCard extends StatelessWidget {
             children: [
               if (totalAmount != null)
                 Expanded(
-                  child: _WhiteStat(
-                      label: 'Total', value: fmt(totalAmount!)),
+                  child: _WhiteStat(label: 'Total', value: fmt(totalAmount!)),
                 ),
               Expanded(
                 child: _WhiteStat(
@@ -399,8 +396,8 @@ class _InstallmentContextCard extends StatelessWidget {
                   : 0.0,
               minHeight: 7,
               backgroundColor: AppColors.white.withValues(alpha: 0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.successGreen),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
             ),
           ),
         ],
@@ -424,8 +421,8 @@ class _WhiteStat extends StatelessWidget {
                 .copyWith(color: AppColors.white.withValues(alpha: 0.6))),
         const SizedBox(height: 2),
         Text(value,
-            style: AppTypography.titleSmall.copyWith(
-                color: AppColors.white, fontWeight: FontWeight.w700)),
+            style: AppTypography.titleSmall
+                .copyWith(color: AppColors.white, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -566,8 +563,7 @@ class _PaymentModeGrid extends StatelessWidget {
                   mode.label,
                   style: AppTypography.labelMedium.copyWith(
                     color: isSelected ? AppColors.white : AppColors.grey700,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
               ],

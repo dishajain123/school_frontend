@@ -15,7 +15,8 @@ import '../../common/widgets/app_loading.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-final _receiptUrlProvider = FutureProvider.family<String, String>((ref, paymentId) async {
+final _receiptUrlProvider =
+    FutureProvider.family<String, String>((ref, paymentId) async {
   final repo = ref.read(feeRepositoryProvider);
   return repo.getReceiptUrl(paymentId);
 });
@@ -37,10 +38,14 @@ class FeeReceiptScreen extends ConsumerWidget {
   final String? paymentMode;
 
   factory FeeReceiptScreen.fromExtras(Map<String, dynamic> extra) {
+    final rawPaymentDate = extra['paymentDate'];
+    final paymentDateText = rawPaymentDate is DateTime
+        ? rawPaymentDate.toIso8601String()
+        : rawPaymentDate?.toString();
     return FeeReceiptScreen(
       paymentId: extra['paymentId'] as String? ?? '',
       amount: (extra['amount'] as num?)?.toDouble(),
-      paymentDate: extra['paymentDate'] as String?,
+      paymentDate: paymentDateText,
       paymentMode: extra['paymentMode'] as String?,
     );
   }
@@ -83,10 +88,12 @@ class FeeReceiptScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    const Icon(Icons.receipt_long_rounded, color: Colors.white70, size: 20),
+                    const Icon(Icons.receipt_long_rounded,
+                        color: Colors.white70, size: 20),
                     const SizedBox(width: 8),
                     Text('Payment Receipt',
-                        style: AppTypography.bodyMedium.copyWith(color: Colors.white70)),
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: Colors.white70)),
                   ]),
                   const SizedBox(height: 12),
                   if (amount != null)
@@ -100,12 +107,15 @@ class FeeReceiptScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   if (paymentDate != null)
                     Text('Date: $paymentDate',
-                        style: AppTypography.bodySmall.copyWith(color: Colors.white70)),
+                        style: AppTypography.bodySmall
+                            .copyWith(color: Colors.white70)),
                   if (paymentMode != null)
                     Text('Mode: $paymentMode',
-                        style: AppTypography.bodySmall.copyWith(color: Colors.white70)),
+                        style: AppTypography.bodySmall
+                            .copyWith(color: Colors.white70)),
                   Text('ID: $paymentId',
-                      style: AppTypography.labelSmall.copyWith(color: Colors.white38)),
+                      style: AppTypography.labelSmall
+                          .copyWith(color: Colors.white38)),
                 ],
               ),
             ),
@@ -193,7 +203,8 @@ class _ReceiptViewer extends StatelessWidget {
                         backgroundColor: AppColors.navyDeep,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => _launchUrl(context, url),
                     ),

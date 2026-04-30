@@ -5,10 +5,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/my_class/my_class_models.dart';
@@ -42,24 +40,21 @@ class TopicListScreen extends ConsumerWidget {
         showBack: true,
         showNotificationBell: false,
         onBackPressed: () {
-          if (context.canPop()) {
-            context.pop();
-            return;
-          }
-          context.go(RouteNames.myClass);
+          Navigator.of(context).maybePop();
         },
       ),
       body: topicsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
             child: Text(e.toString(),
-                style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed))),
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.errorRed))),
         data: (topics) {
           if (topics.isEmpty) {
             return Center(
                 child: Text('No topics yet.',
-                    style:
-                        AppTypography.bodySmall.copyWith(color: AppColors.grey500)));
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.grey500)));
           }
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myClassTopicsProvider),
@@ -110,13 +105,15 @@ class _TopicExpansionTileState extends ConsumerState<_TopicExpansionTile> {
           initiallyExpanded: _expanded,
           onExpansionChanged: (v) => setState(() => _expanded = v),
           title: Text(widget.topic.title,
-              style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600)),
+              style: AppTypography.labelLarge
+                  .copyWith(fontWeight: FontWeight.w600)),
           subtitle: Text(
             '${widget.topic.contentCount} item${widget.topic.contentCount == 1 ? '' : 's'}',
             style: AppTypography.caption.copyWith(color: AppColors.grey500),
           ),
           trailing: widget.topic.isLocked
-              ? const Icon(Icons.lock_outline, size: 16, color: AppColors.grey400)
+              ? const Icon(Icons.lock_outline,
+                  size: 16, color: AppColors.grey400)
               : Icon(_expanded ? Icons.expand_less : Icons.expand_more),
           children: widget.topic.isLocked
               ? [
@@ -127,7 +124,12 @@ class _TopicExpansionTileState extends ConsumerState<_TopicExpansionTile> {
                             .copyWith(color: AppColors.grey500)),
                   )
                 ]
-              : [_ContentList(topic: widget.topic, isReadOnly: widget.isReadOnly, childId: widget.childId)],
+              : [
+                  _ContentList(
+                      topic: widget.topic,
+                      isReadOnly: widget.isReadOnly,
+                      childId: widget.childId)
+                ],
         ),
       ),
     );
@@ -160,15 +162,15 @@ class _ContentList extends ConsumerWidget {
       error: (e, _) => Padding(
         padding: const EdgeInsets.all(12),
         child: Text(e.toString(),
-            style:
-                AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
+            style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed)),
       ),
       data: (items) {
         if (items.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(12),
             child: Text('No content yet.',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.grey500)),
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.grey500)),
           );
         }
         return Column(
@@ -308,10 +310,7 @@ class _ContentItemTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Icon(_icon, color: _iconColor, size: 22),
       title: Text(
-        item.title ??
-            item.linkTitle ??
-            item.fileName ??
-            item.contentType,
+        item.title ?? item.linkTitle ?? item.fileName ?? item.contentType,
         style: AppTypography.bodyMedium,
       ),
       subtitle: Text(

@@ -392,6 +392,18 @@ class _FeeDashboardBody extends ConsumerWidget {
                                 academicYearId: academicYearId
                               ),
                             ));
+                            if (context.mounted) {
+                              context.push(
+                                RouteNames.feeReceipt,
+                                extra: {
+                                  'paymentId': result.id.toString(),
+                                  'amount': result.amount,
+                                  'paymentDate': result.paymentDate,
+                                  'paymentMode': result.paymentMode.label,
+                                  'installmentName': ledger.displayLabel,
+                                },
+                              );
+                            }
                           }
                         }
                       : null,
@@ -475,8 +487,7 @@ class _StickyHeader extends StatelessWidget {
                     CircularProgressIndicator(
                       value: pct,
                       strokeWidth: 6,
-                      backgroundColor:
-                          AppColors.white.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.white.withValues(alpha: 0.15),
                       valueColor: AlwaysStoppedAnimation<Color>(pctColor),
                       strokeCap: StrokeCap.round,
                     ),
@@ -682,8 +693,8 @@ class _InstallmentCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _statusBg,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: _statusColor.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: _statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     ledger.status.label,
@@ -709,9 +720,8 @@ class _InstallmentCard extends StatelessWidget {
                     'Due: ${_fmtDate(ledger.dueDate!)}',
                     style: AppTypography.caption.copyWith(
                       color: ledger.isOverdue ? _kRed : AppColors.grey500,
-                      fontWeight: ledger.isOverdue
-                          ? FontWeight.w600
-                          : FontWeight.w400,
+                      fontWeight:
+                          ledger.isOverdue ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ],
@@ -798,8 +808,18 @@ class _InstallmentCard extends StatelessWidget {
 
   String _fmtDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
@@ -1020,8 +1040,7 @@ class _OverviewTab extends StatelessWidget {
     final pending = summary['total_outstanding_amount'];
     final defaulters =
         summary['defaulters_count'] ?? summary['overdue_ledgers'] ?? 0;
-    final pct =
-        (summary['collection_percentage'] as num?)?.toDouble() ?? 0.0;
+    final pct = (summary['collection_percentage'] as num?)?.toDouble() ?? 0.0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1244,8 +1263,8 @@ class _ClassesTab extends StatelessWidget {
                   ),
                   Text(
                     '${(pct * 100).toStringAsFixed(0)}%',
-                    style: AppTypography.titleSmall.copyWith(
-                        color: pctColor, fontWeight: FontWeight.w800),
+                    style: AppTypography.titleSmall
+                        .copyWith(color: pctColor, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -1284,8 +1303,7 @@ class _ClassesTab extends StatelessWidget {
                   Text(
                     '${currency(paid)} / ${currency(billed)}',
                     style: AppTypography.caption.copyWith(
-                        color: AppColors.grey600,
-                        fontWeight: FontWeight.w600),
+                        color: AppColors.grey600, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1335,8 +1353,7 @@ class _DefaultersTab extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: _kRed.withValues(alpha: 0.2)),
             boxShadow: [
-              BoxShadow(
-                  color: _kRed.withValues(alpha: 0.04), blurRadius: 8)
+              BoxShadow(color: _kRed.withValues(alpha: 0.04), blurRadius: 8)
             ],
           ),
           child: Row(
@@ -1378,8 +1395,8 @@ class _DefaultersTab extends StatelessWidget {
                         .copyWith(color: _kRed, fontWeight: FontWeight.w700),
                   ),
                   Text('outstanding',
-                      style: AppTypography.caption.copyWith(
-                          color: AppColors.grey400, fontSize: 10)),
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.grey400, fontSize: 10)),
                 ],
               ),
             ],
@@ -1435,8 +1452,7 @@ class _KpiCard extends StatelessWidget {
                   color: color, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 2),
           Text(label,
-              style:
-                  AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
         ],
       ),
     );
@@ -1485,8 +1501,7 @@ class _StatusRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: AppColors.navyDeep.withValues(alpha: 0.04),
-              blurRadius: 6)
+              color: AppColors.navyDeep.withValues(alpha: 0.04), blurRadius: 6)
         ],
       ),
       child: Row(
@@ -1503,8 +1518,7 @@ class _StatusRow extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           Text('$count entries',
-              style:
-                  AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
           const SizedBox(width: 10),
           Text(amount,
               style: AppTypography.labelMedium
@@ -1532,8 +1546,7 @@ class _ModeRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: AppColors.navyDeep.withValues(alpha: 0.04),
-              blurRadius: 6)
+              color: AppColors.navyDeep.withValues(alpha: 0.04), blurRadius: 6)
         ],
       ),
       child: Row(
@@ -1544,8 +1557,7 @@ class _ModeRow extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           Text('$txns txns',
-              style:
-                  AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
           const SizedBox(width: 12),
           Text(amount,
               style: AppTypography.labelMedium

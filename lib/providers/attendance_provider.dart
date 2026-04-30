@@ -1,13 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/attendance/attendance_analytics.dart' as attendance_analytics;
-import '../data/models/attendance/attendance_dashboard.dart' as attendance_dashboard;
+import '../data/models/attendance/attendance_analytics.dart'
+    as attendance_analytics;
+import '../data/models/attendance/attendance_dashboard.dart'
+    as attendance_dashboard;
 import '../data/models/attendance/attendance_model.dart' as attendance_model;
-import '../data/models/attendance/attendance_record_input.dart' as attendance_record_input;
+import '../data/models/attendance/attendance_record_input.dart'
+    as attendance_record_input;
 import '../data/models/attendance/below_threshold.dart' as below_threshold;
-import '../data/models/attendance/lecture_attendance.dart' as lecture_attendance;
-import '../data/models/attendance/mark_attendance_request.dart' as mark_attendance_request;
-import '../data/models/attendance/student_detail_attendance.dart' as student_detail_attendance;
+import '../data/models/attendance/lecture_attendance.dart'
+    as lecture_attendance;
+import '../data/models/attendance/mark_attendance_request.dart'
+    as mark_attendance_request;
+import '../data/models/attendance/student_detail_attendance.dart'
+    as student_detail_attendance;
 import '../data/models/auth/current_user.dart';
 import '../data/models/student/student_model.dart';
 import '../data/models/teacher/teacher_class_subject_model.dart';
@@ -65,8 +71,7 @@ typedef StudentsForAttendanceParams = ({
   String academicYearId,
 });
 
-Future<lecture_attendance.LectureAttendanceResponse>
-    _repoGetLectureAttendance({
+Future<lecture_attendance.LectureAttendanceResponse> _repoGetLectureAttendance({
   required dynamic repo,
   required String standardId,
   required String section,
@@ -135,8 +140,11 @@ Future<attendance_dashboard.AttendanceDashboardResponse>
 }
 
 final myTeacherAssignmentsProvider =
-    FutureProvider.family<List<TeacherClassSubjectModel>, String?>(
+    FutureProvider.autoDispose.family<List<TeacherClassSubjectModel>, String?>(
   (ref, academicYearId) async {
+    // Bind cache lifecycle to logged-in user so assignments never leak
+    // across teacher account switches.
+    ref.watch(currentUserProvider);
     final repo = ref.read(teacherClassSubjectRepositoryProvider);
     return repo.getMyAssignments(academicYearId: academicYearId);
   },
@@ -180,7 +188,8 @@ final studentsForAttendanceProvider =
 );
 
 final attendanceListProvider = FutureProvider.family<
-    ({List<attendance_model.AttendanceModel> items, int total}), AttendanceListParams>(
+    ({List<attendance_model.AttendanceModel> items, int total}),
+    AttendanceListParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return repo.listAttendance(
@@ -197,8 +206,8 @@ final attendanceListProvider = FutureProvider.family<
   },
 );
 
-final lectureAttendanceProvider =
-    FutureProvider.family<lecture_attendance.LectureAttendanceResponse, LectureAttendanceParams>(
+final lectureAttendanceProvider = FutureProvider.family<
+    lecture_attendance.LectureAttendanceResponse, LectureAttendanceParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return _repoGetLectureAttendance(
@@ -213,8 +222,9 @@ final lectureAttendanceProvider =
   },
 );
 
-final studentDetailAttendanceProvider =
-    FutureProvider.family<student_detail_attendance.StudentDetailAttendanceResponse, StudentDetailParams>(
+final studentDetailAttendanceProvider = FutureProvider.family<
+    student_detail_attendance.StudentDetailAttendanceResponse,
+    StudentDetailParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return _repoGetStudentDetailAttendance(
@@ -225,8 +235,8 @@ final studentDetailAttendanceProvider =
   },
 );
 
-final studentAnalyticsProvider =
-    FutureProvider.family<attendance_analytics.StudentAttendanceAnalytics, StudentAnalyticsParams>(
+final studentAnalyticsProvider = FutureProvider.family<
+    attendance_analytics.StudentAttendanceAnalytics, StudentAnalyticsParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return repo.getStudentAnalytics(
@@ -238,7 +248,8 @@ final studentAnalyticsProvider =
 );
 
 final attendanceDashboardProvider = FutureProvider.family<
-    attendance_dashboard.AttendanceDashboardResponse, AttendanceDashboardParams>(
+    attendance_dashboard.AttendanceDashboardResponse,
+    AttendanceDashboardParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return _repoGetAttendanceDashboard(
@@ -249,8 +260,8 @@ final attendanceDashboardProvider = FutureProvider.family<
   },
 );
 
-final belowThresholdProvider =
-    FutureProvider.family<below_threshold.BelowThresholdResponse, BelowThresholdParams>(
+final belowThresholdProvider = FutureProvider.family<
+    below_threshold.BelowThresholdResponse, BelowThresholdParams>(
   (ref, params) async {
     final repo = ref.read(attendanceRepositoryProvider);
     return repo.getBelowThreshold(
@@ -361,7 +372,8 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
   }
 
   void initStudents(List<String> ids) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     final incoming = ids.toSet();
     for (final id in ids) {
       next.putIfAbsent(id, () => attendance_model.AttendanceStatus.absent);
@@ -378,23 +390,28 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
   }
 
   void preloadExisting(List<attendance_model.AttendanceModel> records) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     for (final r in records) {
       next[r.studentId] = r.status;
     }
     state = state.copyWith(attendanceMap: next);
   }
 
-  void preloadLectureEntries(List<lecture_attendance.LectureStudentEntry> entries) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+  void preloadLectureEntries(
+      List<lecture_attendance.LectureStudentEntry> entries) {
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     for (final entry in entries) {
       next[entry.studentId] = entry.status;
     }
     state = state.copyWith(attendanceMap: next);
   }
 
-  void setStudentStatus(String studentId, attendance_model.AttendanceStatus status) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+  void setStudentStatus(
+      String studentId, attendance_model.AttendanceStatus status) {
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     next[studentId] = status;
     state = state.copyWith(attendanceMap: next, clearSubmitError: true);
   }
@@ -423,16 +440,20 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
     );
   }
 
-  void markAll(attendance_model.AttendanceStatus status, List<String> studentIds) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+  void markAll(
+      attendance_model.AttendanceStatus status, List<String> studentIds) {
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     for (final id in studentIds) {
       next[id] = status;
     }
     state = state.copyWith(attendanceMap: next, clearSubmitError: true);
   }
 
-  void markSelected(attendance_model.AttendanceStatus status, Iterable<String> studentIds) {
-    final next = Map<String, attendance_model.AttendanceStatus>.from(state.attendanceMap);
+  void markSelected(
+      attendance_model.AttendanceStatus status, Iterable<String> studentIds) {
+    final next = Map<String, attendance_model.AttendanceStatus>.from(
+        state.attendanceMap);
     for (final id in studentIds) {
       next[id] = status;
     }
@@ -457,7 +478,8 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
           .map(
             (id) => attendance_record_input.AttendanceRecordInput(
               studentId: id,
-              status: state.attendanceMap[id] ?? attendance_model.AttendanceStatus.absent,
+              status: state.attendanceMap[id] ??
+                  attendance_model.AttendanceStatus.absent,
             ),
           )
           .toList();

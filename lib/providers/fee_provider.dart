@@ -16,7 +16,7 @@ typedef FeeDashboardParams = ({
 });
 
 final feeDashboardProvider =
-    FutureProvider.family<FeeDashboardResult, FeeDashboardParams>(
+    FutureProvider.autoDispose.family<FeeDashboardResult, FeeDashboardParams>(
   (ref, params) async {
     final repo = ref.read(feeRepositoryProvider);
     return repo.getDashboard(
@@ -30,7 +30,10 @@ final feeDashboardProvider =
 // Keyed by ledgerId. Shows all payments for one installment.
 
 final paymentListProvider =
-    FutureProvider.family<List<PaymentModel>, String>((ref, ledgerId) async {
+    FutureProvider.autoDispose.family<List<PaymentModel>, String>((
+  ref,
+  ledgerId,
+) async {
   final repo = ref.read(feeRepositoryProvider);
   return repo.listPayments(feeLedgerId: ledgerId);
 });
@@ -45,7 +48,7 @@ typedef FeeAnalyticsParams = ({
 });
 
 final feeAnalyticsProvider =
-    FutureProvider.family<Map<String, dynamic>, FeeAnalyticsParams>(
+    FutureProvider.autoDispose.family<Map<String, dynamic>, FeeAnalyticsParams>(
   (ref, params) async {
     final repo = ref.read(feeRepositoryProvider);
     return repo.getAnalytics(
@@ -93,7 +96,8 @@ class RecordPaymentState {
   final bool isLoading;
   final String? error;
 
-  RecordPaymentState copyWith({bool? isLoading, String? error, bool clearError = false}) {
+  RecordPaymentState copyWith(
+      {bool? isLoading, String? error, bool clearError = false}) {
     return RecordPaymentState(
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),

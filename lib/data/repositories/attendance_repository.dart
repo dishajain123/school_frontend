@@ -5,6 +5,7 @@ import '../../core/network/dio_client.dart';
 import '../models/attendance/attendance_model.dart';
 import '../models/attendance/mark_attendance_request.dart';
 import '../models/attendance/attendance_analytics.dart';
+import '../models/attendance/attendance_dashboard.dart';
 import '../models/attendance/below_threshold.dart';
 
 class AttendanceRepository {
@@ -91,6 +92,23 @@ class AttendanceRepository {
       },
     );
     return BelowThresholdResponse.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
+  // ── Dashboard (Principal/Trustee overview) ──────────────────────────────────
+
+  Future<AttendanceDashboardResponse> getAttendanceDashboard({
+    required String academicYearId,
+    String? standardId,
+  }) async {
+    final response = await _dio.get(
+      ApiConstants.attendanceDashboardAnalytics,
+      queryParameters: {
+        'academic_year_id': academicYearId,
+        if (standardId != null) 'standard_id': standardId,
+      },
+    );
+    return AttendanceDashboardResponse.fromJson(
         response.data as Map<String, dynamic>);
   }
 }

@@ -148,6 +148,34 @@ class _AnnouncementCardState extends State<AnnouncementCard>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if ((announcement.targetStandardId != null &&
+                                announcement.targetStandardId!.isNotEmpty) ||
+                            (announcement.targetSection != null &&
+                                announcement.targetSection!.isNotEmpty)) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.groups_2_outlined,
+                                size: 12,
+                                color: AppColors.grey500,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Class: ${announcement.targetStandardId ?? 'All'}'
+                                  '${announcement.targetSection != null && announcement.targetSection!.isNotEmpty ? '  •  Section: ${announcement.targetSection}' : ''}',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.grey500,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Row(
                           children: [
