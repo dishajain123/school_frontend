@@ -58,6 +58,9 @@ import '../../presentation/leave/screens/leave_list_screen.dart';
 import '../../presentation/leave/screens/apply_leave_screen.dart';
 import '../../presentation/leave/screens/leave_balance_screen.dart';
 import '../../presentation/leave/screens/leave_decision_screen.dart';
+import '../../presentation/gallery/screens/album_list_screen.dart';
+import '../../presentation/gallery/screens/album_detail_screen.dart';
+import '../../presentation/gallery/screens/create_album_screen.dart';
 import '../../presentation/documents/screens/document_list_screen.dart';
 import '../../presentation/complaints/screens/complaint_list_screen.dart';
 import '../../presentation/complaints/screens/create_complaint_screen.dart';
@@ -123,6 +126,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.isAuthenticated;
       final loc = state.matchedLocation;
       final enrollmentPending = authState.currentUser?.enrollmentPending ?? false;
+      final profileCreated = authState.currentUser?.profileCreated ?? false;
+      final shouldBlockForOnboarding = enrollmentPending && !profileCreated;
 
       final publicRoutes = {
         RouteNames.splash,
@@ -140,12 +145,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Always leave splash after auth initialization completes.
       if (loc == RouteNames.splash && authState.isInitialized) {
         if (!isLoggedIn) return RouteNames.login;
-        return enrollmentPending ? RouteNames.enrollmentPending : RouteNames.dashboard;
+        return shouldBlockForOnboarding ? RouteNames.enrollmentPending : RouteNames.dashboard;
       }
-      if (isLoggedIn && enrollmentPending && loc != RouteNames.enrollmentPending) {
+      if (isLoggedIn && shouldBlockForOnboarding && loc != RouteNames.enrollmentPending) {
         return RouteNames.enrollmentPending;
       }
-      if (isLoggedIn && !enrollmentPending && loc == RouteNames.enrollmentPending) {
+      if (isLoggedIn && !shouldBlockForOnboarding && loc == RouteNames.enrollmentPending) {
         return RouteNames.dashboard;
       }
       if (isLoggedIn &&
@@ -569,7 +574,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.galleryAlbums,
-            builder: (_, __) => const PlaceholderScreen('Gallery'),
+            builder: (_, __) => const AlbumListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateAlbumScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => AlbumDetailScreen(
+                  albumId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.documents,

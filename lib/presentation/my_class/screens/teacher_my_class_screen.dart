@@ -32,6 +32,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/my_class/my_class_models.dart';
 import '../../../providers/my_class_provider.dart';
+import '../../common/widgets/app_app_bar.dart';
 
 // ── Step enum ─────────────────────────────────────────────────────────────────
 
@@ -339,14 +340,10 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: AppBar(
-          title: Text(_stepTitle, style: AppTypography.titleMedium),
-          backgroundColor: AppColors.surface50,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _goBack,
-          ),
+        appBar: AppAppBar(
+          title: _stepTitle,
+          showBack: true,
+          onBackPressed: _goBack,
           actions: [
             if (_step == _Step.chapters)
               IconButton(

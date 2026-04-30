@@ -312,8 +312,9 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom +
         kBottomNavigationBarHeight +
         8;
-    final maxWidth =
-        MediaQuery.sizeOf(context).width - (AppDimensions.space16 * 2);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxWidth = screenWidth - (AppDimensions.space16 * 2);
+    final isCompactMobile = screenWidth < 380;
 
     if (canRequest && !canUpload) {
       return Padding(
@@ -360,40 +361,74 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       padding: EdgeInsets.only(bottom: AppDimensions.space8 + bottomInset),
       child: SizedBox(
         width: maxWidth.clamp(0, 420).toDouble(),
-        child: Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: FloatingActionButton.extended(
-                  heroTag: null,
-                  onPressed:
-                      state.isUploading ? null : () => _pickAndUpload(context),
-                  backgroundColor: AppColors.navyDeep,
-                  foregroundColor: AppColors.white,
-                  icon: state.isUploading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(AppColors.white),
-                          ),
-                        )
-                      : const Icon(Icons.upload_file_rounded),
-                  label: const Text('Upload'),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navyDeep.withValues(alpha: 0.1),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: FloatingActionButton.extended(
+                    heroTag: null,
+                    onPressed:
+                        state.isUploading ? null : () => _pickAndUpload(context),
+                    backgroundColor: AppColors.navyDeep,
+                    foregroundColor: AppColors.white,
+                    icon: state.isUploading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(AppColors.white),
+                            ),
+                          )
+                        : const Icon(Icons.upload_file_rounded),
+                    label: Text(isCompactMobile ? 'Upload' : 'Upload Document'),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppDimensions.space12),
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: _requestFab(context, state),
+              const SizedBox(width: AppDimensions.space8),
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: FloatingActionButton.extended(
+                    heroTag: 'request-doc-fab',
+                    onPressed:
+                        state.isRequesting ? null : () => _showRequestSheet(context),
+                    backgroundColor: state.isRequesting
+                        ? AppColors.goldPrimary.withValues(alpha: 0.7)
+                        : AppColors.goldPrimary,
+                    foregroundColor: AppColors.navyDeep,
+                    icon: state.isRequesting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.navyDeep),
+                            ),
+                          )
+                        : const Icon(Icons.description_outlined),
+                    label: Text(isCompactMobile ? 'Request' : 'Request Document'),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

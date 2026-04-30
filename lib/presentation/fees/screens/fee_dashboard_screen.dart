@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/fee/fee_ledger_model.dart';
+import '../../../data/models/fee/fee_structure_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/dashboard_provider.dart';
@@ -91,6 +92,7 @@ class _ParentFeeDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider)!;
+    final selectedChild = ref.watch(selectedChildProvider);
     final childId = explicitStudentId ?? ref.watch(selectedChildIdProvider);
 
     if (childId == null || childId.isEmpty) {
@@ -112,6 +114,7 @@ class _ParentFeeDashboard extends ConsumerWidget {
       studentId: childId,
       user: user,
       academicYearId: activeYearId,
+      standardId: selectedChild?.standardId,
     );
   }
 }
@@ -135,8 +138,8 @@ class _StudentFeeDashboard extends ConsumerWidget {
       );
     }
 
-    final myIdAsync = ref.watch(myStudentIdProvider);
-    return myIdAsync.when(
+    final myProfileAsync = ref.watch(myStudentProfileProvider);
+    return myProfileAsync.when(
       loading: () => const Scaffold(
         backgroundColor: AppColors.surface50,
         appBar: AppAppBar(title: 'Fee Management', showBack: true),
@@ -150,8 +153,9 @@ class _StudentFeeDashboard extends ConsumerWidget {
           onRetry: () => ref.invalidate(myStudentIdProvider),
         ),
       ),
-      data: (id) {
-        if (id == null) {
+      data: (profile) {
+        final id = profile.id;
+        if (id.isEmpty) {
           return const Scaffold(
             backgroundColor: AppColors.surface50,
             appBar: AppAppBar(title: 'Fee Management', showBack: true),
@@ -168,6 +172,7 @@ class _StudentFeeDashboard extends ConsumerWidget {
           studentId: id,
           user: user,
           academicYearId: activeYearId,
+          standardId: profile.standardId,
         );
       },
     );
@@ -181,11 +186,13 @@ class _FeeDashboardBody extends ConsumerWidget {
     required this.studentId,
     required this.user,
     this.academicYearId,
+    this.standardId,
   });
 
   final String studentId;
   final CurrentUser user;
   final String? academicYearId;
+  final String? standardId;
 
   bool get _canRecord =>
       user.hasPermission('fee:create') ||
@@ -196,6 +203,9 @@ class _FeeDashboardBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final params = (studentId: studentId, academicYearId: academicYearId);
     final dashAsync = ref.watch(feeDashboardProvider(params));
+    final structureParams =
+        (academicYearId: academicYearId, standardId: standardId);
+    final structuresAsync = ref.watch(feeStructuresProvider(structureParams));
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
@@ -210,7 +220,7 @@ class _FeeDashboardBody extends ConsumerWidget {
         ],
       ),
       body: dashAsync.when(
-        data: (result) => _buildBody(context, ref, result),
+        data: (result) => _buildBody(context, ref, result, structuresAsync),
         loading: () => AppLoading.fullPage(),
         error: (e, _) => AppErrorState(
           message: e.toString(),
@@ -224,12 +234,75 @@ class _FeeDashboardBody extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     FeeDashboardResult result,
+    AsyncValue<List<FeeStructureModel>> structuresAsync,
   ) {
     if (result.items.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'No Fee Records',
-        subtitle: 'No fee ledger entries have been generated yet.',
+      return structuresAsync.when(
+        loading: () => AppLoading.fullPage(),
+        error: (_, __) => const AppEmptyState(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'No Fee Records',
+          subtitle: 'No fee ledger entries have been generated yet.',
+        ),
+        data: (structures) {
+          if (structures.isEmpty) {
+            return const AppEmptyState(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'No Fee Records',
+              subtitle: 'No fee structures found for your allotted class yet.',
+            );
+          }
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'Class Fee Structures',
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.grey800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Ledger is not generated yet. Showing configured class fee heads.',
+                style:
+                    AppTypography.bodySmall.copyWith(color: AppColors.grey500),
+              ),
+              const SizedBox(height: 14),
+              ...structures.map(
+                (s) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.surface100),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          // ✅ FIX: was s.displayFeeHead — correct getter is displayLabel
+                          s.displayLabel,
+                          style: AppTypography.labelLarge.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹${s.amount.toStringAsFixed(2)}',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: AppColors.navyDeep,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       );
     }
 
@@ -242,9 +315,7 @@ class _FeeDashboardBody extends ConsumerWidget {
         slivers: [
           // ── Sticky summary header ─────────────────────────────────────
           SliverToBoxAdapter(
-            child: _StickyHeader(
-              result: result,
-            ),
+            child: _StickyHeader(result: result),
           ),
 
           // ── Overdue alert ─────────────────────────────────────────────
@@ -404,7 +475,8 @@ class _StickyHeader extends StatelessWidget {
                     CircularProgressIndicator(
                       value: pct,
                       strokeWidth: 6,
-                      backgroundColor: AppColors.white.withValues(alpha: 0.15),
+                      backgroundColor:
+                          AppColors.white.withValues(alpha: 0.15),
                       valueColor: AlwaysStoppedAnimation<Color>(pctColor),
                       strokeCap: StrokeCap.round,
                     ),
@@ -474,8 +546,7 @@ class _HeaderStat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style:
-                AppTypography.caption.copyWith(color: AppColors.white54)),
+            style: AppTypography.caption.copyWith(color: AppColors.white54)),
         const SizedBox(height: 2),
         Text(value,
             style: AppTypography.titleMedium
@@ -574,7 +645,8 @@ class _InstallmentCard extends StatelessWidget {
                     color: _statusBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(ledger.status.icon, size: 18, color: _statusColor),
+                  child:
+                      Icon(ledger.status.icon, size: 18, color: _statusColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -605,8 +677,8 @@ class _InstallmentCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 // Status badge
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _statusBg,
                     borderRadius: BorderRadius.circular(20),
@@ -631,8 +703,7 @@ class _InstallmentCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(
                 children: [
-                  Icon(Icons.event_rounded,
-                      size: 13, color: AppColors.grey400),
+                  Icon(Icons.event_rounded, size: 13, color: AppColors.grey400),
                   const SizedBox(width: 4),
                   Text(
                     'Due: ${_fmtDate(ledger.dueDate!)}',
@@ -670,8 +741,7 @@ class _InstallmentCard extends StatelessWidget {
                   child: _AmountStat(
                     label: 'Due',
                     value: _fmt(ledger.outstandingAmount),
-                    color:
-                        ledger.hasOutstanding ? _kRed : _kGreen,
+                    color: ledger.hasOutstanding ? _kRed : _kGreen,
                   ),
                 ),
               ],
@@ -948,8 +1018,10 @@ class _OverviewTab extends StatelessWidget {
 
     final collected = summary['total_paid_amount'];
     final pending = summary['total_outstanding_amount'];
-    final defaulters = summary['defaulters_count'] ?? summary['overdue_ledgers'] ?? 0;
-    final pct = (summary['collection_percentage'] as num?)?.toDouble() ?? 0.0;
+    final defaulters =
+        summary['defaulters_count'] ?? summary['overdue_ledgers'] ?? 0;
+    final pct =
+        (summary['collection_percentage'] as num?)?.toDouble() ?? 0.0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1049,9 +1121,12 @@ class _OverviewTab extends StatelessWidget {
                       value: currency(summary['total_billed_amount'])),
                   const SizedBox(width: 20),
                   _InlineStat(
-                      label: 'Paid', value: currency(summary['total_paid_amount'])),
+                      label: 'Paid',
+                      value: currency(summary['total_paid_amount'])),
                   const SizedBox(width: 20),
-                  _InlineStat(label: 'Students', value: '${summary['total_students'] ?? 0}'),
+                  _InlineStat(
+                      label: 'Students',
+                      value: '${summary['total_students'] ?? 0}'),
                 ],
               ),
             ],
@@ -1201,15 +1276,16 @@ class _ClassesTab extends StatelessWidget {
                       ),
                       child: Text(
                         '${c['defaulters_count']} overdue',
-                        style: AppTypography.caption
-                            .copyWith(color: _kRed, fontWeight: FontWeight.w600),
+                        style: AppTypography.caption.copyWith(
+                            color: _kRed, fontWeight: FontWeight.w600),
                       ),
                     ),
                   const SizedBox(width: 8),
                   Text(
                     '${currency(paid)} / ${currency(billed)}',
-                    style: AppTypography.caption
-                        .copyWith(color: AppColors.grey600, fontWeight: FontWeight.w600),
+                    style: AppTypography.caption.copyWith(
+                        color: AppColors.grey600,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1298,12 +1374,12 @@ class _DefaultersTab extends StatelessWidget {
                 children: [
                   Text(
                     _currency(s['outstanding_amount']),
-                    style: AppTypography.titleSmall.copyWith(
-                        color: _kRed, fontWeight: FontWeight.w700),
+                    style: AppTypography.titleSmall
+                        .copyWith(color: _kRed, fontWeight: FontWeight.w700),
                   ),
                   Text('outstanding',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.grey400, fontSize: 10)),
+                      style: AppTypography.caption.copyWith(
+                          color: AppColors.grey400, fontSize: 10)),
                 ],
               ),
             ],
@@ -1338,8 +1414,7 @@ class _KpiCard extends StatelessWidget {
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-              color: color.withValues(alpha: 0.08), blurRadius: 10)
+          BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 10)
         ],
       ),
       child: Column(
@@ -1360,7 +1435,8 @@ class _KpiCard extends StatelessWidget {
                   color: color, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 2),
           Text(label,
-              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style:
+                  AppTypography.caption.copyWith(color: AppColors.grey500)),
         ],
       ),
     );
@@ -1427,7 +1503,8 @@ class _StatusRow extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           Text('$count entries',
-              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style:
+                  AppTypography.caption.copyWith(color: AppColors.grey500)),
           const SizedBox(width: 10),
           Text(amount,
               style: AppTypography.labelMedium
@@ -1467,7 +1544,8 @@ class _ModeRow extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w600)),
           ),
           Text('$txns txns',
-              style: AppTypography.caption.copyWith(color: AppColors.grey500)),
+              style:
+                  AppTypography.caption.copyWith(color: AppColors.grey500)),
           const SizedBox(width: 12),
           Text(amount,
               style: AppTypography.labelMedium

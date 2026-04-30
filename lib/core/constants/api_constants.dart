@@ -115,15 +115,17 @@ class ApiConstants {
 
   // ── Attendance ────────────────────────────────────────────────────────────
   static const String attendance = '/attendance';
+  static const String attendanceMark = '/attendance/mark';
+  static const String attendanceMe = '/attendance/me';
   static const String attendanceLecture = '/attendance/lecture';
   static String attendanceStudentDetail(String studentId) =>
-      '/attendance/student/$studentId';
+      '/attendance/student/$studentId/detail';
   static String attendanceStudentAnalytics(String studentId) =>
-      '/attendance/analytics/student/$studentId';
+      '/attendance/student/$studentId/analytics';
   static const String attendanceBelowThreshold =
-      '/attendance/analytics/below-threshold';
+      '/attendance/below-threshold';
   static const String attendanceDashboardAnalytics =
-      '/attendance/analytics/dashboard';
+      '/attendance/dashboard';
 
   // ── Assignments ───────────────────────────────────────────────────────────
   static const String assignments = '/assignments';

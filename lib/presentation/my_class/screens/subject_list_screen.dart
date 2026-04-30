@@ -20,6 +20,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../data/models/my_class/my_class_models.dart';
 import '../../../providers/my_class_provider.dart';
+import '../../common/widgets/app_app_bar.dart';
 import 'chapter_list_screen.dart';
 
 // ── Academic year model ───────────────────────────────────────────────────────
@@ -161,46 +162,69 @@ class _MyClassSubjectListScreenState
           )))
         : const AsyncValue<List<SubjectSummary>>.loading();
 
+    final selectedYearValue = _years.any((y) => y.id == _selectedYear?.id)
+        ? _selectedYear
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppBar(
-        title: Text(
-          'My Class',
-          style: AppTypography.titleMedium,
-        ),
-        backgroundColor: AppColors.surface50,
-        elevation: 0,
+      appBar: AppAppBar(
+        title: 'My Class',
+        showBack: true,
         actions: [
           if (!_loadingYears && _years.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: DropdownButton<_AcademicYear>(
-                value: _selectedYear,
-                underline: const SizedBox.shrink(),
-                items: _years
-                    .map((y) => DropdownMenuItem(
-                          value: y,
-                          child: Text(
+              padding: const EdgeInsets.only(right: 8, top: 2, bottom: 2),
+              child: Center(
+                child: SizedBox(
+                  height: 40,
+                  child: DropdownButton<_AcademicYear>(
+                    value: selectedYearValue,
+                    isDense: true,
+                    underline: const SizedBox.shrink(),
+                    dropdownColor: AppColors.white,
+                    iconEnabledColor: AppColors.white,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    items: _years
+                        .map((y) => DropdownMenuItem(
+                              value: y,
+                              child: Text(
+                                y.name,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: y.isActive
+                                      ? AppColors.navyMedium
+                                      : AppColors.grey500,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                    selectedItemBuilder: (context) => _years
+                        .map(
+                          (y) => Text(
                             y.name,
                             style: AppTypography.bodySmall.copyWith(
-                              color: y.isActive
-                                  ? AppColors.navyMedium
-                                  : AppColors.grey500,
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ))
-                    .toList(),
-                onChanged: (y) async {
-                  if (y != null) {
-                    setState(() {
-                      _selectedYear = y;
-                      if ((widget.initialSectionId ?? '').isEmpty) {
-                        _resolvedSectionId = null;
+                        )
+                        .toList(),
+                    onChanged: (y) async {
+                      if (y != null) {
+                        setState(() {
+                          _selectedYear = y;
+                          if ((widget.initialSectionId ?? '').isEmpty) {
+                            _resolvedSectionId = null;
+                          }
+                        });
+                        await _resolveSectionIdIfNeeded(y.id);
                       }
-                    });
-                    await _resolveSectionIdIfNeeded(y.id);
-                  }
-                },
+                    },
+                  ),
+                ),
               ),
             ),
         ],

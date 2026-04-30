@@ -16,7 +16,7 @@ class AttendanceRepository {
   Future<MarkAttendanceResponse> markAttendance(
       MarkAttendanceRequest request) async {
     final response = await _dio.post(
-      ApiConstants.attendance,
+      ApiConstants.attendanceMark,
       data: request.toJson(),
     );
     return MarkAttendanceResponse.fromJson(

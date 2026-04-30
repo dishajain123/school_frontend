@@ -127,6 +127,30 @@ class StudentDashboard extends ConsumerWidget {
         color: AppColors.subjectPhysics,
         onTap: () => context.go(RouteNames.galleryAlbums),
       ),
+      QuickActionItem(
+        icon: Icons.campaign_outlined,
+        label: 'Announcements',
+        color: AppColors.subjectChem,
+        onTap: () => context.go(RouteNames.announcements),
+      ),
+      QuickActionItem(
+        icon: Icons.feedback_outlined,
+        label: 'Complaints',
+        color: AppColors.errorRed,
+        onTap: () => context.go(RouteNames.complaints),
+      ),
+      QuickActionItem(
+        icon: Icons.chat_bubble_outline_rounded,
+        label: 'Chat',
+        color: AppColors.navyMedium,
+        onTap: () => context.go(RouteNames.conversations),
+      ),
+      QuickActionItem(
+        icon: Icons.assignment_outlined,
+        label: 'Assignments',
+        color: AppColors.subjectScience,
+        onTap: () => context.go(RouteNames.assignments),
+      ),
     ];
 
     return Scaffold(

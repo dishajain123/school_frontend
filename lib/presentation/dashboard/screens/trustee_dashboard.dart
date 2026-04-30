@@ -82,7 +82,7 @@ class TrusteeDashboard extends ConsumerWidget {
       ),
       QuickActionItem(
         icon: Icons.campaign_outlined,
-        label: 'Announce',
+        label: 'Announcements',
         color: AppColors.subjectChem,
         onTap: () => context.go(RouteNames.announcements),
       ),

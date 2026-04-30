@@ -30,6 +30,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.schoolSettings,
     ),
     ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -67,6 +73,12 @@ abstract final class RoleShellConfig {
       activeIcon: Icons.chat_bubble,
       label: 'Chat',
       rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
     ),
     ShellTabItem(
       icon: Icons.person_outline,
@@ -108,6 +120,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.conversations,
     ),
     ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -141,6 +159,12 @@ abstract final class RoleShellConfig {
       rootPath: RouteNames.conversations,
     ),
     ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
+    ),
+    ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Profile',
@@ -172,6 +196,12 @@ abstract final class RoleShellConfig {
       activeIcon: Icons.chat_bubble,
       label: 'Chat',
       rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
     ),
     ShellTabItem(
       icon: Icons.person_outline,
@@ -211,6 +241,12 @@ abstract final class RoleShellConfig {
       activeIcon: Icons.chat_bubble,
       label: 'Chat',
       rootPath: RouteNames.conversations,
+    ),
+    ShellTabItem(
+      icon: Icons.photo_library_outlined,
+      activeIcon: Icons.photo_library,
+      label: 'Gallery',
+      rootPath: RouteNames.galleryAlbums,
     ),
     ShellTabItem(
       icon: Icons.person_outline,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../common/widgets/app_app_bar.dart';
 import 'subject_list_screen.dart';
 
 class _Opt {
@@ -84,19 +85,20 @@ class _ClassroomMonitorScreenState extends ConsumerState<ClassroomMonitorScreen>
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final yearValue = _years.any((y) => y.id == _year?.id) ? _year : null;
+    final standardValue =
+        _standards.any((s) => s.id == _standard?.id) ? _standard : null;
+    final sectionValue =
+        _sections.any((s) => s.id == _section?.id) ? _section : null;
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppBar(
-        title: Text('Classroom Monitor', style: AppTypography.titleMedium),
-        backgroundColor: AppColors.surface50,
-        elevation: 0,
-      ),
+      appBar: const AppAppBar(title: 'Classroom Monitor', showBack: true),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             DropdownButtonFormField<_Opt>(
-              value: _year,
+              value: yearValue,
               decoration: const InputDecoration(labelText: 'Academic Year'),
               items: _years.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
               onChanged: (v) async {
@@ -106,7 +108,7 @@ class _ClassroomMonitorScreenState extends ConsumerState<ClassroomMonitorScreen>
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<_Opt>(
-              value: _standard,
+              value: standardValue,
               decoration: const InputDecoration(labelText: 'Class'),
               items: _standards.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
               onChanged: (v) async {
@@ -116,7 +118,7 @@ class _ClassroomMonitorScreenState extends ConsumerState<ClassroomMonitorScreen>
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<_Opt>(
-              value: _section,
+              value: sectionValue,
               decoration: const InputDecoration(labelText: 'Section'),
               items: _sections.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
               onChanged: (v) => setState(() => _section = v),
