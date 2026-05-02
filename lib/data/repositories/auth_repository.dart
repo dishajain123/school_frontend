@@ -111,6 +111,19 @@ class AuthRepository {
       },
     );
   }
+
+  /// GET /registrations/active-academic-years
+  Future<List<Map<String, dynamic>>> listActiveAcademicYearsForRegistration() async {
+    final response = await _dio.get('/registrations/active-academic-years');
+    final body = response.data;
+    if (body is! Map<String, dynamic>) return const [];
+    final rawItems = body['items'];
+    if (rawItems is! List) return const [];
+    return rawItems
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

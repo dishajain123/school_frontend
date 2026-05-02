@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_logout_bus.dart';
 import '../constants/api_constants.dart';
+import '../storage/local_storage.dart';
 import '../storage/secure_storage.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/envelope_interceptor.dart';
@@ -10,6 +11,7 @@ import 'interceptors/error_interceptor.dart';
 
 final dioClientProvider = Provider<Dio>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
+  final localStorage = ref.watch(localStorageProvider);
   final resolvedBaseUrl = _buildApiBaseUrl(
     ApiConstants.resolvedBaseUrl,
     ApiConstants.apiPrefix,
@@ -32,6 +34,7 @@ final dioClientProvider = Provider<Dio>((ref) {
   dio.interceptors.addAll([
     AuthInterceptor(
       secureStorage: secureStorage,
+      localStorage: localStorage,
       onLogout: () {
         secureStorage.clearAll();
         AuthLogoutBus.instance.notifyLogout();

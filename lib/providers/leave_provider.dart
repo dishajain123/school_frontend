@@ -230,7 +230,7 @@ final leaveNotifierProvider =
 // Invalidated when a leave is applied.
 
 final leaveBalanceProvider =
-    FutureProvider.family<List<LeaveBalanceModel>, String?>(
+    FutureProvider.autoDispose.family<List<LeaveBalanceModel>, String?>(
   (ref, academicYearId) async {
     final repo = ref.read(leaveRepositoryProvider);
     return repo.getBalance(academicYearId: academicYearId);
@@ -242,8 +242,8 @@ typedef TeacherLeaveBalanceParams = ({
   String? academicYearId
 });
 
-final teacherLeaveBalanceProvider =
-    FutureProvider.family<List<LeaveBalanceModel>, TeacherLeaveBalanceParams>(
+final teacherLeaveBalanceProvider = FutureProvider.autoDispose
+    .family<List<LeaveBalanceModel>, TeacherLeaveBalanceParams>(
   (ref, params) async {
     final repo = ref.read(leaveRepositoryProvider);
     return repo.getTeacherBalance(
@@ -253,13 +253,10 @@ final teacherLeaveBalanceProvider =
   },
 );
 
-typedef TeacherLeavesParams = ({
-  String teacherId,
-  String? academicYearId
-});
+typedef TeacherLeavesParams = ({String teacherId, String? academicYearId});
 
 final teacherLeavesProvider =
-    FutureProvider.family<LeaveListResponse, TeacherLeavesParams>(
+    FutureProvider.autoDispose.family<LeaveListResponse, TeacherLeavesParams>(
   (ref, params) async {
     final repo = ref.read(leaveRepositoryProvider);
     return repo.list(

@@ -37,7 +37,6 @@ class LectureAttendanceResponse {
     required this.subjectId,
     required this.academicYearId,
     required this.date,
-    required this.lectureNumber,
     required this.totalStudents,
     required this.presentCount,
     required this.absentCount,
@@ -50,7 +49,6 @@ class LectureAttendanceResponse {
   final String subjectId;
   final String academicYearId;
   final DateTime date;
-  final int lectureNumber;
   final int totalStudents;
   final int presentCount;
   final int absentCount;
@@ -64,7 +62,6 @@ class LectureAttendanceResponse {
       subjectId: json['subject_id'] as String,
       academicYearId: json['academic_year_id'] as String,
       date: DateTime.parse(json['date'] as String),
-      lectureNumber: json['lecture_number'] as int? ?? 1,
       totalStudents: json['total_students'] as int? ?? 0,
       presentCount: json['present_count'] as int? ?? 0,
       absentCount: json['absent_count'] as int? ?? 0,

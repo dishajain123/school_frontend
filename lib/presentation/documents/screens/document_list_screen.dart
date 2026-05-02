@@ -89,6 +89,14 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return docs.where((d) => d.status == _statusFilter).toList();
   }
 
+  /// Open uploaded file from storage (pending verification, approved, or rejected).
+  bool _canOpenUpload(DocumentModel doc) {
+    if ((doc.fileKey ?? '').trim().isEmpty) return false;
+    return doc.isReady ||
+        doc.status == DocumentStatus.processing ||
+        doc.hasFailed;
+  }
+
   bool _isVerifiable(DocumentModel doc) {
     final hasFile = (doc.fileKey ?? '').trim().isNotEmpty;
     return doc.status == DocumentStatus.processing && hasFile;
@@ -218,7 +226,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                       children: [
                         DocumentTile(
                           document: doc,
-                          onDownload: doc.isReady
+                          onDownload: _canOpenUpload(doc)
                               ? () => _handleDownload(context, doc)
                               : null,
                         ),
@@ -638,6 +646,33 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     );
   }
 
+  /// Types the school typically issues or uploads after a parent/student request.
+  List<RequiredDocumentModel> _mergedRequestCatalog(DocumentState state) {
+    const adminIssuable = [
+      DocumentType.idCard,
+      DocumentType.reportCard,
+      DocumentType.bonafide,
+      DocumentType.leavingCert,
+      DocumentType.academicCertificate,
+    ];
+    final merged = <RequiredDocumentModel>[];
+    final seen = <String>{};
+    void add(RequiredDocumentModel r) {
+      final key = r.documentType == DocumentType.other
+          ? 'OTHER|${(r.note ?? '').trim()}'
+          : r.documentType.backendValue;
+      if (seen.add(key)) merged.add(r);
+    }
+
+    for (final t in adminIssuable) {
+      add(RequiredDocumentModel(documentType: t));
+    }
+    for (final r in state.requiredDocuments) {
+      add(r);
+    }
+    return merged;
+  }
+
   Future<void> _showRequestSheet(BuildContext context) async {
     if (_isRequestSheetOpen) return;
     if (_resolvedStudentId == null) {
@@ -651,7 +686,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     }
     _isRequestSheetOpen = true;
     RequiredDocumentModel? requested;
-    final allowedRequirements = ref.read(documentProvider).requiredDocuments;
+    final docState = ref.read(documentProvider);
+    final allowedRequirements = _mergedRequestCatalog(docState);
     try {
       requested = await showModalBottomSheet<RequiredDocumentModel?>(
         context: context,
@@ -662,8 +698,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
           heightFactor: 0.86,
           child: RequestDocumentSheet(
             studentId: _resolvedStudentId!,
-            allowedRequirements:
-                allowedRequirements.isEmpty ? null : allowedRequirements,
+            allowedRequirements: allowedRequirements,
           ),
         ),
       );
@@ -679,7 +714,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '$requestedLabel requested! Generating in background.',
+          '$requestedLabel requested. The school will upload or issue it when ready.',
         ),
         backgroundColor: AppColors.successGreen,
         behavior: SnackBarBehavior.floating,

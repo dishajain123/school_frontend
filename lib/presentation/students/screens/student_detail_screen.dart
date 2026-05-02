@@ -44,7 +44,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
 
   Future<void> _load() async {
     setState(() {
-      _loading = true;
+      _loading = _student == null;
       _error = null;
     });
     try {
@@ -85,7 +85,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : _error != null && _student == null
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -106,6 +106,36 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
                       child: ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
+                          if (_error != null) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.red.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Could not refresh latest details. Showing available student data.',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: Colors.red.shade800,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _load,
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           // ── Avatar + name ──────────────────────────────
                           _ProfileHeader(student: _student!),
                           const SizedBox(height: 16),
@@ -140,10 +170,9 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
                                 final result = await context.push(
                                   RouteNames.reenrollmentPath(widget.studentId),
                                   extra: {
-                                    'studentName':
-                                        _student?.user?.fullName ??
-                                            _student?.displayName ??
-                                            'Student',
+                                    'studentName': _student?.user?.fullName ??
+                                        _student?.displayName ??
+                                        'Student',
                                     'admissionNumber':
                                         _student?.admissionNumber ?? '—',
                                   },

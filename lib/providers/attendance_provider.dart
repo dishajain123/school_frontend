@@ -31,7 +31,6 @@ typedef AttendanceListParams = ({
   int? month,
   int? year,
   String? subjectId,
-  int? lectureNumber,
 });
 
 typedef StudentAnalyticsParams = ({
@@ -46,7 +45,6 @@ typedef LectureAttendanceParams = ({
   String subjectId,
   String academicYearId,
   String date,
-  int lectureNumber,
 });
 
 typedef StudentDetailParams = ({
@@ -78,7 +76,6 @@ Future<lecture_attendance.LectureAttendanceResponse> _repoGetLectureAttendance({
   required String subjectId,
   required String academicYearId,
   required String date,
-  required int lectureNumber,
 }) async {
   try {
     return await repo.getLectureAttendance(
@@ -87,7 +84,6 @@ Future<lecture_attendance.LectureAttendanceResponse> _repoGetLectureAttendance({
       subjectId: subjectId,
       academicYearId: academicYearId,
       date: date,
-      lectureNumber: lectureNumber,
     ) as lecture_attendance.LectureAttendanceResponse;
   } on NoSuchMethodError {
     return await repo.lectureAttendance(
@@ -96,7 +92,6 @@ Future<lecture_attendance.LectureAttendanceResponse> _repoGetLectureAttendance({
       subjectId: subjectId,
       academicYearId: academicYearId,
       date: date,
-      lectureNumber: lectureNumber,
     ) as lecture_attendance.LectureAttendanceResponse;
   }
 }
@@ -201,7 +196,6 @@ final attendanceListProvider = FutureProvider.family<
       month: params.month,
       year: params.year,
       subjectId: params.subjectId,
-      lectureNumber: params.lectureNumber,
     );
   },
 );
@@ -217,7 +211,6 @@ final lectureAttendanceProvider = FutureProvider.family<
       subjectId: params.subjectId,
       academicYearId: params.academicYearId,
       date: params.date,
-      lectureNumber: params.lectureNumber,
     );
   },
 );
@@ -275,7 +268,6 @@ final belowThresholdProvider = FutureProvider.family<
 class MarkAttendanceFormState {
   const MarkAttendanceFormState({
     required this.date,
-    this.selectedLectureNumber = 1,
     this.selectedAcademicYearId,
     this.selectedAssignment,
     this.selectedSubjectId,
@@ -286,7 +278,6 @@ class MarkAttendanceFormState {
   });
 
   final DateTime date;
-  final int selectedLectureNumber;
   final String? selectedAcademicYearId;
   final TeacherClassSubjectModel? selectedAssignment;
   final String? selectedSubjectId;
@@ -297,7 +288,6 @@ class MarkAttendanceFormState {
 
   MarkAttendanceFormState copyWith({
     DateTime? date,
-    int? selectedLectureNumber,
     String? selectedAcademicYearId,
     TeacherClassSubjectModel? selectedAssignment,
     String? selectedSubjectId,
@@ -309,8 +299,6 @@ class MarkAttendanceFormState {
   }) {
     return MarkAttendanceFormState(
       date: date ?? this.date,
-      selectedLectureNumber:
-          selectedLectureNumber ?? this.selectedLectureNumber,
       selectedAcademicYearId:
           selectedAcademicYearId ?? this.selectedAcademicYearId,
       selectedAssignment: selectedAssignment ?? this.selectedAssignment,
@@ -331,13 +319,6 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
 
   void setDate(DateTime date) {
     state = state.copyWith(date: date, clearSubmitError: true);
-  }
-
-  void setLectureNumber(int lectureNumber) {
-    state = state.copyWith(
-      selectedLectureNumber: lectureNumber,
-      clearSubmitError: true,
-    );
   }
 
   void setAcademicYear(String? academicYearId) {
@@ -490,7 +471,6 @@ class MarkAttendanceNotifier extends Notifier<MarkAttendanceFormState> {
         subjectId: subjectId,
         academicYearId: academicYearId,
         date: state.date,
-        lectureNumber: state.selectedLectureNumber,
         records: records,
       );
 

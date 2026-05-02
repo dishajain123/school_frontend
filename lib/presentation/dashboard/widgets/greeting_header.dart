@@ -28,9 +28,6 @@ class GreetingHeader extends ConsumerWidget {
     if (user == null) return '';
     final fullName = user.fullName?.trim() ?? '';
     if (fullName.isNotEmpty) return fullName;
-    if (user.email != null && user.email!.isNotEmpty) {
-      return user.email!.split('@').first.split('.').first.capitalize();
-    }
     return '';
   }
 
@@ -202,12 +199,5 @@ class _RoleBadge extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-extension _StringCapitalize on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

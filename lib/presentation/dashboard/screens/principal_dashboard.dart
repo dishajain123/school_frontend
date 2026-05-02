@@ -47,6 +47,33 @@ class PrincipalDashboard extends ConsumerWidget {
 
     final primaryActions = [
       QuickActionItem(
+        icon: Icons.bar_chart_outlined,
+        label: 'Attendance',
+        color: AppColors.successGreen,
+        onTap: () => context.go(RouteNames.attendanceOverview),
+      ),
+      QuickActionItem(
+        icon: Icons.account_balance_wallet_outlined,
+        label: 'Fees',
+        color: AppColors.goldPrimary,
+        onTap: () => context.go(RouteNames.feeDashboard),
+      ),
+      QuickActionItem(
+        icon: Icons.assessment_outlined,
+        label: 'Reports',
+        color: AppColors.subjectHindi,
+        onTap: () => context.go(RouteNames.principalReportDetails),
+      ),
+      QuickActionItem(
+        icon: Icons.feedback_outlined,
+        label: 'Complaints',
+        color: AppColors.errorRed,
+        onTap: () => context.go(RouteNames.complaints),
+      ),
+    ];
+
+    final secondaryActions = [
+      QuickActionItem(
         icon: Icons.school_outlined,
         label: 'Students',
         color: AppColors.navyMedium,
@@ -59,49 +86,16 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.teachers),
       ),
       QuickActionItem(
-        icon: Icons.bar_chart_outlined,
-        label: 'Attendance',
-        color: AppColors.successGreen,
-        onTap: () => context.go(RouteNames.attendanceOverview),
-      ),
-      QuickActionItem(
-        icon: Icons.feedback_outlined,
-        label: 'Complaints',
-        color: AppColors.errorRed,
-        onTap: () => context.go(RouteNames.complaints),
-      ),
-    ];
-
-    final secondaryActions = [
-      QuickActionItem(
-        icon: Icons.class_outlined,
-        label: 'Classroom',
-        color: AppColors.subjectChem,
-        onTap: () => context.go(RouteNames.classroomMonitor),
-      ),
-      QuickActionItem(
         icon: Icons.family_restroom_outlined,
         label: 'Parents',
         color: AppColors.subjectMath,
         onTap: () => context.go(RouteNames.parents),
       ),
       QuickActionItem(
-        icon: Icons.account_balance_wallet_outlined,
-        label: 'Fees',
-        color: AppColors.goldPrimary,
-        onTap: () => context.go(RouteNames.feeDashboard),
-      ),
-      QuickActionItem(
-        icon: Icons.schedule_outlined,
-        label: 'Timetable',
-        color: AppColors.subjectScience,
-        onTap: () => context.go(RouteNames.timetable),
-      ),
-      QuickActionItem(
-        icon: Icons.assessment_outlined,
-        label: 'Results',
-        color: AppColors.subjectHindi,
-        onTap: () => context.go(RouteNames.principalResultsDistribution),
+        icon: Icons.beach_access_outlined,
+        label: 'Leave',
+        color: AppColors.warningAmber,
+        onTap: () => context.go(RouteNames.leaveList),
       ),
       QuickActionItem(
         icon: Icons.campaign_outlined,
@@ -110,16 +104,22 @@ class PrincipalDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.announcements),
       ),
       QuickActionItem(
+        icon: Icons.schedule_outlined,
+        label: 'Timetable',
+        color: AppColors.subjectScience,
+        onTap: () => context.go(RouteNames.timetable),
+      ),
+      QuickActionItem(
+        icon: Icons.class_outlined,
+        label: 'Classroom',
+        color: AppColors.subjectChem,
+        onTap: () => context.go(RouteNames.classroomMonitor),
+      ),
+      QuickActionItem(
         icon: Icons.photo_library_outlined,
         label: 'Gallery',
         color: AppColors.subjectPhysics,
         onTap: () => context.go(RouteNames.galleryAlbums),
-      ),
-      QuickActionItem(
-        icon: Icons.beach_access_outlined,
-        label: 'Leave',
-        color: AppColors.warningAmber,
-        onTap: () => context.go(RouteNames.leaveList),
       ),
     ];
 

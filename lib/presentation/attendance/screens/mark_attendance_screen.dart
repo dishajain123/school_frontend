@@ -4,7 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/attendance/attendance_model.dart';
-import '../../../data/models/attendance/lecture_attendance.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/academic_year_provider.dart';
@@ -15,15 +14,6 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../widgets/student_attendance_tile.dart';
-
-List<LectureStudentEntry> _lectureEntriesOrEmpty(
-  Object? lecture,
-) {
-  if (lecture is LectureAttendanceResponse) {
-    return lecture.entries;
-  }
-  return const <LectureStudentEntry>[];
-}
 
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
@@ -123,9 +113,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                   .toggleStudentSelection(studentId, selected),
               onStudentsLoaded: (ids) =>
                   ref.read(markAttendanceProvider.notifier).initStudents(ids),
-              onExistingLoaded: (entries) => ref
-                  .read(markAttendanceProvider.notifier)
-                  .preloadLectureEntries(entries),
+              onExistingLoaded: (entries) =>
+                  ref.read(markAttendanceProvider.notifier).preloadExisting(entries),
               onSubmit: _submit,
             ),
           ),
@@ -311,15 +300,6 @@ class _ExpandedFilters extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _FieldLabel(label: 'Lecture'),
-          const SizedBox(height: 8),
-          _LectureDropdown(
-            selectedLecture: formState.selectedLectureNumber,
-            onChanged: (lecture) => ref
-                .read(markAttendanceProvider.notifier)
-                .setLectureNumber(lecture),
-          ),
-          const SizedBox(height: 16),
           _FieldLabel(label: 'Class'),
           const SizedBox(height: 8),
           _ClassDropdown(
@@ -412,34 +392,6 @@ class _DatePickerTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LectureDropdown extends StatelessWidget {
-  const _LectureDropdown({
-    required this.selectedLecture,
-    required this.onChanged,
-  });
-
-  final int selectedLecture;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<int>(
-      initialValue: selectedLecture,
-      decoration: _inputDecoration('Select lecture'),
-      items: List.generate(
-        12,
-        (i) => DropdownMenuItem<int>(
-          value: i + 1,
-          child: Text('Lecture ${i + 1}', style: AppTypography.bodyMedium),
-        ),
-      ),
-      onChanged: (value) {
-        if (value != null) onChanged(value);
-      },
     );
   }
 }
@@ -621,7 +573,7 @@ class _StudentList extends ConsumerWidget {
   final void Function(String, AttendanceStatus) onStatusChanged;
   final void Function(String, bool) onSelectionChanged;
   final void Function(List<String>) onStudentsLoaded;
-  final void Function(List<LectureStudentEntry>) onExistingLoaded;
+  final void Function(List<AttendanceModel>) onExistingLoaded;
   final Future<void> Function(List<String>) onSubmit;
 
   bool get _canLoad =>
@@ -648,14 +600,27 @@ class _StudentList extends ConsumerWidget {
 
     final existingDate =
         '${formState.date.year}-${formState.date.month.toString().padLeft(2, '0')}-${formState.date.day.toString().padLeft(2, '0')}';
-    final lectureAsync = ref.watch(lectureAttendanceProvider((
+    final existingAsync = ref.watch(attendanceListProvider((
+      studentId: null,
       standardId: assignment.standardId,
       section: assignment.section,
-      subjectId: formState.selectedSubjectId!,
       academicYearId: formState.selectedAcademicYearId!,
       date: existingDate,
-      lectureNumber: formState.selectedLectureNumber,
+      month: null,
+      year: null,
+      subjectId: formState.selectedSubjectId!,
     )));
+
+    existingAsync.whenData((result) {
+      final existingEntries = result.items;
+      final hasMismatch = existingEntries.any(
+        (entry) => formState.attendanceMap[entry.studentId] != entry.status,
+      );
+      if (hasMismatch) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => onExistingLoaded(existingEntries));
+      }
+    });
 
     return studentsAsync.when(
       data: (students) {
@@ -681,17 +646,6 @@ class _StudentList extends ConsumerWidget {
           WidgetsBinding.instance
               .addPostFrameCallback((_) => onStudentsLoaded(studentIds));
         }
-        lectureAsync.whenData((lecture) {
-          final lectureEntries = _lectureEntriesOrEmpty(lecture);
-          final hasMismatch = lectureEntries.any(
-            (entry) => formState.attendanceMap[entry.studentId] != entry.status,
-          );
-          if (hasMismatch) {
-            WidgetsBinding.instance
-                .addPostFrameCallback((_) => onExistingLoaded(lectureEntries));
-          }
-        });
-
         final presentCount = formState.attendanceMap.values
             .where((s) => s == AttendanceStatus.present)
             .length;

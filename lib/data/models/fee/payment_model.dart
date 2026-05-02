@@ -8,6 +8,8 @@ enum PaymentMode {
   cash,
   cheque,
   online,
+  card,
+  bankTransfer,
   dd,
   neft,
   rtgs,
@@ -24,10 +26,13 @@ extension PaymentModeX on PaymentMode {
         return PaymentMode.cheque;
       case 'ONLINE':
         return PaymentMode.online;
+      case 'CARD':
+        return PaymentMode.card;
+      case 'BANK_TRANSFER':
+        return PaymentMode.bankTransfer;
       case 'DD':
         return PaymentMode.dd;
       case 'NEFT':
-      case 'BANK_TRANSFER':
       case 'BANK':
         return PaymentMode.neft;
       case 'RTGS':
@@ -35,10 +40,9 @@ extension PaymentModeX on PaymentMode {
       case 'UPI':
         return PaymentMode.upi;
       case 'OTHER':
-      case 'CARD':
         return PaymentMode.other;
       default:
-        return PaymentMode.cash;
+        return PaymentMode.other;
     }
   }
 
@@ -50,6 +54,10 @@ extension PaymentModeX on PaymentMode {
         return 'CHEQUE';
       case PaymentMode.online:
         return 'ONLINE';
+      case PaymentMode.card:
+        return 'CARD';
+      case PaymentMode.bankTransfer:
+        return 'BANK_TRANSFER';
       case PaymentMode.dd:
         return 'DD';
       case PaymentMode.neft:
@@ -71,6 +79,10 @@ extension PaymentModeX on PaymentMode {
         return 'Cheque';
       case PaymentMode.online:
         return 'Online';
+      case PaymentMode.card:
+        return 'Card';
+      case PaymentMode.bankTransfer:
+        return 'Bank Transfer';
       case PaymentMode.dd:
         return 'Demand Draft';
       case PaymentMode.neft:
@@ -92,6 +104,10 @@ extension PaymentModeX on PaymentMode {
         return Icons.description_outlined;
       case PaymentMode.online:
         return Icons.language_outlined;
+      case PaymentMode.card:
+        return Icons.credit_card_outlined;
+      case PaymentMode.bankTransfer:
+        return Icons.account_balance_outlined;
       case PaymentMode.dd:
         return Icons.receipt_long_outlined;
       case PaymentMode.neft:

@@ -116,6 +116,15 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
         user.role == UserRole.teacher;
   }
 
+  bool get _canManageLeaveAllocation {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return false;
+    // Leave allocation is moved to Admin Console teacher assignment flow.
+    if (user.role == UserRole.principal) return false;
+    return user.hasPermission('teacher_assignment:manage') ||
+        user.role == UserRole.superadmin;
+  }
+
   Future<void> _openAssignSheet(TeacherModel teacher) async {
     final created = await AppBottomSheet.show<bool>(
       context,
@@ -349,7 +358,7 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
                     const SizedBox(height: 16),
                     _TeacherLeaveBalanceCard(
                       balancesAsync: teacherBalanceAsync,
-                      canManage: _canEdit,
+                      canManage: _canManageLeaveAllocation,
                       onManage: (balances) => _openLeaveAllocationSheet(
                         teacher: teacher,
                         academicYearId: activeYearId,
@@ -669,7 +678,7 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-class _TeacherLeaveBalanceCard extends StatelessWidget {
+class _TeacherLeaveBalanceCard extends StatefulWidget {
   const _TeacherLeaveBalanceCard({
     required this.balancesAsync,
     required this.canManage,
@@ -679,6 +688,14 @@ class _TeacherLeaveBalanceCard extends StatelessWidget {
   final AsyncValue<List<LeaveBalanceModel>> balancesAsync;
   final bool canManage;
   final ValueChanged<List<LeaveBalanceModel>> onManage;
+
+  @override
+  State<_TeacherLeaveBalanceCard> createState() =>
+      _TeacherLeaveBalanceCardState();
+}
+
+class _TeacherLeaveBalanceCardState extends State<_TeacherLeaveBalanceCard> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -697,108 +714,173 @@ class _TeacherLeaveBalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: AppColors.navyDeep.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 15,
-                    color: AppColors.navyDeep,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Leave Allocation',
-                    style: AppTypography.titleSmall.copyWith(
-                      fontWeight: FontWeight.w700,
+          InkWell(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.navyDeep.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 15,
                       color: AppColors.navyDeep,
-                      fontSize: 13,
                     ),
                   ),
-                ),
-                if (canManage)
-                  balancesAsync.when(
-                    loading: () => const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    error: (_, __) => GestureDetector(
-                      onTap: () => onManage(const <LeaveBalanceModel>[]),
-                      child: _pillButtonLabel('Set'),
-                    ),
-                    data: (balances) => GestureDetector(
-                      onTap: () => onManage(balances),
-                      child: _pillButtonLabel('Manage'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Leave Allocation',
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navyDeep,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-              ],
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: AppColors.grey600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (widget.canManage)
+                    widget.balancesAsync.when(
+                      loading: () => const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, __) => GestureDetector(
+                        onTap: () =>
+                            widget.onManage(const <LeaveBalanceModel>[]),
+                        child: _pillButtonLabel('Set'),
+                      ),
+                      data: (balances) => GestureDetector(
+                        onTap: () => widget.onManage(balances),
+                        child: _pillButtonLabel('Manage'),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-          Container(height: 1, color: AppColors.surface100),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-            child: balancesAsync.when(
-              loading: () => const LinearProgressIndicator(
-                minHeight: 2,
-                color: AppColors.navyMedium,
-              ),
-              error: (e, _) => Text(
-                e.toString(),
-                style:
-                    AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
-              ),
-              data: (balances) {
-                if (balances.isEmpty) {
-                  return Text(
-                    'No leave allocation found for this teacher yet.',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.grey500,
-                    ),
-                  );
-                }
+          if (_expanded) ...[
+            Container(height: 1, color: AppColors.surface100),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              child: widget.balancesAsync.when(
+                loading: () => const LinearProgressIndicator(
+                  minHeight: 2,
+                  color: AppColors.navyMedium,
+                ),
+                error: (e, _) => Text(
+                  e.toString(),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.errorRed,
+                  ),
+                ),
+                data: (balances) {
+                  if (balances.isEmpty) {
+                    return Text(
+                      'No leave allocation found for this teacher yet.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.grey500,
+                      ),
+                    );
+                  }
 
-                return Column(
-                  children: balances
-                      .map(
-                        (b) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
+                  return Column(
+                    children: balances.map((b) {
+                      final total = b.totalDays <= 0 ? 1 : b.totalDays;
+                      final usedRatio = (b.usedDays / total).clamp(0.0, 1.0);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.surface100),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  b.leaveType.shortLabel,
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.navyDeep,
+                              Text(
+                                b.leaveType.shortLabel,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.navyDeep,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  value: usedRatio,
+                                  minHeight: 6,
+                                  backgroundColor: AppColors.successGreen
+                                      .withValues(alpha: 0.15),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.warningAmber,
                                   ),
                                 ),
                               ),
-                              Text(
-                                'A ${b.totalDays.toStringAsFixed(0)}  U ${b.usedDays.toStringAsFixed(0)}  R ${b.remainingDays.toStringAsFixed(0)}',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.grey600,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _LeaveMetricChip(
+                                      label: 'Allocated',
+                                      value: b.totalDays.toStringAsFixed(0),
+                                      bg: AppColors.infoBlue
+                                          .withValues(alpha: 0.12),
+                                      fg: AppColors.infoBlue,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: _LeaveMetricChip(
+                                      label: 'Used',
+                                      value: b.usedDays.toStringAsFixed(0),
+                                      bg: AppColors.warningAmber
+                                          .withValues(alpha: 0.14),
+                                      fg: AppColors.warningDark,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: _LeaveMetricChip(
+                                      label: 'Remaining',
+                                      value: b.remainingDays.toStringAsFixed(0),
+                                      bg: AppColors.successGreen
+                                          .withValues(alpha: 0.15),
+                                      fg: AppColors.successDark,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      )
-                      .toList(),
-                );
-              },
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -818,6 +900,52 @@ class _TeacherLeaveBalanceCard extends StatelessWidget {
           fontWeight: FontWeight.w700,
           fontSize: 11,
         ),
+      ),
+    );
+  }
+}
+
+class _LeaveMetricChip extends StatelessWidget {
+  const _LeaveMetricChip({
+    required this.label,
+    required this.value,
+    required this.bg,
+    required this.fg,
+  });
+
+  final String label;
+  final String value;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: AppTypography.labelMedium.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.grey700,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -892,8 +1020,9 @@ class _TeacherLeaveRequestsCard extends StatelessWidget {
                     AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
               ),
               data: (result) {
-                final pending =
-                    result.items.where((l) => l.status == LeaveStatus.pending).length;
+                final pending = result.items
+                    .where((l) => l.status == LeaveStatus.pending)
+                    .length;
                 final approved = result.items
                     .where((l) => l.status == LeaveStatus.approved)
                     .length;

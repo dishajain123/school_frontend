@@ -168,9 +168,35 @@ class _PrincipalResultsDistributionScreenState
               )));
 
     return AppScaffold(
-      appBar: const AppAppBar(
+      appBar: AppAppBar(
         title: 'Results Distribution',
         showBack: true,
+        actions: [
+          if (isTeacher)
+            IconButton(
+              tooltip: 'Enter Marks',
+              onPressed: () {
+                if (_selectedStandardId == null || _selectedExamId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Select class and exam first to enter marks.'),
+                    ),
+                  );
+                  return;
+                }
+                context.push(
+                  RouteNames.enterResults,
+                  extra: {
+                    'examId': _selectedExamId,
+                    'standardId': _selectedStandardId,
+                    'section': _selectedSection,
+                  },
+                );
+              },
+              icon: const Icon(Icons.edit_note_outlined),
+            ),
+        ],
       ),
       body: Column(
         children: [

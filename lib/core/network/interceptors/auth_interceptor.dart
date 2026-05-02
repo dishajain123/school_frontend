@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../constants/api_constants.dart';
+import '../../constants/storage_keys.dart';
+import '../../storage/local_storage.dart';
 import '../../storage/secure_storage.dart';
 
 /// Attaches Bearer token to every request.
@@ -8,10 +10,12 @@ import '../../storage/secure_storage.dart';
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required this.secureStorage,
+    required this.localStorage,
     required this.onLogout,
   });
 
   final SecureStorage secureStorage;
+  final LocalStorage localStorage;
   final void Function() onLogout;
 
   bool _isRefreshing = false;
@@ -69,6 +73,10 @@ class AuthInterceptor extends Interceptor {
         }
 
         await secureStorage.writeToken(newAccessToken);
+        await localStorage.setString(
+          StorageKeys.accessTokenBackup,
+          newAccessToken,
+        );
 
         // Retry the original request with the new token
         // Build a new RequestOptions with the updated Authorization header

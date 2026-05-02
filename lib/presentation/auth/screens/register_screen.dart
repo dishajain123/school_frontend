@@ -14,6 +14,18 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
 
+class _AcademicYearOption {
+  const _AcademicYearOption({
+    required this.id,
+    required this.name,
+    required this.isActive,
+  });
+
+  final String id;
+  final String name;
+  final bool isActive;
+}
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -41,7 +53,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmPasswordFocus = FocusNode();
 
   UserRole _selectedRole = UserRole.teacher;
+  List<_AcademicYearOption> _academicYears = const [];
+  String? _selectedAcademicYearId;
+  bool _loadingAcademicYears = true;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAcademicYears();
+  }
 
   @override
   void dispose() {
@@ -67,10 +88,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedAcademicYearId == null || _selectedAcademicYearId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an academic year'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
-      final submittedData = <String, dynamic>{};
+      final submittedData = <String, dynamic>{
+        'academic_year_id': _selectedAcademicYearId!,
+      };
       if (_selectedRole == UserRole.student) {
         submittedData['admission_number'] =
             _admissionNumberController.text.trim();
@@ -85,8 +117,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList();
-        submittedData['student_admission_number'] = tokens.first;
-        submittedData['child_admission_numbers'] = tokens;
+        if (tokens.isNotEmpty) {
+          // Keep all accepted backend aliases for consistency across onboarding flows.
+          submittedData['student_admission_number'] = tokens.first;
+          submittedData['child_admission_number'] = tokens.first;
+          submittedData['admission_number'] = tokens.first;
+          submittedData['child_admission_numbers'] = tokens;
+        }
       }
 
       await ref.read(authRepositoryProvider).registerSelf(
@@ -143,6 +180,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return 'Could not submit registration. Please try again.';
   }
 
+  Future<void> _loadAcademicYears() async {
+    setState(() => _loadingAcademicYears = true);
+    try {
+      final rawItems = await ref
+          .read(authRepositoryProvider)
+          .listActiveAcademicYearsForRegistration();
+      final options = rawItems.map((item) {
+        return _AcademicYearOption(
+          id: (item['id'] ?? '').toString(),
+          name: (item['name'] ?? '').toString(),
+          isActive: item['is_active'] == true,
+        );
+      }).where((item) => item.id.isNotEmpty && item.name.isNotEmpty).toList();
+      if (!mounted) return;
+      setState(() {
+        _academicYears = options;
+        _selectedAcademicYearId =
+            options.isNotEmpty ? options.first.id : null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _academicYears = const [];
+        _selectedAcademicYearId = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loadingAcademicYears = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,6 +264,46 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _selectedAcademicYearId,
+                  decoration:
+                      const InputDecoration(labelText: 'Academic Year *'),
+                  items: _academicYears
+                      .map(
+                        (year) => DropdownMenuItem<String>(
+                          value: year.id,
+                          child: Text(
+                            year.isActive ? '${year.name} (Active)' : year.name,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _loadingAcademicYears
+                      ? null
+                      : (value) {
+                          setState(() => _selectedAcademicYearId = value);
+                        },
+                  validator: (_) {
+                    if (_selectedAcademicYearId == null ||
+                        _selectedAcademicYearId!.isEmpty) {
+                      return 'Academic year is required';
+                    }
+                    return null;
+                  },
+                  hint: _loadingAcademicYears
+                      ? const Text('Loading active academic years...')
+                      : const Text('Select active academic year'),
+                ),
+                if (_academicYears.isEmpty && !_loadingAcademicYears) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'No active academic year found. Contact school admin.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.errorRed,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 AppTextField(
                   controller: _fullNameController,
                   focusNode: _fullNameFocus,
@@ -230,11 +339,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   onSubmitted: (_) {
                     if (_selectedRole == UserRole.parent) {
-                      FocusScope.of(context).requestFocus(_childAdmissionNumbersFocus);
+                      FocusScope.of(context)
+                          .requestFocus(_childAdmissionNumbersFocus);
                     } else if (_selectedRole == UserRole.teacher) {
-                      FocusScope.of(context).requestFocus(_teacherIdentifierFocus);
+                      FocusScope.of(context)
+                          .requestFocus(_teacherIdentifierFocus);
                     } else if (_selectedRole == UserRole.student) {
-                      FocusScope.of(context).requestFocus(_studentAdmissionFocus);
+                      FocusScope.of(context)
+                          .requestFocus(_studentAdmissionFocus);
                     } else {
                       FocusScope.of(context).requestFocus(_passwordFocus);
                     }
@@ -304,8 +416,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: true,
                   prefixIconData: Icons.lock_outline,
                   textInputAction: TextInputAction.next,
-                  onSubmitted: (_) =>
-                      FocusScope.of(context).requestFocus(_confirmPasswordFocus),
+                  onSubmitted: (_) => FocusScope.of(context)
+                      .requestFocus(_confirmPasswordFocus),
                   validator: Validators.validatePassword,
                 ),
                 const SizedBox(height: 16),
@@ -318,8 +430,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIconData: Icons.lock_outline,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  validator: (v) =>
-                      Validators.validateConfirmPassword(v, _passwordController.text),
+                  validator: (v) => Validators.validateConfirmPassword(
+                      v, _passwordController.text),
                 ),
                 const SizedBox(height: 24),
                 AppButton.primary(

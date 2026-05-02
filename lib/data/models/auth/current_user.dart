@@ -61,6 +61,8 @@ class CurrentUser {
     this.enrollmentCompleted = false,
     this.enrollmentPending = true,
     this.onboardingMessage,
+    this.academicYearId,
+    this.academicYearName,
   });
 
   final String id;
@@ -76,6 +78,8 @@ class CurrentUser {
   final bool enrollmentCompleted;
   final bool enrollmentPending;
   final String? onboardingMessage;
+  final String? academicYearId;
+  final String? academicYearName;
 
   bool hasPermission(String permission) => permissions.contains(permission);
 
@@ -101,6 +105,10 @@ class CurrentUser {
       enrollmentCompleted: json['enrollment_completed'] as bool? ?? false,
       enrollmentPending: json['enrollment_pending'] as bool? ?? true,
       onboardingMessage: json['onboarding_message'] as String?,
+      academicYearId: (json['academic_year_id'] ?? json['academicYearId'])
+          ?.toString(),
+      academicYearName:
+          (json['academic_year_name'] ?? json['academicYearName'])?.toString(),
     );
   }
 
@@ -119,6 +127,8 @@ class CurrentUser {
       'enrollment_completed': enrollmentCompleted,
       'enrollment_pending': enrollmentPending,
       'onboarding_message': onboardingMessage,
+      'academic_year_id': academicYearId,
+      'academic_year_name': academicYearName,
     };
   }
 
@@ -136,6 +146,8 @@ class CurrentUser {
     bool? enrollmentCompleted,
     bool? enrollmentPending,
     String? onboardingMessage,
+    String? academicYearId,
+    String? academicYearName,
   }) {
     return CurrentUser(
       id: id ?? this.id,
@@ -151,6 +163,8 @@ class CurrentUser {
       enrollmentCompleted: enrollmentCompleted ?? this.enrollmentCompleted,
       enrollmentPending: enrollmentPending ?? this.enrollmentPending,
       onboardingMessage: onboardingMessage ?? this.onboardingMessage,
+      academicYearId: academicYearId ?? this.academicYearId,
+      academicYearName: academicYearName ?? this.academicYearName,
     );
   }
 }

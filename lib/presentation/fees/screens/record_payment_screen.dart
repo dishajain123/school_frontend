@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/fee/payment_model.dart';
@@ -55,6 +54,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _refCtrl = TextEditingController();
+  final _transactionCtrl = TextEditingController();
   PaymentMode _selectedMode = PaymentMode.cash;
   DateTime _paymentDate = DateTime.now();
 
@@ -71,6 +71,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   void dispose() {
     _amountCtrl.dispose();
     _refCtrl.dispose();
+    _transactionCtrl.dispose();
     super.dispose();
   }
 
@@ -137,6 +138,9 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
           paymentDate: apiDate,
           referenceNumber:
               _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
+          transactionRef: _transactionCtrl.text.trim().isEmpty
+              ? null
+              : _transactionCtrl.text.trim(),
         );
 
     if (!mounted) return;
@@ -243,6 +247,15 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                       label: '',
                       hint: 'UTR No., Cheque No., Transaction ID...',
                       controller: _refCtrl,
+                      keyboardType: TextInputType.text,
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionLabel(label: 'Transaction Notes / Ref (optional)'),
+                    const SizedBox(height: 10),
+                    AppTextField(
+                      label: '',
+                      hint: 'Gateway ref, remarks, or payment details...',
+                      controller: _transactionCtrl,
                       keyboardType: TextInputType.text,
                     ),
                   ],
@@ -582,6 +595,10 @@ class _PaymentModeGrid extends StatelessWidget {
         return Icons.qr_code_rounded;
       case PaymentMode.online:
         return Icons.credit_card_rounded;
+      case PaymentMode.card:
+        return Icons.credit_card_rounded;
+      case PaymentMode.bankTransfer:
+        return Icons.account_balance_rounded;
       case PaymentMode.cheque:
         return Icons.account_balance_rounded;
       case PaymentMode.dd:

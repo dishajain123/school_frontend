@@ -11,7 +11,7 @@ import '../../../data/models/document/document_model.dart';
 /// - Type icon (color-coded)
 /// - Document type label + request/generate timestamps
 /// - Status chip (animated spinner for PROCESSING)
-/// - Download button (only when READY)
+/// - Download / open file when the document has a stored file (any review stage)
 class DocumentTile extends StatelessWidget {
   const DocumentTile({
     super.key,
@@ -79,6 +79,16 @@ class DocumentTile extends StatelessWidget {
                       ],
                       const SizedBox(height: AppDimensions.space4),
                       _TimestampRow(document: document),
+                      if (document.hasFailed &&
+                          (document.reviewNote ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: AppDimensions.space6),
+                        Text(
+                          'Admin feedback: ${document.reviewNote!.trim()}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.errorRed,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -91,11 +101,12 @@ class DocumentTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _StatusChip(status: status),
-                    if (document.isReady && onDownload != null) ...[
+                    if (onDownload != null) ...[
                       const SizedBox(height: AppDimensions.space8),
                       _DownloadButton(onTap: onDownload!),
                     ],
-                    if (document.hasFailed) ...[
+                    if (document.hasFailed &&
+                        (document.reviewNote ?? '').trim().isEmpty) ...[
                       const SizedBox(height: AppDimensions.space8),
                       Text(
                         'Contact admin',

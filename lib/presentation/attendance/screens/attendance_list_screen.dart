@@ -28,8 +28,6 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   int _month = DateTime.now().month;
   int _year = DateTime.now().year;
   String? _selectedSubjectId;
-  _AttendanceViewMode _viewMode = _AttendanceViewMode.daily;
-  int? _selectedLectureNumber;
   bool _requestedParentChildrenLoad = false;
 
   @override
@@ -101,9 +99,6 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
       month: _month,
       year: _year,
       subjectId: _selectedSubjectId,
-      lectureNumber: _viewMode == _AttendanceViewMode.lectureWise
-          ? _selectedLectureNumber
-          : null,
     );
 
     final attendanceAsync = ref.watch(attendanceListProvider(params));
@@ -163,15 +158,10 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: _AttendanceViewFilters(
-              mode: _viewMode,
               subjects: subjects,
               selectedSubjectId: _selectedSubjectId,
-              selectedLectureNumber: _selectedLectureNumber,
-              onModeChanged: (mode) => setState(() => _viewMode = mode),
               onSubjectChanged: (subjectId) =>
                   setState(() => _selectedSubjectId = subjectId),
-              onLectureChanged: (lecture) =>
-                  setState(() => _selectedLectureNumber = lecture),
             ),
           ),
         ),
@@ -228,24 +218,13 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: _viewMode == _AttendanceViewMode.daily
-                ? SliverList.builder(
-                    itemCount: dailyItems.length,
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _DailyAttendanceTile(summary: dailyItems[index]),
-                    ),
-                  )
-                : SliverList.builder(
-                    itemCount: records.length,
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _AttendanceRecordTile(
-                        record: records[index],
-                        isLast: index == records.length - 1,
-                      ),
-                    ),
-                  ),
+            sliver: SliverList.builder(
+              itemCount: dailyItems.length,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _DailyAttendanceTile(summary: dailyItems[index]),
+              ),
+            ),
           ),
         ],
         const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
@@ -263,7 +242,6 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
     }
     final list = grouped.entries.map((entry) {
       final dayRecords = entry.value;
-      dayRecords.sort((a, b) => a.lectureNumber.compareTo(b.lectureNumber));
       final present =
           dayRecords.where((r) => r.status == AttendanceStatus.present).length;
       final absent =
@@ -283,8 +261,6 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
     return list;
   }
 }
-
-enum _AttendanceViewMode { daily, lectureWise }
 
 class _DailyAttendanceSummary {
   const _DailyAttendanceSummary({
@@ -554,8 +530,9 @@ class _AttendanceRecordTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Lecture ${record.lectureNumber}'
-                  '${record.section.isNotEmpty ? ' · Sec ${record.section}' : ''}',
+                  record.section.isNotEmpty
+                      ? 'Section ${record.section}'
+                      : 'Attendance record',
                   style:
                       AppTypography.caption.copyWith(color: AppColors.grey500),
                 ),
@@ -585,28 +562,17 @@ class _AttendanceRecordTile extends StatelessWidget {
 
 class _AttendanceViewFilters extends StatelessWidget {
   const _AttendanceViewFilters({
-    required this.mode,
     required this.subjects,
     required this.selectedSubjectId,
-    required this.selectedLectureNumber,
-    required this.onModeChanged,
     required this.onSubjectChanged,
-    required this.onLectureChanged,
   });
 
-  final _AttendanceViewMode mode;
   final List<SubjectAttendanceStat> subjects;
   final String? selectedSubjectId;
-  final int? selectedLectureNumber;
-  final ValueChanged<_AttendanceViewMode> onModeChanged;
   final ValueChanged<String?> onSubjectChanged;
-  final ValueChanged<int?> onLectureChanged;
 
   @override
   Widget build(BuildContext context) {
-    final chipStyle = AppTypography.labelMedium.copyWith(
-      fontWeight: FontWeight.w600,
-    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -629,42 +595,6 @@ class _AttendanceViewFilters extends StatelessWidget {
           ],
           onChanged: onSubjectChanged,
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            ChoiceChip(
-              label: Text('Daily', style: chipStyle),
-              selected: mode == _AttendanceViewMode.daily,
-              onSelected: (_) => onModeChanged(_AttendanceViewMode.daily),
-            ),
-            const SizedBox(width: 8),
-            ChoiceChip(
-              label: Text('Lecture-wise', style: chipStyle),
-              selected: mode == _AttendanceViewMode.lectureWise,
-              onSelected: (_) => onModeChanged(_AttendanceViewMode.lectureWise),
-            ),
-          ],
-        ),
-        if (mode == _AttendanceViewMode.lectureWise) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChoiceChip(
-                label: Text('All Lectures', style: chipStyle),
-                selected: selectedLectureNumber == null,
-                onSelected: (_) => onLectureChanged(null),
-              ),
-              for (var i = 1; i <= 8; i++)
-                ChoiceChip(
-                  label: Text('L$i', style: chipStyle),
-                  selected: selectedLectureNumber == i,
-                  onSelected: (_) => onLectureChanged(i),
-                ),
-            ],
-          ),
-        ],
       ],
     );
   }

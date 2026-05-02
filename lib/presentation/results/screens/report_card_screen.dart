@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -190,6 +191,11 @@ class _ReportUrlCard extends StatelessWidget {
                       label: const Text('View PDF'),
                     ),
                     TextButton.icon(
+                      onPressed: () => _downloadPdf(context, url),
+                      icon: const Icon(Icons.download_outlined, size: 16),
+                      label: const Text('Download'),
+                    ),
+                    TextButton.icon(
                       onPressed: () => _showOpenDialog(context, url),
                       icon: const Icon(Icons.open_in_new_rounded, size: 16),
                       label: const Text('Open Link'),
@@ -202,6 +208,15 @@ class _ReportUrlCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _downloadPdf(BuildContext context, String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    SnackbarUtils.showError(context, 'Unable to open download link');
   }
 }
 

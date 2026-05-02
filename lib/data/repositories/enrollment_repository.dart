@@ -230,6 +230,18 @@ class EnrollmentRepository {
     );
     return response.data!;
   }
+
+  /// Annual re-enrollment for any authenticated role (self).
+  Future<Map<String, dynamic>> annualReenrollUser({
+    required String userId,
+    required String academicYearId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiConstants.enrollmentAnnualReenroll(userId),
+      data: {'academic_year_id': academicYearId},
+    );
+    return response.data!;
+  }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

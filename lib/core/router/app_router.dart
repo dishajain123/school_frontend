@@ -36,6 +36,10 @@ import '../../presentation/parents/screens/create_parent_screen.dart';
 import '../../presentation/attendance/screens/attendance_list_screen.dart';
 import '../../presentation/attendance/screens/principal_attendance_overview_screen.dart';
 import '../../presentation/attendance/screens/mark_attendance_screen.dart';
+import '../../presentation/assignments/screens/assignment_list_screen.dart';
+import '../../presentation/assignments/screens/assignment_detail_screen.dart';
+import '../../presentation/assignments/screens/create_assignment_screen.dart';
+import '../../presentation/assignments/screens/submission_list_screen.dart';
 import '../../presentation/academic_year/screens/student_academic_history_screen.dart';
 import '../../presentation/teacher_schedule/screens/teacher_schedule_screen.dart';
 import '../../presentation/my_class/screens/subject_list_screen.dart';
@@ -419,8 +423,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               return ReenrollmentScreen(
                 studentId: studentId,
                 studentName: (extra?['studentName'] as String?) ?? 'Student',
-                admissionNumber:
-                    (extra?['admissionNumber'] as String?) ?? '—',
+                admissionNumber: (extra?['admissionNumber'] as String?) ?? '—',
               );
             },
           ),
@@ -459,7 +462,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── Attendance ─────────────────────────────────────────────────
           GoRoute(
             path: RouteNames.attendance,
-            builder: (_, __) => const AttendanceListScreen(),
+            builder: (context, state) {
+              final user = ref.read(authNotifierProvider).currentUser;
+              if (user?.role == UserRole.teacher) {
+                return const MarkAttendanceScreen();
+              }
+              return const AttendanceListScreen();
+            },
           ),
           GoRoute(
             path: RouteNames.attendanceOverview,
@@ -473,7 +482,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ── All other screens (placeholders kept for backward compat) ──
           GoRoute(
             path: RouteNames.assignments,
-            builder: (_, __) => const PlaceholderScreen('Assignments'),
+            builder: (_, __) => const AssignmentListScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (_, __) => const CreateAssignmentScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => AssignmentDetailScreen(
+                  assignmentId: state.pathParameters['id']!,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'submissions',
+                    builder: (context, state) => SubmissionListScreen(
+                      assignmentId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.homework,

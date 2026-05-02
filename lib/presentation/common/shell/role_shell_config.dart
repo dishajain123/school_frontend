@@ -132,7 +132,7 @@ abstract final class RoleShellConfig {
       icon: Icons.fact_check_outlined,
       activeIcon: Icons.fact_check,
       label: 'Attendance',
-      rootPath: RouteNames.attendance,
+      rootPath: RouteNames.markAttendance,
     ),
     ShellTabItem(
       icon: Icons.menu_book_outlined,

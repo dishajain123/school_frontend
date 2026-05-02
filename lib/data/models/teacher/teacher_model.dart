@@ -2,6 +2,7 @@ class TeacherUserModel {
   const TeacherUserModel({
     required this.id,
     required this.isActive,
+    this.fullName,
     this.email,
     this.phone,
     this.profilePhotoKey,
@@ -9,6 +10,7 @@ class TeacherUserModel {
   });
 
   final String id;
+  final String? fullName;
   final String? email;
   final String? phone;
   final bool isActive;
@@ -18,6 +20,7 @@ class TeacherUserModel {
   factory TeacherUserModel.fromJson(Map<String, dynamic> json) {
     return TeacherUserModel(
       id: json['id'] as String,
+      fullName: json['full_name'] as String?,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       isActive: json['is_active'] as bool? ?? true,
@@ -27,6 +30,10 @@ class TeacherUserModel {
   }
 
   String get displayName {
+    final name = fullName?.trim();
+    if (name != null && name.isNotEmpty) {
+      return name;
+    }
     if (email != null && email!.isNotEmpty) {
       final parts = email!.split('@').first.split('.');
       return parts.map((w) {

@@ -242,12 +242,35 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
     ];
 
     final primaryActions = [
+      // Row 1 (Parent Critical): Fees, Results, Attendance, Diary
+      QuickActionItem(
+        icon: Icons.account_balance_wallet_outlined,
+        label: 'Fees',
+        color: AppColors.warningAmber,
+        onTap: () => context.go(RouteNames.feeDashboard),
+      ),
+      QuickActionItem(
+        icon: Icons.bar_chart_outlined,
+        label: 'Results',
+        color: AppColors.subjectPhysics,
+        onTap: () => context.go(RouteNames.results),
+      ),
       QuickActionItem(
         icon: Icons.fact_check_outlined,
         label: 'Attendance',
-        color: AppColors.successGreen,
+        color: AppColors.subjectBio,
         onTap: () => context.go(RouteNames.attendance),
       ),
+      QuickActionItem(
+        icon: Icons.menu_book_outlined,
+        label: 'Diary',
+        color: AppColors.subjectChem,
+        onTap: () => context.go(RouteNames.diary),
+      ),
+    ];
+
+    final secondaryActions = [
+      // Row 2 (Student Daily Use): Homework, Assignments, Announcements, Timetable
       QuickActionItem(
         icon: Icons.home_work_outlined,
         label: 'Homework',
@@ -255,15 +278,46 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
         onTap: () => context.go(RouteNames.homework),
       ),
       QuickActionItem(
-        icon: Icons.account_balance_wallet_outlined,
-        label: 'Fees',
-        color: AppColors.goldPrimary,
-        onTap: () => context.go(RouteNames.feeDashboard),
+        icon: Icons.assignment_outlined,
+        label: 'Assignments',
+        color: AppColors.subjectEnglish,
+        onTap: () => context.go(RouteNames.assignments),
+      ),
+      QuickActionItem(
+        icon: Icons.campaign_outlined,
+        label: 'Announcements',
+        color: AppColors.subjectHindi,
+        onTap: () => context.go(RouteNames.announcements),
+      ),
+      QuickActionItem(
+        icon: Icons.calendar_month_outlined,
+        label: 'Timetable',
+        color: AppColors.infoBlue,
+        onTap: () => context.go(RouteNames.timetable),
+      ),
+      // Row 3 (Academic + Support): Exams, Documents, Complaints, Classroom
+      QuickActionItem(
+        icon: Icons.quiz_outlined,
+        label: 'Exams',
+        color: AppColors.subjectHistory,
+        onTap: () => context.go(RouteNames.examSchedules),
+      ),
+      QuickActionItem(
+        icon: Icons.description_outlined,
+        label: 'Documents',
+        color: AppColors.navyLight,
+        onTap: () => context.go(RouteNames.documents),
+      ),
+      QuickActionItem(
+        icon: Icons.feedback_outlined,
+        label: 'Complaints',
+        color: AppColors.errorRed,
+        onTap: () => context.go(RouteNames.complaints),
       ),
       QuickActionItem(
         icon: Icons.class_outlined,
         label: 'Classroom',
-        color: AppColors.infoBlue,
+        color: AppColors.subjectScience,
         onTap: () {
           context.go(
             RouteNames.myClass,
@@ -275,51 +329,6 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
             },
           );
         },
-      ),
-    ];
-
-    final secondaryActions = [
-      QuickActionItem(
-        icon: Icons.assignment_outlined,
-        label: 'Assignments',
-        color: AppColors.subjectEnglish,
-        onTap: () => context.go(RouteNames.assignments),
-      ),
-      QuickActionItem(
-        icon: Icons.quiz_outlined,
-        label: 'Exams',
-        color: AppColors.subjectPhysics,
-        onTap: () => context.go(RouteNames.examSchedules),
-      ),
-      QuickActionItem(
-        icon: Icons.bar_chart_outlined,
-        label: 'Results',
-        color: AppColors.subjectScience,
-        onTap: () => context.go(RouteNames.results),
-      ),
-      QuickActionItem(
-        icon: Icons.menu_book_outlined,
-        label: 'Diary',
-        color: AppColors.subjectEnglish,
-        onTap: () => context.go(RouteNames.diary),
-      ),
-      QuickActionItem(
-        icon: Icons.description_outlined,
-        label: 'Documents',
-        color: AppColors.subjectChem,
-        onTap: () => context.go(RouteNames.documents),
-      ),
-      QuickActionItem(
-        icon: Icons.feedback_outlined,
-        label: 'Complaints',
-        color: AppColors.errorRed,
-        onTap: () => context.go(RouteNames.complaints),
-      ),
-      QuickActionItem(
-        icon: Icons.photo_library_outlined,
-        label: 'Gallery',
-        color: AppColors.subjectPhysics,
-        onTap: () => context.go(RouteNames.galleryAlbums),
       ),
     ];
 
@@ -555,10 +564,17 @@ class _ParentClassTeachersCard extends ConsumerWidget {
   }
 }
 
-class _ClassTeachersShell extends StatelessWidget {
+class _ClassTeachersShell extends StatefulWidget {
   const _ClassTeachersShell({required this.child, this.sectionLabel});
   final String? sectionLabel;
   final Widget child;
+
+  @override
+  State<_ClassTeachersShell> createState() => _ClassTeachersShellState();
+}
+
+class _ClassTeachersShellState extends State<_ClassTeachersShell> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -580,36 +596,64 @@ class _ClassTeachersShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.navyDeep.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.co_present_outlined,
-                    size: 16, color: AppColors.navyDeep),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
                 children: [
-                  Text('Class Teachers',
-                      style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.navyDeep,
-                          fontWeight: FontWeight.w700)),
-                  if (sectionLabel != null)
-                    Text(sectionLabel!,
-                        style: AppTypography.caption
-                            .copyWith(color: AppColors.grey500)),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.navyDeep.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.co_present_outlined,
+                        size: 16, color: AppColors.navyDeep),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Class Teachers',
+                            style: AppTypography.titleSmall.copyWith(
+                                color: AppColors.navyDeep,
+                                fontWeight: FontWeight.w700)),
+                        if (widget.sectionLabel != null)
+                          Text(widget.sectionLabel!,
+                              style: AppTypography.caption
+                                  .copyWith(color: AppColors.grey500)),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.navyMedium,
+                      size: 24,
+                    ),
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          child,
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 180),
+            firstChild: const SizedBox.shrink(),
+            secondChild: Column(
+              children: [
+                const SizedBox(height: 12),
+                widget.child,
+              ],
+            ),
+            crossFadeState:
+                _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          ),
         ],
       ),
     );

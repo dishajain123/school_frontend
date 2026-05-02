@@ -30,8 +30,7 @@ class ReenrollmentScreen extends ConsumerStatefulWidget {
   final String admissionNumber;
 
   @override
-  ConsumerState<ReenrollmentScreen> createState() =>
-      _ReenrollmentScreenState();
+  ConsumerState<ReenrollmentScreen> createState() => _ReenrollmentScreenState();
 }
 
 class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
@@ -58,20 +57,20 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await ref
-          .read(enrollmentNotifierProvider.notifier)
-          .reenrollStudent(
-            widget.studentId,
-            targetYearId: _selectedYearId!,
-            standardId: _selectedStandardId!,
-            sectionId: _selectedSectionId,
-            rollNumber:
-                _rollCtrl.text.trim().isEmpty ? null : _rollCtrl.text.trim(),
-            joinedOn: _joinedOn != null
-                ? DateFormatter.formatDateForApi(_joinedOn!)
-                : null,
-            admissionType: _admissionType.backendValue,
-          );
+      final result =
+          await ref.read(enrollmentNotifierProvider.notifier).reenrollStudent(
+                widget.studentId,
+                targetYearId: _selectedYearId!,
+                standardId: _selectedStandardId!,
+                sectionId: _selectedSectionId,
+                rollNumber: _rollCtrl.text.trim().isEmpty
+                    ? null
+                    : _rollCtrl.text.trim(),
+                joinedOn: _joinedOn != null
+                    ? DateFormatter.formatDateForApi(_joinedOn!)
+                    : null,
+                admissionType: _admissionType.backendValue,
+              );
 
       if (mounted) {
         SnackbarUtils.showSuccess(
@@ -88,8 +87,20 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
   @override
   Widget build(BuildContext context) {
     final yearsAsync = ref.watch(academicYearNotifierProvider);
-    final years = yearsAsync.valueOrNull ?? [];
-    final standardsAsync = ref.watch(standardsProvider(_selectedYearId));
+    final allYears = yearsAsync.valueOrNull ?? [];
+    final now = DateTime.now();
+    final preferredYears = allYears
+        .where((y) => !y.isActive && y.endDate.isAfter(now))
+        .toList(growable: false)
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+    final years = preferredYears.isNotEmpty
+        ? preferredYears
+        : allYears.where((y) => !y.isActive).toList(growable: false);
+    final availableYears = years.isNotEmpty ? years : allYears;
+    final selectedYearValue = availableYears.any((y) => y.id == _selectedYearId)
+        ? _selectedYearId
+        : null;
+    final standardsAsync = ref.watch(standardsProvider(selectedYearValue));
     final standards = standardsAsync.valueOrNull ?? [];
 
     return Scaffold(
@@ -129,15 +140,13 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
           Card(
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor:
-                    AppColors.navyDeep.withValues(alpha: 0.1),
+                backgroundColor: AppColors.navyDeep.withValues(alpha: 0.1),
                 child: Text(
                   widget.studentName.isNotEmpty
                       ? widget.studentName[0].toUpperCase()
                       : '?',
                   style: const TextStyle(
-                      color: AppColors.navyDeep,
-                      fontWeight: FontWeight.bold),
+                      color: AppColors.navyDeep, fontWeight: FontWeight.bold),
                 ),
               ),
               title: Text(widget.studentName,
@@ -166,13 +175,13 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
 
           // Academic Year
           DropdownButtonFormField<String>(
-            value: _selectedYearId,
+            value: selectedYearValue,
             decoration: const InputDecoration(
               labelText: 'Target Academic Year *',
               border: OutlineInputBorder(),
             ),
             hint: const Text('Select year'),
-            items: years
+            items: availableYears
                 .map((y) => DropdownMenuItem<String>(
                       value: y.id,
                       child: Text(
@@ -180,8 +189,11 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
                       ),
                     ))
                 .toList(),
-            onChanged: (v) =>
-                setState(() => _selectedYearId = v),
+            onChanged: (v) => setState(() {
+              _selectedYearId = v;
+              _selectedStandardId = null;
+              _selectedSectionId = null;
+            }),
           ),
           const SizedBox(height: 12),
 
@@ -199,8 +211,7 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
                       child: Text(s.name),
                     ))
                 .toList(),
-            onChanged: (v) =>
-                setState(() => _selectedStandardId = v),
+            onChanged: (v) => setState(() => _selectedStandardId = v),
           ),
           const SizedBox(height: 12),
 

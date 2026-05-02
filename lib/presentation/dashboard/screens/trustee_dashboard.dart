@@ -50,25 +50,25 @@ class TrusteeDashboard extends ConsumerWidget {
       QuickActionItem(
         icon: Icons.school_outlined,
         label: 'Students',
-        color: AppColors.navyMedium,
+        color: AppColors.subjectMath,
         onTap: () => context.go(RouteNames.students),
       ),
       QuickActionItem(
         icon: Icons.co_present_outlined,
         label: 'Teachers',
-        color: AppColors.infoBlue,
+        color: AppColors.subjectEnglish,
         onTap: () => context.go(RouteNames.teachers),
       ),
       QuickActionItem(
         icon: Icons.account_balance_wallet_outlined,
         label: 'Fees',
-        color: AppColors.goldPrimary,
+        color: AppColors.warningAmber,
         onTap: () => context.go(RouteNames.feeDashboard),
       ),
       QuickActionItem(
         icon: Icons.class_outlined,
         label: 'Classroom',
-        color: AppColors.subjectScience,
+        color: AppColors.subjectBio,
         onTap: () => context.go(RouteNames.classroomMonitor),
       ),
     ];
@@ -77,13 +77,13 @@ class TrusteeDashboard extends ConsumerWidget {
       QuickActionItem(
         icon: Icons.bar_chart_outlined,
         label: 'Attendance',
-        color: AppColors.successGreen,
+        color: AppColors.subjectPhysics,
         onTap: () => context.go(RouteNames.attendance),
       ),
       QuickActionItem(
         icon: Icons.campaign_outlined,
         label: 'Announcements',
-        color: AppColors.subjectChem,
+        color: AppColors.subjectHindi,
         onTap: () => context.go(RouteNames.announcements),
       ),
       QuickActionItem(
@@ -95,13 +95,13 @@ class TrusteeDashboard extends ConsumerWidget {
       QuickActionItem(
         icon: Icons.quiz_outlined,
         label: 'Exams',
-        color: AppColors.subjectPhysics,
+        color: AppColors.subjectHistory,
         onTap: () => context.go(RouteNames.examSchedules),
       ),
       QuickActionItem(
         icon: Icons.photo_library_outlined,
         label: 'Gallery',
-        color: AppColors.subjectChem,
+        color: AppColors.navyLight,
         onTap: () => context.go(RouteNames.galleryAlbums),
       ),
     ];

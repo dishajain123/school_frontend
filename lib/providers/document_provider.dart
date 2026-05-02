@@ -218,6 +218,10 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
         requiredStatus: requiredUpdated,
         clearError: true,
       );
+      final sid = target?.studentId;
+      if (sid != null && sid.isNotEmpty) {
+        await refreshRequiredStatus(sid);
+      }
       return true;
     } catch (e) {
       state = state.copyWith(error: Failure.fromError(e).message);

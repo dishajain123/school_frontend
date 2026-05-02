@@ -70,7 +70,6 @@ class TimetableViewScreen extends ConsumerWidget {
     // STUDENT — scope to own standard
     if (currentUser.role == UserRole.student) {
       return _StudentTimetableView(
-        section: section,
         academicYearId: activeYear?.id,
       );
     }
@@ -383,8 +382,7 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
 // ── Student-scoped view ───────────────────────────────────────────────────────
 
 class _StudentTimetableView extends ConsumerWidget {
-  const _StudentTimetableView({this.section, this.academicYearId});
-  final String? section;
+  const _StudentTimetableView({this.academicYearId});
   final String? academicYearId;
 
   @override
@@ -424,9 +422,22 @@ class _StudentTimetableView extends ConsumerWidget {
             ),
           );
         }
+        final studentSection = student.section?.trim();
+        if (studentSection == null || studentSection.isEmpty) {
+          return AppScaffold(
+            appBar: const AppAppBar(title: 'Timetable', showBack: true),
+            body: AppEmptyState(
+              icon: Icons.schedule_outlined,
+              title: 'Section not assigned',
+              subtitle:
+                  'Your section is not assigned yet, so timetable cannot be shown.',
+            ),
+          );
+        }
         return _TimetableContent(
           standardId: student.standardId!,
-          section: section ?? student.section,
+          // Always enforce own section for students.
+          section: studentSection,
           academicYearId: academicYearId,
         );
       },

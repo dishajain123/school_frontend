@@ -68,12 +68,44 @@ class _MyClassSubjectListScreenState
   List<_AcademicYear> _years = [];
   _AcademicYear? _selectedYear;
   bool _loadingYears = true;
+  String? _resolvedStandardId;
+  String? _resolvedAcademicYearId;
+  String? _resolvedSectionName;
   String? _resolvedSectionId;
 
   @override
   void initState() {
     super.initState();
-    _loadYears();
+    _resolvedStandardId = widget.initialStandardId;
+    _resolvedAcademicYearId = widget.initialAcademicYearId;
+    _resolvedSectionName = widget.initialSectionName;
+    _resolveStudentContextIfNeeded().whenComplete(_loadYears);
+  }
+
+  Future<void> _resolveStudentContextIfNeeded() async {
+    if ((_resolvedStandardId ?? '').isNotEmpty &&
+        (_resolvedAcademicYearId ?? '').isNotEmpty &&
+        (_resolvedSectionName ?? '').isNotEmpty) {
+      return;
+    }
+    if (widget.childId != null) return;
+    try {
+      final dio = ref.read(dioClientProvider);
+      final resp = await dio.get<Map<String, dynamic>>('/students/me');
+      final raw =
+          (resp.data?['data'] as Map<String, dynamic>?) ?? resp.data ?? {};
+      if (!mounted) return;
+      setState(() {
+        _resolvedStandardId =
+            _resolvedStandardId ?? raw['standard_id']?.toString();
+        _resolvedAcademicYearId =
+            _resolvedAcademicYearId ?? raw['academic_year_id']?.toString();
+        _resolvedSectionName =
+            _resolvedSectionName ?? raw['section']?.toString();
+      });
+    } catch (_) {
+      // Keep existing values; UI will show a clear message if still unresolved.
+    }
   }
 
   Future<void> _loadYears() async {
@@ -94,7 +126,7 @@ class _MyClassSubjectListScreenState
         setState(() {
           _years = years;
           // Default to current year or pre-filled
-          final prefilledId = widget.initialAcademicYearId;
+          final prefilledId = _resolvedAcademicYearId;
           _selectedYear = years.firstWhere(
             (y) => prefilledId != null ? y.id == prefilledId : y.isActive,
             orElse: () => years.isNotEmpty
@@ -117,8 +149,8 @@ class _MyClassSubjectListScreenState
       return;
     }
 
-    final standardId = widget.initialStandardId ?? '';
-    final sectionName = (widget.initialSectionName ?? '').trim();
+    final standardId = _resolvedStandardId ?? '';
+    final sectionName = (_resolvedSectionName ?? '').trim();
     if (standardId.isEmpty || sectionName.isEmpty || yearId.isEmpty) {
       return;
     }
@@ -152,19 +184,20 @@ class _MyClassSubjectListScreenState
 
   @override
   Widget build(BuildContext context) {
-    final standardId = widget.initialStandardId ?? '';
+    final standardId = _resolvedStandardId ?? '';
     final sectionId = widget.initialSectionId ?? _resolvedSectionId ?? '';
     final yearId = _selectedYear?.id ?? '';
 
-    final subjectsAsync =
-        (standardId.isNotEmpty && sectionId.isNotEmpty && yearId.isNotEmpty)
-            ? ref.watch(myClassSubjectsProvider((
-                standardId: standardId,
-                sectionId: sectionId,
-                academicYearId: yearId,
-                childId: widget.childId,
-              )))
-            : const AsyncValue<List<SubjectSummary>>.loading();
+    final hasContext =
+        standardId.isNotEmpty && sectionId.isNotEmpty && yearId.isNotEmpty;
+    final subjectsAsync = hasContext
+        ? ref.watch(myClassSubjectsProvider((
+            standardId: standardId,
+            sectionId: sectionId,
+            academicYearId: yearId,
+            childId: widget.childId,
+          )))
+        : const AsyncValue<List<SubjectSummary>>.data(<SubjectSummary>[]);
 
     final selectedYearValue =
         _years.any((y) => y.id == _selectedYear?.id) ? _selectedYear : null;
@@ -257,42 +290,53 @@ class _MyClassSubjectListScreenState
               ),
             ),
           Expanded(
-            child: subjectsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Text(
-                  e.toString(),
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.errorRed),
-                ),
-              ),
-              data: (subjects) {
-                if (subjects.isEmpty) {
-                  return Center(
+            child: !hasContext
+                ? Center(
                     child: Text(
-                      'No subjects found for this class and year.',
+                      'Classroom is not available yet.\nClass/section/year assignment is missing.',
+                      textAlign: TextAlign.center,
                       style: AppTypography.bodySmall
                           .copyWith(color: AppColors.grey500),
                     ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(myClassSubjectsProvider);
-                  },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: subjects.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) => _SubjectCard(
-                      subject: subjects[i],
-                      isReadOnly: !_isCurrentYear,
-                      childId: widget.childId,
+                  )
+                : subjectsAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(
+                      child: Text(
+                        e.toString(),
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.errorRed),
+                      ),
                     ),
+                    data: (subjects) {
+                      if (subjects.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No subjects found for this class and year.',
+                            style: AppTypography.bodySmall
+                                .copyWith(color: AppColors.grey500),
+                          ),
+                        );
+                      }
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(myClassSubjectsProvider);
+                        },
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: subjects.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, i) => _SubjectCard(
+                            subject: subjects[i],
+                            isReadOnly: !_isCurrentYear,
+                            childId: widget.childId,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

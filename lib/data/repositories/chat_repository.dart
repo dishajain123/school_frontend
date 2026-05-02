@@ -61,6 +61,7 @@ class UserSearchResult {
     required this.id,
     required this.role,
     this.displayNameOverride,
+    this.fullName,
     this.email,
     this.phone,
   });
@@ -68,6 +69,7 @@ class UserSearchResult {
   final String id;
   final String role;
   final String? displayNameOverride;
+  final String? fullName;
   final String? email;
   final String? phone;
 
@@ -75,7 +77,7 @@ class UserSearchResult {
     if (displayNameOverride != null && displayNameOverride!.isNotEmpty) {
       return displayNameOverride!;
     }
-    if (email != null && email!.isNotEmpty) return email!;
+    if (fullName != null && fullName!.trim().isNotEmpty) return fullName!;
     return phone ?? id;
   }
 
@@ -84,6 +86,7 @@ class UserSearchResult {
       id: json['id'] as String,
       role: json['role'] as String? ?? '',
       displayNameOverride: json['display_name'] as String?,
+      fullName: json['full_name'] as String?,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
     );

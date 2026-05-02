@@ -190,6 +190,24 @@ class EnrollmentNotifier extends StateNotifier<AsyncValue<void>> {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>?> annualReenrollUser({
+    required String userId,
+    required String academicYearId,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final result = await _repo.annualReenrollUser(
+        userId: userId,
+        academicYearId: academicYearId,
+      );
+      state = const AsyncData(null);
+      return result;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
 }
 
 final enrollmentNotifierProvider =

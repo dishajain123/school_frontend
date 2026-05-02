@@ -99,9 +99,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final cachedUser = _readCachedUser();
-      final token = await _secureStorage
+      var token = await _secureStorage
           .readToken()
           .timeout(const Duration(seconds: 3), onTimeout: () => null);
+      // Fallback token source for hot-restart/reload resiliency.
+      if (token == null || token.isEmpty) {
+        final backup = _localStorage.getString(StorageKeys.accessTokenBackup);
+        if (backup != null && backup.isNotEmpty) {
+          token = backup;
+          await _secureStorage.writeToken(backup);
+          final refreshBackup =
+              _localStorage.getString(StorageKeys.refreshTokenBackup);
+          if (refreshBackup != null && refreshBackup.isNotEmpty) {
+            await _secureStorage.writeRefreshToken(refreshBackup);
+          }
+        }
+      }
       if (token == null || token.isEmpty) {
         if (cachedUser != null && cachedUser.role != UserRole.superadmin) {
           state = AuthState(
@@ -170,6 +183,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       await _secureStorage.writeToken(tokenResponse.accessToken);
       await _secureStorage.writeRefreshToken(tokenResponse.refreshToken);
+      await _localStorage.setString(
+        StorageKeys.accessTokenBackup,
+        tokenResponse.accessToken,
+      );
+      await _localStorage.setString(
+        StorageKeys.refreshTokenBackup,
+        tokenResponse.refreshToken,
+      );
 
       final user = await _authRepo.getMe();
       if (user.role == UserRole.superadmin) {
@@ -271,6 +292,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _localStorage.remove(StorageKeys.userRole);
     await _localStorage.remove(StorageKeys.userPermissions);
     await _localStorage.remove(StorageKeys.selectedChildId);
+    await _localStorage.remove(StorageKeys.accessTokenBackup);
+    await _localStorage.remove(StorageKeys.refreshTokenBackup);
   }
 }
 

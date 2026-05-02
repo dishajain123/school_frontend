@@ -81,8 +81,8 @@ class DocumentRepository {
 
   // ── GET /documents/{document_id}/download ───────────────────────────────────
   // Permission: document:generate
-  // Returns { status, url? } — url is a presigned MinIO URL (short-lived)
-  // Only populated when status == READY
+  // Returns { status, url? } — url is a presigned MinIO URL (short-lived).
+  // Populated when a file exists (including PROCESSING / FAILED for review).
 
   Future<DocumentDownloadResponse> downloadDocument(String documentId) async {
     final response = await _dio.get(

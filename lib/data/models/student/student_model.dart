@@ -177,6 +177,8 @@ class StudentModel {
   String get displayName {
     final name = studentName?.trim();
     if (name != null && name.isNotEmpty) return name;
+    final userName = user?.fullName?.trim();
+    if (userName != null && userName.isNotEmpty) return userName;
     return admissionNumber;
   }
 

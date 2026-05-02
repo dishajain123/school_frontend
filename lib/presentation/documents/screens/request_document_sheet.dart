@@ -90,7 +90,7 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                     Text('Request Document',
                         style: AppTypography.headlineSmall),
                     Text(
-                      'Select a document type below',
+                      'Ask the school to issue or upload it (e.g. ID card, report card)',
                       style: AppTypography.bodySmall,
                     ),
                   ],

@@ -265,6 +265,8 @@ class ApiConstants {
   static const String enrollmentRollNumbers = '/enrollments/roll-numbers/assign';
   static String enrollmentHistory(String studentId) =>
       '/enrollments/history/$studentId';
+  static String enrollmentAnnualReenroll(String userId) =>
+      '/enrollments/annual-reenroll/$userId';
 
   // ── Promotion ──────────────────────────────────────────────────────────────
   static const String promotionPreview = '/promotions/preview';
