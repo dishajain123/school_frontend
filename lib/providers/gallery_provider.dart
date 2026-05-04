@@ -379,14 +379,14 @@ final galleryCanManageProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return false;
   return user.hasPermission('gallery:create') ||
-      user.role == UserRole.principal ||
+      user.role.isSchoolScopedAdmin ||
       user.role == UserRole.teacher;
 });
 
 final galleryCanDeleteAlbumProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return false;
-  return user.role == UserRole.principal;
+  return user.role.isSchoolScopedAdmin;
 });
 
 final galleryCanInteractProvider = Provider<bool>((ref) {

@@ -29,7 +29,9 @@ class AuthInterceptor extends Interceptor {
     if (path == ApiConstants.login ||
         path == ApiConstants.forgotPassword ||
         path == ApiConstants.verifyOtp ||
-        path == ApiConstants.resetPassword) {
+        path == ApiConstants.resetPassword ||
+        path == ApiConstants.registrationsSelf ||
+        path == ApiConstants.registrationsActiveAcademicYears) {
       return handler.next(options);
     }
 

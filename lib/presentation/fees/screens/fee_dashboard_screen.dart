@@ -196,9 +196,7 @@ class _FeeDashboardBody extends ConsumerWidget {
   final String? standardId;
 
   bool get _canRecord =>
-      user.hasPermission('fee:create') ||
-      user.role == UserRole.principal ||
-      user.role == UserRole.superadmin;
+      user.hasPermission('fee:create') || user.role.isSchoolScopedAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

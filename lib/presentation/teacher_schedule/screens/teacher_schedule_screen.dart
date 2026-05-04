@@ -15,8 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:dio/dio.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
-import '../../../providers/auth_provider.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ class _ScheduleRepository {
 
   Future<List<_ClassAssignment>> fetchMine(String? academicYearId) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/teacher-assignments/mine',
+      ApiConstants.teacherAssignmentsMine,
       queryParameters: {
         if (academicYearId != null) 'academic_year_id': academicYearId,
       },
@@ -89,7 +89,8 @@ class _ScheduleRepository {
   }
 
   Future<List<_AcademicYear>> fetchYears() async {
-    final resp = await _dio.get<Map<String, dynamic>>('/academic-years');
+    final resp =
+        await _dio.get<Map<String, dynamic>>(ApiConstants.academicYears);
     final items = (resp.data?['items'] as List?) ?? [];
     return items.map((e) {
       final m = Map<String, dynamic>.from(e as Map);

@@ -100,8 +100,7 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
     final user = ref.read(currentUserProvider);
     if (user == null) return false;
     return user.hasPermission('teacher_assignment:manage') ||
-        user.role == UserRole.principal ||
-        user.role == UserRole.superadmin;
+        user.role.isSchoolScopedAdmin;
   }
 
   bool get _canViewTeacherLeaves {
@@ -110,9 +109,7 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
     return user.hasPermission('leave:read') ||
         user.hasPermission('leave:approve') ||
         user.hasPermission('leave:apply') ||
-        user.role == UserRole.principal ||
-        user.role == UserRole.trustee ||
-        user.role == UserRole.superadmin ||
+        user.role.isSchoolScopedAdminOrTrustee ||
         user.role == UserRole.teacher;
   }
 
@@ -120,7 +117,9 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
     final user = ref.read(currentUserProvider);
     if (user == null) return false;
     // Leave allocation is moved to Admin Console teacher assignment flow.
-    if (user.role == UserRole.principal) return false;
+    if (user.role == UserRole.principal || user.role == UserRole.staffAdmin) {
+      return false;
+    }
     return user.hasPermission('teacher_assignment:manage') ||
         user.role == UserRole.superadmin;
   }

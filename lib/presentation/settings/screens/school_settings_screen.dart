@@ -69,7 +69,9 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen>
     final user = ref.watch(currentUserProvider);
     final settingsState = ref.watch(schoolSettingsProvider);
     final settingsNotifier = ref.read(schoolSettingsProvider.notifier);
-    final canManageSettings = user?.role == UserRole.principal;
+    final canManageSettings = (user?.hasPermission('settings:manage') ??
+            false) ||
+        (user?.role.isSchoolScopedAdmin ?? false);
 
     if (!canManageSettings) {
       return const AppScaffold(
@@ -77,7 +79,8 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen>
         body: AppEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Access denied',
-          subtitle: 'Only principal can manage school settings.',
+          subtitle:
+              'You need permission to manage school settings (e.g. principal or staff admin).',
         ),
       );
     }

@@ -24,10 +24,8 @@ class _AuditLogsScreenState extends ConsumerState<AuditLogsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final allowed = user != null &&
-        (user.role == UserRole.principal ||
-            user.role == UserRole.superadmin ||
-            user.role == UserRole.trustee);
+    final allowed =
+        user != null && user.role.isSchoolScopedAdminOrTrustee;
     if (!allowed) {
       return const Scaffold(
         body: Center(child: Text('You do not have access to audit logs.')),

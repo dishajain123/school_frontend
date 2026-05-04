@@ -4,6 +4,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../models/fee/fee_ledger_model.dart';
 import '../models/fee/fee_structure_model.dart';
@@ -43,7 +44,7 @@ class FeeRepository {
     String? academicYearId,
   }) async {
     final response = await _dio.get(
-      '$_base/structures',
+      ApiConstants.feeStructuresList,
       queryParameters: {
         'standard_id': standardId,
         if (academicYearId != null && academicYearId.trim().isNotEmpty)

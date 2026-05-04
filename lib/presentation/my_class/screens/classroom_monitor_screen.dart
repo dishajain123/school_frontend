@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
@@ -95,9 +96,10 @@ class _ClassroomMonitorScreenState
     });
     try {
       final dio = ref.read(dioClientProvider);
-      final yearsResp = await dio.get<Map<String, dynamic>>('/academic-years');
+      final yearsResp =
+          await dio.get<Map<String, dynamic>>(ApiConstants.academicYears);
       final standardsResp =
-          await dio.get<Map<String, dynamic>>('/masters/standards');
+          await dio.get<Map<String, dynamic>>(ApiConstants.standards);
 
       final yearsRaw = yearsResp.data?['data'] ?? yearsResp.data;
       final yearsItems = (yearsRaw?['items'] as List?) ?? [];
@@ -142,7 +144,7 @@ class _ClassroomMonitorScreenState
     try {
       final dio = ref.read(dioClientProvider);
       final resp = await dio.get<Map<String, dynamic>>(
-        '/masters/sections',
+        ApiConstants.mastersSections,
         queryParameters: {
           'standard_id': _standard!.id,
           'academic_year_id': _year!.id,
@@ -173,7 +175,7 @@ class _ClassroomMonitorScreenState
     try {
       final dio = ref.read(dioClientProvider);
       final resp = await dio.get<Map<String, dynamic>>(
-        '/my-class/subjects',
+        ApiConstants.myClassSubjects,
         queryParameters: {
           'standard_id': _standard!.id,
           'section_id': _section!.id,

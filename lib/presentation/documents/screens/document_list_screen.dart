@@ -72,9 +72,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         if (!mounted) return;
         _resolvedStudentId = ref.read(selectedChildIdProvider);
       }
-    } else if (user.role == UserRole.principal ||
-        user.role == UserRole.superadmin ||
-        user.role == UserRole.staffAdmin) {
+    } else if (user.role.isSchoolScopedAdmin) {
       _resolvedStudentId = null;
     }
 
@@ -116,15 +114,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         user != null &&
         (user.role == UserRole.student || user.role == UserRole.parent) &&
         (canGenerate || canManage);
-    final canVerify = user != null &&
-        canManage &&
-        (user.role == UserRole.principal ||
-            user.role == UserRole.superadmin ||
-            user.role == UserRole.staffAdmin);
-    final canManageRequirements = canManage &&
-        (user.role == UserRole.principal ||
-            user.role == UserRole.superadmin ||
-            user.role == UserRole.staffAdmin);
+    final canVerify =
+        user != null && canManage && user.role.isSchoolScopedAdmin;
+    final canManageRequirements =
+        canManage && (user?.role.isSchoolScopedAdmin ?? false);
 
     final state = ref.watch(documentProvider);
     final filtered = _filtered(state.documents);

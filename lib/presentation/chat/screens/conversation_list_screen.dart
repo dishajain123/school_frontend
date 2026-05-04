@@ -105,7 +105,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     final conversationsAsync = ref.watch(conversationNotifierProvider);
     final currentUser = ref.watch(currentUserProvider);
     final canDeleteChat = currentUser != null &&
-        (currentUser.role == UserRole.principal ||
+        (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
 
     return AppScaffold(

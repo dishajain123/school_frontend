@@ -68,8 +68,7 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
         user.hasPermission('leave:apply') ||
         user.hasPermission('leave:approve') ||
         user.role == UserRole.teacher ||
-        user.role == UserRole.principal ||
-        user.role == UserRole.trustee;
+        user.role.isSchoolScopedAdminOrTrustee;
   }
 
   void _initLoad() {
@@ -115,9 +114,8 @@ class _LeaveListScreenState extends ConsumerState<LeaveListScreen>
       );
     }
 
-    final isPrincipal =
-        (user?.role == UserRole.principal || user?.role == UserRole.trustee) ||
-            (user?.hasPermission('leave:approve') ?? false);
+    final isPrincipal = (user?.role.isSchoolScopedAdminOrTrustee ?? false) ||
+        (user?.hasPermission('leave:approve') ?? false);
     final isTeacher = (user?.role == UserRole.teacher) ||
         ((user?.hasPermission('leave:apply') ?? false) && !isPrincipal);
 

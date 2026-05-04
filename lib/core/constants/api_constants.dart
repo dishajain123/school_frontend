@@ -53,6 +53,11 @@ class ApiConstants {
   static const String resetPassword = '/auth/reset-password';
   static const String authMe = '/auth/me';
   static const String registrationsSelf = '/registrations/self';
+  static const String registrationsActiveAcademicYears =
+      '/registrations/active-academic-years';
+
+  // ── Profile (enriched role-specific payload; complements /auth/me) ───────
+  static const String profileMe = '/profile/me';
 
   // ── Users ─────────────────────────────────────────────────────────────────
   static const String users = '/users';
@@ -85,14 +90,18 @@ class ApiConstants {
   static const String grades = '/masters/grades';
   static String gradeById(String id) => '/masters/grades/$id';
   static const String gradesLookup = '/masters/grades/lookup';
+  static const String mastersSections = '/masters/sections';
 
   // ── Teacher Assignments ───────────────────────────────────────────────────
   static const String teacherAssignments = '/teacher-assignments';
   static String teacherAssignmentById(String id) => '/teacher-assignments/$id';
+  static const String teacherAssignmentsMine = '/teacher-assignments/mine';
+  static const String teachersMeAssignments = '/teachers/me/assignments';
 
   // ── Teachers ──────────────────────────────────────────────────────────────
   static const String teachers = '/teachers';
   static String teacherById(String id) => '/teachers/$id';
+  static const String teachersMeAnalytics = '/teachers/me/analytics';
 
   // ── Students ──────────────────────────────────────────────────────────────
   static const String students = '/students';
@@ -173,6 +182,7 @@ class ApiConstants {
   static const String feeLedgerGenerate = '/fees/ledger/generate';
   static const String feePayments = '/fees/payments';
   static const String feeDashboard = '/fees';
+  static const String feeStructuresList = '/fees/structures';
   static String feePaymentReceipt(String paymentId) =>
       '/fees/payments/$paymentId/receipt';
   static String feeReceiptUrl(String paymentId) =>
@@ -184,6 +194,10 @@ class ApiConstants {
   static const String notificationsMarkRead = '/notifications/mark-read';
   static const String notificationsMarkAllRead = '/notifications/mark-all-read';
   static const String notificationsClearRead = '/notifications/clear-read';
+
+  // ── Principal / trustee dashboards ────────────────────────────────────────
+  static const String principalReportsOverview = '/principal-reports/overview';
+  static const String principalReportsDetails = '/principal-reports/details';
 
   // ── Announcements ─────────────────────────────────────────────────────────
   static const String announcements = '/announcements';
@@ -281,7 +295,7 @@ class ApiConstants {
   }
 
 
-    // ── My Class ──────────────────────────────────────────────────────────────
+  // ── My Class ──────────────────────────────────────────────────────────────
   // Decision #4: parent access uses ?child_id= query param
   static const String myClassSubjects = '/my-class/subjects';
   static const String myClassChapters = '/my-class/chapters';
@@ -300,6 +314,7 @@ class ApiConstants {
       '/my-class/quizzes/$quizId/attempts/mine';
   static String myClassAllAttempts(String quizId) =>
       '/my-class/quizzes/$quizId/attempts';
+  static const String myClassUploadFile = '/my-class/upload-file';
 
   static String _httpToWsBaseUrl(String httpBaseUrl) {
     final normalized = _normalizeBaseUrl(httpBaseUrl);

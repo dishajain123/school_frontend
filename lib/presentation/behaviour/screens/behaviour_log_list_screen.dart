@@ -68,9 +68,7 @@ class _BehaviourLogListScreenState
     if (user.role == UserRole.student) {
       return currentStudentId;
     }
-    if (user.role == UserRole.principal ||
-        user.role == UserRole.trustee ||
-        user.role == UserRole.superadmin) {
+    if (user.role.isSchoolScopedAdminOrTrustee) {
       return null;
     }
     return null;
@@ -96,9 +94,8 @@ class _BehaviourLogListScreenState
     final activeYearId = ref.watch(activeYearProvider)?.id;
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
     final baseStudentId = _resolveStudentId(currentStudentIdAsync.valueOrNull);
-    final isManagementRole = user?.role == UserRole.principal ||
-        user?.role == UserRole.trustee ||
-        user?.role == UserRole.superadmin;
+    final isManagementRole =
+        user?.role.isSchoolScopedAdminOrTrustee ?? false;
     final isTeacherRole = user?.role == UserRole.teacher;
     final hasPinnedStudent =
         widget.studentId != null && widget.studentId!.isNotEmpty;
@@ -111,10 +108,9 @@ class _BehaviourLogListScreenState
 
     if (baseStudentId == null) {
       final isStudent = user?.role == UserRole.student;
-      final canSeeAll = user?.role == UserRole.principal ||
-          user?.role == UserRole.trustee ||
-          user?.role == UserRole.superadmin ||
-          user?.role == UserRole.teacher;
+      final canSeeAll =
+          (user?.role.isSchoolScopedAdminOrTrustee ?? false) ||
+              user?.role == UserRole.teacher;
       if (canSeeAll) {
         // For management roles, no student filter means all-school behaviour logs.
       } else if (isStudent && currentStudentIdAsync.isLoading) {

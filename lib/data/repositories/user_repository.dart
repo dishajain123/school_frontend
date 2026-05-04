@@ -26,7 +26,7 @@ class UserRepository {
 
     Map<String, dynamic>? profile;
     try {
-      final profileResp = await _dio.get('/profile/me');
+      final profileResp = await _dio.get(ApiConstants.profileMe);
       profile = Map<String, dynamic>.from(profileResp.data as Map);
     } on DioException catch (_) {
       profile = null;

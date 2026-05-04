@@ -28,6 +28,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
@@ -111,7 +112,7 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
     try {
       final dio = ref.read(dioClientProvider);
       final resp = await dio.get<Map<String, dynamic>>(
-        '/teacher-assignments/mine',
+        ApiConstants.teacherAssignmentsMine,
       );
       final raw = resp.data?['data'] ?? resp.data;
       final items = (raw?['items'] as List?) ?? [];
@@ -161,7 +162,7 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
     }
     final dio = ref.read(dioClientProvider);
     final resp = await dio.get<Map<String, dynamic>>(
-      '/masters/sections',
+      ApiConstants.mastersSections,
       queryParameters: {
         'standard_id': ctx.standardId,
         'academic_year_id': ctx.academicYearId,

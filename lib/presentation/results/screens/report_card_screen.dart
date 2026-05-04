@@ -29,9 +29,7 @@ class ReportCardScreen extends ConsumerWidget {
   bool _canUpload(CurrentUser? user) {
     if (user == null) return false;
     if (!user.hasPermission('result:create')) return false;
-    return user.role == UserRole.teacher ||
-        user.role == UserRole.principal ||
-        user.role == UserRole.superadmin;
+    return user.role == UserRole.teacher || user.role.isSchoolScopedAdmin;
   }
 
   Future<void> _uploadReportCard(BuildContext context, WidgetRef ref) async {

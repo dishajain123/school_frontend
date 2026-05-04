@@ -203,13 +203,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUser = ref.watch(currentUserProvider);
     final currentUserId = currentUser?.id ?? '';
     final canDeleteChat = currentUser != null &&
-        (currentUser.role == UserRole.principal ||
+        (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
     final canReactToMessage = currentUser != null &&
         (currentUser.role == UserRole.parent ||
             currentUser.role == UserRole.student ||
             currentUser.role == UserRole.teacher ||
-            currentUser.role == UserRole.principal);
+            currentUser.role.isSchoolScopedAdmin);
 
     ref.listen(chatRoomProvider(widget.conversationId), (prev, next) {
       final prevCount = prev?.valueOrNull?.messages.length ?? 0;

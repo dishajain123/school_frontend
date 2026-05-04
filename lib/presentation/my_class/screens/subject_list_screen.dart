@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -91,7 +92,7 @@ class _MyClassSubjectListScreenState
     if (widget.childId != null) return;
     try {
       final dio = ref.read(dioClientProvider);
-      final resp = await dio.get<Map<String, dynamic>>('/students/me');
+      final resp = await dio.get<Map<String, dynamic>>(ApiConstants.studentsMe);
       final raw =
           (resp.data?['data'] as Map<String, dynamic>?) ?? resp.data ?? {};
       if (!mounted) return;
@@ -111,7 +112,7 @@ class _MyClassSubjectListScreenState
   Future<void> _loadYears() async {
     try {
       final dio = ref.read(dioClientProvider);
-      final resp = await dio.get<Map<String, dynamic>>('/academic-years');
+      final resp = await dio.get<Map<String, dynamic>>(ApiConstants.academicYears);
       final raw = resp.data?['data'] ?? resp.data;
       final items = (raw?['items'] as List?) ?? (raw as List?) ?? [];
       final years = items
@@ -158,7 +159,7 @@ class _MyClassSubjectListScreenState
     try {
       final dio = ref.read(dioClientProvider);
       final resp = await dio.get<Map<String, dynamic>>(
-        '/masters/sections',
+        ApiConstants.mastersSections,
         queryParameters: {
           'standard_id': standardId,
           'academic_year_id': yearId,

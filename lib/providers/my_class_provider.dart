@@ -6,6 +6,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
+import '../core/constants/api_constants.dart';
 import '../core/network/dio_client.dart';
 import '../data/models/my_class/my_class_models.dart';
 
@@ -23,7 +24,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/subjects',
+      ApiConstants.myClassSubjects,
       queryParameters: {
         'standard_id': standardId,
         'section_id': sectionId,
@@ -47,7 +48,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/chapters',
+      ApiConstants.myClassChapters,
       queryParameters: {
         'subject_id': subjectId,
         'standard_id': standardId,
@@ -69,7 +70,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/topics',
+      ApiConstants.myClassTopics,
       queryParameters: {
         'chapter_id': chapterId,
         if (childId != null) 'child_id': childId,
@@ -88,7 +89,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/content',
+      ApiConstants.myClassContent,
       queryParameters: {
         'topic_id': topicId,
         if (childId != null) 'child_id': childId,
@@ -107,7 +108,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/quizzes/$quizId',
+      ApiConstants.myClassQuizById(quizId),
       queryParameters: {
         if (childId != null) 'child_id': childId,
       },
@@ -123,7 +124,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/quizzes/$quizId/attempt',
+      ApiConstants.myClassQuizAttempt(quizId),
       queryParameters: {
         if (childId != null) 'child_id': childId,
       },
@@ -142,7 +143,7 @@ class MyClassRepository {
     String? childId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/quizzes/$quizId/attempts/mine',
+      ApiConstants.myClassMyAttempts(quizId),
       queryParameters: {
         if (childId != null) 'child_id': childId,
       },
@@ -162,7 +163,7 @@ class MyClassRepository {
     int orderIndex = 0,
   }) async {
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/chapters',
+      ApiConstants.myClassChapters,
       data: {
         'subject_id': subjectId,
         'standard_id': standardId,
@@ -185,7 +186,7 @@ class MyClassRepository {
     int orderIndex = 0,
   }) async {
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/topics',
+      ApiConstants.myClassTopics,
       data: {
         'chapter_id': chapterId,
         'title': title,
@@ -216,7 +217,7 @@ class MyClassRepository {
     int orderIndex = 0,
   }) async {
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/content',
+      ApiConstants.myClassContent,
       data: {
         'topic_id': topicId,
         'content_type': contentType,
@@ -254,7 +255,7 @@ class MyClassRepository {
       'file': file,
     });
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/upload-file',
+      ApiConstants.myClassUploadFile,
       data: form,
       options: Options(contentType: 'multipart/form-data'),
     );
@@ -273,7 +274,7 @@ class MyClassRepository {
     int? durationMinutes,
   }) async {
     final resp = await _dio.post<Map<String, dynamic>>(
-      '/my-class/quizzes',
+      ApiConstants.myClassQuizzes,
       data: {
         'topic_id': topicId,
         'title': title,
@@ -296,7 +297,7 @@ class MyClassRepository {
     String? explanation,
   }) async {
     await _dio.post<Map<String, dynamic>>(
-      '/my-class/questions',
+      ApiConstants.myClassQuestions,
       data: {
         'quiz_id': quizId,
         'question_text': questionText,
@@ -314,7 +315,7 @@ class MyClassRepository {
     required String quizId,
   }) async {
     final resp = await _dio.get<Map<String, dynamic>>(
-      '/my-class/quizzes/$quizId/attempts',
+      ApiConstants.myClassAllAttempts(quizId),
     );
     final data = resp.data?['data'] ?? resp.data;
     return AttemptSummary.fromJson(data as Map<String, dynamic>);

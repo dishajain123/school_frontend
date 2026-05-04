@@ -494,13 +494,11 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
                 examId: resolvedExamId,
                 section: resolvedSection,
               )));
-    final canCreateExam = currentUser?.role == UserRole.principal ||
-        currentUser?.role == UserRole.superadmin;
+    final canCreateExam = currentUser?.role.isSchoolScopedAdmin ?? false;
     final canUploadPdf = currentUser != null &&
         currentUser.hasPermission('result:create') &&
         (currentUser.role == UserRole.teacher ||
-            currentUser.role == UserRole.principal ||
-            currentUser.role == UserRole.superadmin);
+            currentUser.role.isSchoolScopedAdmin);
 
     final assignmentsAsync = activeYear == null
         ? const AsyncValue<List<TeacherClassSubjectModel>>.data(

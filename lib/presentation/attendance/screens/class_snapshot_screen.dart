@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -26,7 +27,7 @@ final _attendanceOverviewProvider =
   (ref, params) async {
     final dio = ref.read(dioClientProvider);
     final response = await dio.get(
-      '/principal-reports/details',
+      ApiConstants.principalReportsDetails,
       queryParameters: {
         'metric': 'student_attendance',
         if (params.academicYearId != null) 'academic_year_id': params.academicYearId,

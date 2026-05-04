@@ -114,7 +114,8 @@ class AuthRepository {
 
   /// GET /registrations/active-academic-years
   Future<List<Map<String, dynamic>>> listActiveAcademicYearsForRegistration() async {
-    final response = await _dio.get('/registrations/active-academic-years');
+    final response =
+        await _dio.get(ApiConstants.registrationsActiveAcademicYears);
     final body = response.data;
     if (body is! Map<String, dynamic>) return const [];
     final rawItems = body['items'];

@@ -51,6 +51,17 @@ extension UserRoleX on UserRole {
   }
 }
 
+/// Coarse UI gates aligned with [RoleEnum] in the API and admin console in-school users.
+extension UserRoleSchoolAdmin on UserRole {
+  bool get isSchoolScopedAdmin =>
+      this == UserRole.superadmin ||
+      this == UserRole.principal ||
+      this == UserRole.staffAdmin;
+
+  bool get isSchoolScopedAdminOrTrustee =>
+      isSchoolScopedAdmin || this == UserRole.trustee;
+}
+
 class CurrentUser {
   const CurrentUser({
     required this.id,

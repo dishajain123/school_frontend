@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants/api_constants.dart';
 import '../data/models/assignment/assignment_model.dart';
 import '../data/models/attendance/attendance_analytics.dart';
 import '../core/network/dio_client.dart';
@@ -392,7 +393,7 @@ final principalDashboardStatsProvider =
   Map<String, dynamic> report = <String, dynamic>{};
   try {
     final reportRes = await dio.get(
-      '/principal-reports/overview',
+      ApiConstants.principalReportsOverview,
       queryParameters: {
         if (activeYearId != null) 'academic_year_id': activeYearId,
       },
@@ -477,7 +478,7 @@ final teacherDashboardStatsProvider =
   Map<String, dynamic> report = <String, dynamic>{};
   try {
     final reportRes = await dio.get(
-      '/principal-reports/overview',
+      ApiConstants.principalReportsOverview,
       queryParameters: {
         if (activeYearId != null) 'academic_year_id': activeYearId,
       },
@@ -516,7 +517,7 @@ final teacherAnalyticsProvider =
     ref.watch(currentUserProvider);
     final dio = ref.read(dioClientProvider);
     final response = await dio.get(
-      '/teachers/me/analytics',
+      ApiConstants.teachersMeAnalytics,
       queryParameters: {
         if (params.academicYearId != null)
           'academic_year_id': params.academicYearId,
@@ -704,7 +705,7 @@ final trusteeDashboardStatsProvider =
   Map<String, dynamic> report = <String, dynamic>{};
   try {
     final reportRes = await dio.get(
-      '/principal-reports/overview',
+      ApiConstants.principalReportsOverview,
       queryParameters: {
         if (activeYearId != null) 'academic_year_id': activeYearId,
       },

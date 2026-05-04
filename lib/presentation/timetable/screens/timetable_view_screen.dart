@@ -57,7 +57,7 @@ class TimetableViewScreen extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final activeYear = ref.watch(activeYearProvider);
     final canUpload = currentUser != null &&
-        (currentUser.role == UserRole.principal ||
+        (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
 
     if (currentUser == null) {
@@ -510,7 +510,7 @@ class _TimetableContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final canUpload = currentUser != null &&
-        (currentUser.role == UserRole.principal ||
+        (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
     return AppScaffold(
       appBar: AppAppBar(

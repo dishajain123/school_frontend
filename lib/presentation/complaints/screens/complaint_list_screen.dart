@@ -155,9 +155,8 @@ class _ComplaintListScreenState extends ConsumerState<ComplaintListScreen>
                   child: AnimatedCrossFade(
                     firstChild: const SizedBox(width: double.infinity),
                     secondChild: _ComplaintFilterPanel(
-                      canFilterByComplainant: user?.role == UserRole.principal ||
-                          user?.role == UserRole.trustee ||
-                          user?.role == UserRole.superadmin,
+                      canFilterByComplainant:
+                          user?.role.isSchoolScopedAdminOrTrustee ?? false,
                       selectedStatus: state.statusFilter,
                       selectedCategory: state.categoryFilter,
                       selectedComplainantType: state.complainantTypeFilter,

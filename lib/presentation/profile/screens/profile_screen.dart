@@ -443,13 +443,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ? () => _showAnnualReenrollmentDialog(authUser)
                               : null,
                         ),
-                      if (authUser != null &&
-                          (authUser.role == UserRole.principal ||
-                              authUser.role == UserRole.superadmin))
+                      if (authUser != null && authUser.role.isSchoolScopedAdmin)
                         const Divider(height: 1, color: AppColors.surface100),
-                      if (authUser != null &&
-                          (authUser.role == UserRole.principal ||
-                              authUser.role == UserRole.superadmin))
+                      if (authUser != null && authUser.role.isSchoolScopedAdmin)
                         ListTile(
                           leading: const Icon(Icons.history_outlined,
                               color: AppColors.grey600),

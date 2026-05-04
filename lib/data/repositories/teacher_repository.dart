@@ -116,7 +116,7 @@ class TeacherClassSubjectRepository {
 
     try {
       final response = await _dio.get(
-        '/teacher-assignments/mine',
+        ApiConstants.teacherAssignmentsMine,
         queryParameters: query,
       );
       return _parseList(response.data);
@@ -126,7 +126,7 @@ class TeacherClassSubjectRepository {
 
     // Last fallback for setups that expose this via /teachers module.
     final legacy = await _dio.get(
-      '/teachers/me/assignments',
+      ApiConstants.teachersMeAssignments,
       queryParameters: query,
     );
     return _parseList(legacy.data);
