@@ -311,7 +311,25 @@ class DocumentModel {
 
   bool get isReady => status == DocumentStatus.ready;
   bool get hasFailed => status == DocumentStatus.failed;
-  bool get isPollable => status.isPollable;
+
+  /// Polling: pending (e.g. admin request) or upload pending verification (has file).
+  bool get isPollable =>
+      status == DocumentStatus.pending ||
+      (status == DocumentStatus.processing &&
+          (fileKey != null && fileKey!.trim().isNotEmpty));
+
+  /// PROCESSING without a file is not a valid server state; treat as pending in UI.
+  DocumentStatus get displayStatus {
+    if (status == DocumentStatus.processing &&
+        (fileKey == null || fileKey!.trim().isEmpty)) {
+      return DocumentStatus.pending;
+    }
+    return status;
+  }
+
+  bool get isAwaitingAdminVerification =>
+      status == DocumentStatus.processing &&
+      (fileKey != null && fileKey!.trim().isNotEmpty);
 
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
     return DocumentModel(

@@ -38,6 +38,12 @@ class RoleChip extends StatelessWidget {
       bg: const Color(0xFFF0F7FF),
       fg: AppColors.navyDeep,
     ),
+    UserRole.staffAdmin: _RoleStyle(
+      label: 'Staff Admin',
+      icon: Icons.admin_panel_settings_outlined,
+      bg: const Color(0xFFE8EAF6),
+      fg: const Color(0xFF3949AB),
+    ),
     UserRole.trustee: _RoleStyle(
       label: 'Trustee',
       icon: Icons.account_balance_rounded,

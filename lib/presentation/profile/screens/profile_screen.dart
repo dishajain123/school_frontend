@@ -489,6 +489,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return 'Super Admin';
       case 'PRINCIPAL':
         return 'Principal';
+      case 'STAFF_ADMIN':
+        return 'Staff Admin';
       case 'TRUSTEE':
         return 'Trustee';
       case 'TEACHER':

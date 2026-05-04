@@ -1,6 +1,7 @@
 enum UserRole {
   superadmin,
   principal,
+  staffAdmin,
   trustee,
   teacher,
   student,
@@ -14,6 +15,8 @@ extension UserRoleX on UserRole {
         return 'SUPERADMIN';
       case UserRole.principal:
         return 'PRINCIPAL';
+      case UserRole.staffAdmin:
+        return 'STAFF_ADMIN';
       case UserRole.trustee:
         return 'TRUSTEE';
       case UserRole.teacher:
@@ -32,6 +35,8 @@ extension UserRoleX on UserRole {
         return UserRole.superadmin;
       case 'PRINCIPAL':
         return UserRole.principal;
+      case 'STAFF_ADMIN':
+        return UserRole.staffAdmin;
       case 'TRUSTEE':
         return UserRole.trustee;
       case 'TEACHER':

@@ -202,9 +202,9 @@ class ApiConstants {
       '/chat/conversations/$conversationId/files';
   static String chatMessageReaction(String messageId) =>
       '/chat/messages/$messageId/reaction';
-  static String chatWebSocket(String token, String conversationId) =>
+  /// No JWT in query string (URLs are logged). Send auth as first WS text frame.
+  static String chatWebSocket(String conversationId) =>
       '$resolvedWsBaseUrl$apiPrefix/ws/chat?${Uri(queryParameters: {
-            'token': token,
             'conversation_id': conversationId,
           }).query}';
 

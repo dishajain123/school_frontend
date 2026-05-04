@@ -25,7 +25,7 @@ class DocumentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = document.documentType;
-    final status = document.status;
+    final status = document.displayStatus;
 
     return Container(
       decoration: AppDecorations.card,
@@ -44,7 +44,13 @@ class DocumentTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Icon container ─────────────────────────────────────
-                _DocumentIcon(type: type, status: status),
+                _DocumentIcon(
+                  type: type,
+                  status: status,
+                  showProcessingOverlay: document.status ==
+                          DocumentStatus.processing &&
+                      (document.fileKey ?? '').trim().isNotEmpty,
+                ),
                 const SizedBox(width: AppDimensions.space12),
 
                 // ── Info column ────────────────────────────────────────
@@ -129,9 +135,14 @@ class DocumentTile extends StatelessWidget {
 // ── Document Icon ─────────────────────────────────────────────────────────────
 
 class _DocumentIcon extends StatelessWidget {
-  const _DocumentIcon({required this.type, required this.status});
+  const _DocumentIcon({
+    required this.type,
+    required this.status,
+    required this.showProcessingOverlay,
+  });
   final DocumentType type;
   final DocumentStatus status;
+  final bool showProcessingOverlay;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +161,7 @@ class _DocumentIcon extends StatelessWidget {
             ),
             child: Icon(type.icon, color: type.color, size: 22),
           ),
-          if (status == DocumentStatus.processing)
+          if (showProcessingOverlay)
             Positioned.fill(
               child: _SpinningIndicator(color: type.color),
             ),

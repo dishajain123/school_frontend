@@ -26,6 +26,8 @@ class DashboardScreen extends ConsumerWidget {
         return const ParentDashboard();
       case UserRole.principal:
         return const PrincipalDashboard();
+      case UserRole.staffAdmin:
+        return const PrincipalDashboard();
       case UserRole.trustee:
         return const TrusteeDashboard();
       case UserRole.superadmin:

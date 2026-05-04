@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -283,9 +285,14 @@ class ChatRepository {
   ) async {
     final token = await _secureStorage.readToken();
     if (token == null || token.isEmpty) return null;
-    final url = ApiConstants.chatWebSocket(token, conversationId);
+    final url = ApiConstants.chatWebSocket(conversationId);
     try {
-      return WebSocketChannel.connect(Uri.parse(url));
+      final channel = WebSocketChannel.connect(Uri.parse(url));
+      channel.sink.add(jsonEncode({
+        'type': 'auth',
+        'access_token': token,
+      }));
+      return channel;
     } catch (_) {
       return null;
     }

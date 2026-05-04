@@ -119,6 +119,8 @@ String _roleToBackendValue(UserRole role) {
       return 'SUPERADMIN';
     case UserRole.principal:
       return 'PRINCIPAL';
+    case UserRole.staffAdmin:
+      return 'STAFF_ADMIN';
     case UserRole.trustee:
       return 'TRUSTEE';
     case UserRole.teacher:

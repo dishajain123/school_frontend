@@ -166,6 +166,8 @@ class _RoleBadge extends StatelessWidget {
         return 'Super Admin';
       case UserRole.principal:
         return 'Principal';
+      case UserRole.staffAdmin:
+        return 'Staff Admin';
       case UserRole.trustee:
         return 'Trustee';
       case UserRole.teacher:

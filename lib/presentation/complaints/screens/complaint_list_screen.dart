@@ -121,7 +121,10 @@ class _ComplaintListScreenState extends ConsumerState<ComplaintListScreen>
           final userId = user?.id;
           final role = user?.role;
           final items = switch (role) {
-            UserRole.principal => state.items
+            UserRole.principal ||
+            UserRole.superadmin ||
+            UserRole.staffAdmin =>
+              state.items
                 .where((c) => c.status != ComplaintStatus.closed)
                 .toList(),
             UserRole.parent || UserRole.student || UserRole.teacher => state

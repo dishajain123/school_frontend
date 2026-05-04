@@ -73,7 +73,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         _resolvedStudentId = ref.read(selectedChildIdProvider);
       }
     } else if (user.role == UserRole.principal ||
-        user.role == UserRole.superadmin) {
+        user.role == UserRole.superadmin ||
+        user.role == UserRole.staffAdmin) {
       _resolvedStudentId = null;
     }
 
@@ -97,10 +98,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         doc.hasFailed;
   }
 
-  bool _isVerifiable(DocumentModel doc) {
-    final hasFile = (doc.fileKey ?? '').trim().isNotEmpty;
-    return doc.status == DocumentStatus.processing && hasFile;
-  }
+  bool _isVerifiable(DocumentModel doc) => doc.isAwaitingAdminVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -120,13 +118,19 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         (canGenerate || canManage);
     final canVerify = user != null &&
         canManage &&
-        (user.role == UserRole.principal || user.role == UserRole.superadmin);
-    final canManageRequirements = canVerify;
+        (user.role == UserRole.principal ||
+            user.role == UserRole.superadmin ||
+            user.role == UserRole.staffAdmin);
+    final canManageRequirements = canManage &&
+        (user.role == UserRole.principal ||
+            user.role == UserRole.superadmin ||
+            user.role == UserRole.staffAdmin);
 
     final state = ref.watch(documentProvider);
     final filtered = _filtered(state.documents);
-    final hasPendingVerification =
-        state.documents.any((d) => d.status == DocumentStatus.processing);
+    final hasPendingVerification = state.documents.any(
+      (d) => d.isAwaitingAdminVerification,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
@@ -146,7 +150,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
               SliverToBoxAdapter(
                 child: _ProcessingBanner(
                   count: state.documents
-                      .where((d) => d.status == DocumentStatus.processing)
+                      .where((d) => d.isAwaitingAdminVerification)
                       .length,
                 ),
               ),
