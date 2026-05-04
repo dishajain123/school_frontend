@@ -14,7 +14,7 @@ class DocumentState {
     this.documents = const [],
     this.requiredDocuments = const [],
     this.requiredStatus = const [],
-    this.listWorkflow = DocumentWorkflowFilter.all,
+    this.listStatusFilter = DocumentListStatusFilter.all,
     this.isLoading = false,
     this.isRequesting = false,
     this.isUploading = false,
@@ -25,7 +25,7 @@ class DocumentState {
   final List<DocumentModel> documents;
   final List<RequiredDocumentModel> requiredDocuments;
   final List<RequiredDocumentStatusModel> requiredStatus;
-  final DocumentWorkflowFilter listWorkflow;
+  final DocumentListStatusFilter listStatusFilter;
   final bool isLoading;
   final bool isRequesting;
   final bool isUploading;
@@ -36,7 +36,7 @@ class DocumentState {
     List<DocumentModel>? documents,
     List<RequiredDocumentModel>? requiredDocuments,
     List<RequiredDocumentStatusModel>? requiredStatus,
-    DocumentWorkflowFilter? listWorkflow,
+    DocumentListStatusFilter? listStatusFilter,
     bool? isLoading,
     bool? isRequesting,
     bool? isUploading,
@@ -48,7 +48,7 @@ class DocumentState {
       documents: documents ?? this.documents,
       requiredDocuments: requiredDocuments ?? this.requiredDocuments,
       requiredStatus: requiredStatus ?? this.requiredStatus,
-      listWorkflow: listWorkflow ?? this.listWorkflow,
+      listStatusFilter: listStatusFilter ?? this.listStatusFilter,
       isLoading: isLoading ?? this.isLoading,
       isRequesting: isRequesting ?? this.isRequesting,
       isUploading: isUploading ?? this.isUploading,
@@ -75,18 +75,18 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
 
   Future<void> load(
     String? studentId, {
-    DocumentWorkflowFilter workflow = DocumentWorkflowFilter.all,
+    DocumentListStatusFilter statusFilter = DocumentListStatusFilter.all,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _repo.listDocuments(
         studentId,
-        workflow: workflow,
+        statusFilter: statusFilter,
       );
       state = state.copyWith(
         documents: result.items,
         requiredStatus: result.requiredDocuments,
-        listWorkflow: workflow,
+        listStatusFilter: statusFilter,
         isLoading: false,
       );
       await _loadRequirementsSilently();
@@ -119,12 +119,15 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
         academicYearId: academicYearId,
         note: note,
       );
-      // Optimistically prepend the new document at the top of the list
+      final idx = state.documents.indexWhere((d) => d.id == doc.id);
+      final next = idx >= 0
+          ? (List<DocumentModel>.from(state.documents)..[idx] = doc)
+          : [doc, ...state.documents];
       state = state.copyWith(
-        documents: [doc, ...state.documents],
+        documents: next,
         isRequesting: false,
       );
-      // Start polling since the new doc will be PENDING/PROCESSING
+      // Start polling when a file is awaiting review
       _maybeStartPolling(studentId);
       return true;
     } catch (e) {
@@ -150,8 +153,12 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
         file: file,
         note: note,
       );
+      final idx = state.documents.indexWhere((d) => d.id == doc.id);
+      final next = idx >= 0
+          ? (List<DocumentModel>.from(state.documents)..[idx] = doc)
+          : [doc, ...state.documents];
       state = state.copyWith(
-        documents: [doc, ...state.documents],
+        documents: next,
         isUploading: false,
       );
       _maybeStartPolling(studentId);
@@ -215,11 +222,11 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
                     latestDocumentId: updated.id,
                     latestStatus: updated.status,
                     uploadedAt: updated.requestedAt,
-                    reviewNote: updated.reviewNote,
+                    reviewNote: updated.rejectionReason ?? updated.reviewNote,
                     reviewedAt: updated.reviewedAt,
                     reviewedBy: updated.reviewedBy,
-                    needsReupload: updated.status == DocumentStatus.failed,
-                    isCompleted: updated.status == DocumentStatus.ready,
+                    needsReupload: updated.status == DocumentStatus.rejected,
+                    isCompleted: updated.status == DocumentStatus.approved,
                   )
                 : r,
           )
@@ -267,7 +274,7 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
     try {
       final result = await _repo.listDocuments(
         studentId,
-        workflow: state.listWorkflow,
+        statusFilter: state.listStatusFilter,
       );
       state = state.copyWith(
         documents: result.items,

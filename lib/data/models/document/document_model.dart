@@ -73,13 +73,13 @@ extension DocumentTypeX on DocumentType {
   String get label {
     switch (this) {
       case DocumentType.idCard:
-        return 'ID Card';
+        return 'Student ID Card';
       case DocumentType.bonafide:
         return 'Bonafide Certificate';
       case DocumentType.leavingCert:
         return 'Leaving Certificate';
       case DocumentType.reportCard:
-        return 'Report Card';
+        return 'Report Card / Result PDF';
       case DocumentType.idProof:
         return 'ID Proof';
       case DocumentType.addressProof:
@@ -87,24 +87,24 @@ extension DocumentTypeX on DocumentType {
       case DocumentType.academicCertificate:
         return 'Academic Certificate';
       case DocumentType.transferCertificate:
-        return 'Transfer Certificate';
+        return 'School Leaving Certificate (TC/LC)';
       case DocumentType.medical:
         return 'Medical Certificate';
       case DocumentType.other:
-        return 'Other Document';
+        return 'Other (custom name)';
     }
   }
 
   String get description {
     switch (this) {
       case DocumentType.idCard:
-        return 'Official student identity card';
+        return 'Official student identity card from the school';
       case DocumentType.bonafide:
-        return 'Certificate confirming enrollment status';
+        return 'Certificate confirming enrollment and conduct';
       case DocumentType.leavingCert:
         return 'Required for school transfers';
       case DocumentType.reportCard:
-        return 'Academic performance summary report';
+        return 'Official marksheet or result PDF for an exam or term';
       case DocumentType.idProof:
         return 'Government identity proof document';
       case DocumentType.addressProof:
@@ -112,11 +112,11 @@ extension DocumentTypeX on DocumentType {
       case DocumentType.academicCertificate:
         return 'Academic certificate issued by school';
       case DocumentType.transferCertificate:
-        return 'Transfer or leaving certificate';
+        return 'Transfer certificate (TC) or leaving certificate (LC) from the school';
       case DocumentType.medical:
         return 'Medical certificate or related document';
       case DocumentType.other:
-        return 'Any additional requested document';
+        return 'Describe what you need; the school will see your exact wording';
     }
   }
 
@@ -175,23 +175,32 @@ extension DocumentTypeX on DocumentType {
 // Mirrors backend app/utils/enums.DocumentStatus
 
 enum DocumentStatus {
+  notUploaded,
   pending,
-  processing,
-  ready,
-  failed,
+  approved,
+  rejected,
+  requested,
 }
 
 extension DocumentStatusX on DocumentStatus {
   static DocumentStatus fromString(String? value) {
     switch ((value ?? '').toUpperCase()) {
+      case 'NOT_UPLOADED':
+        return DocumentStatus.notUploaded;
+      case 'PENDING':
+        return DocumentStatus.pending;
+      case 'APPROVED':
+        return DocumentStatus.approved;
+      case 'REJECTED':
+        return DocumentStatus.rejected;
+      case 'REQUESTED':
+        return DocumentStatus.requested;
       case 'PROCESSING':
-        return DocumentStatus.processing;
       case 'READY':
       case 'VERIFIED':
-        return DocumentStatus.ready;
+        return DocumentStatus.approved;
       case 'FAILED':
-      case 'REJECTED':
-        return DocumentStatus.failed;
+        return DocumentStatus.rejected;
       default:
         return DocumentStatus.pending;
     }
@@ -199,133 +208,167 @@ extension DocumentStatusX on DocumentStatus {
 
   String get backendValue {
     switch (this) {
+      case DocumentStatus.notUploaded:
+        return 'NOT_UPLOADED';
       case DocumentStatus.pending:
         return 'PENDING';
-      case DocumentStatus.processing:
-        return 'PROCESSING';
-      case DocumentStatus.ready:
-        return 'READY';
-      case DocumentStatus.failed:
-        return 'FAILED';
+      case DocumentStatus.approved:
+        return 'APPROVED';
+      case DocumentStatus.rejected:
+        return 'REJECTED';
+      case DocumentStatus.requested:
+        return 'REQUESTED';
     }
   }
 
   String get label {
     switch (this) {
+      case DocumentStatus.notUploaded:
+        return 'Upload Required';
       case DocumentStatus.pending:
-        return 'Pending';
-      case DocumentStatus.processing:
-        return 'Pending Verification';
-      case DocumentStatus.ready:
-        return 'Ready';
-      case DocumentStatus.failed:
-        return 'Failed';
+        return 'Under Review';
+      case DocumentStatus.approved:
+        return 'Verified';
+      case DocumentStatus.rejected:
+        return 'Rejected';
+      case DocumentStatus.requested:
+        return 'Waiting for School';
     }
   }
 
   Color get color {
     switch (this) {
+      case DocumentStatus.notUploaded:
+        return AppColors.grey600;
       case DocumentStatus.pending:
-        return AppColors.warningAmber;
-      case DocumentStatus.processing:
         return AppColors.infoBlue;
-      case DocumentStatus.ready:
+      case DocumentStatus.approved:
         return AppColors.successGreen;
-      case DocumentStatus.failed:
+      case DocumentStatus.rejected:
         return AppColors.errorRed;
+      case DocumentStatus.requested:
+        return AppColors.warningAmber;
     }
   }
 
   Color get backgroundColor {
     switch (this) {
+      case DocumentStatus.notUploaded:
+        return AppColors.surface200;
       case DocumentStatus.pending:
-        return AppColors.warningLight;
-      case DocumentStatus.processing:
         return AppColors.infoLight;
-      case DocumentStatus.ready:
+      case DocumentStatus.approved:
         return AppColors.successLight;
-      case DocumentStatus.failed:
+      case DocumentStatus.rejected:
         return AppColors.errorLight;
+      case DocumentStatus.requested:
+        return AppColors.warningLight;
     }
   }
 
   IconData get icon {
     switch (this) {
+      case DocumentStatus.notUploaded:
+        return Icons.upload_file_outlined;
       case DocumentStatus.pending:
         return Icons.hourglass_empty_rounded;
-      case DocumentStatus.processing:
-        return Icons.sync_rounded;
-      case DocumentStatus.ready:
+      case DocumentStatus.approved:
         return Icons.check_circle_outline_rounded;
-      case DocumentStatus.failed:
+      case DocumentStatus.rejected:
         return Icons.error_outline_rounded;
+      case DocumentStatus.requested:
+        return Icons.mark_email_unread_outlined;
     }
   }
 
   bool get isTerminal =>
-      this == DocumentStatus.ready || this == DocumentStatus.failed;
+      this == DocumentStatus.approved || this == DocumentStatus.rejected;
 
-  bool get isPollable =>
-      this == DocumentStatus.pending || this == DocumentStatus.processing;
+  /// Poll while a file is awaiting admin verification.
+  bool get isPollable => this == DocumentStatus.pending;
 }
 
-// ── DocumentWorkflowFilter ────────────────────────────────────────────────────
-// Matches backend GET /documents?status_filter= (DocumentWorkflowFilter).
+// ── DocumentListStatusFilter ─────────────────────────────────────────────────
+// Maps to GET /documents?status= (backend DocumentStatus).
 
-enum DocumentWorkflowFilter {
+enum DocumentListStatusFilter {
   all,
+  notUploaded,
   requested,
   pending,
   approved,
   rejected,
 }
 
-extension DocumentWorkflowFilterX on DocumentWorkflowFilter {
-  /// Omit query param when "all" so the server default applies.
-  String? get statusFilterQueryParam =>
-      this == DocumentWorkflowFilter.all ? null : name;
+extension DocumentListStatusFilterX on DocumentListStatusFilter {
+  /// Omit query param when "all".
+  String? get statusQueryParam =>
+      this == DocumentListStatusFilter.all ? null : backendValue;
+
+  String get backendValue {
+    switch (this) {
+      case DocumentListStatusFilter.all:
+        return '';
+      case DocumentListStatusFilter.notUploaded:
+        return 'NOT_UPLOADED';
+      case DocumentListStatusFilter.requested:
+        return 'REQUESTED';
+      case DocumentListStatusFilter.pending:
+        return 'PENDING';
+      case DocumentListStatusFilter.approved:
+        return 'APPROVED';
+      case DocumentListStatusFilter.rejected:
+        return 'REJECTED';
+    }
+  }
 
   String get label {
     switch (this) {
-      case DocumentWorkflowFilter.all:
+      case DocumentListStatusFilter.all:
         return 'All';
-      case DocumentWorkflowFilter.requested:
+      case DocumentListStatusFilter.notUploaded:
+        return 'Not Uploaded';
+      case DocumentListStatusFilter.requested:
         return 'Requested';
-      case DocumentWorkflowFilter.pending:
+      case DocumentListStatusFilter.pending:
         return 'Pending';
-      case DocumentWorkflowFilter.approved:
+      case DocumentListStatusFilter.approved:
         return 'Approved';
-      case DocumentWorkflowFilter.rejected:
+      case DocumentListStatusFilter.rejected:
         return 'Rejected';
     }
   }
 
   IconData get icon {
     switch (this) {
-      case DocumentWorkflowFilter.all:
+      case DocumentListStatusFilter.all:
         return Icons.list_rounded;
-      case DocumentWorkflowFilter.requested:
+      case DocumentListStatusFilter.notUploaded:
+        return Icons.cloud_off_outlined;
+      case DocumentListStatusFilter.requested:
         return Icons.mark_email_unread_outlined;
-      case DocumentWorkflowFilter.pending:
-        return Icons.sync_rounded;
-      case DocumentWorkflowFilter.approved:
+      case DocumentListStatusFilter.pending:
+        return Icons.schedule_rounded;
+      case DocumentListStatusFilter.approved:
         return Icons.check_circle_outline_rounded;
-      case DocumentWorkflowFilter.rejected:
+      case DocumentListStatusFilter.rejected:
         return Icons.error_outline_rounded;
     }
   }
 
   Color get color {
     switch (this) {
-      case DocumentWorkflowFilter.all:
+      case DocumentListStatusFilter.all:
         return AppColors.navyDeep;
-      case DocumentWorkflowFilter.requested:
+      case DocumentListStatusFilter.notUploaded:
+        return AppColors.grey600;
+      case DocumentListStatusFilter.requested:
         return AppColors.warningAmber;
-      case DocumentWorkflowFilter.pending:
+      case DocumentListStatusFilter.pending:
         return AppColors.infoBlue;
-      case DocumentWorkflowFilter.approved:
+      case DocumentListStatusFilter.approved:
         return AppColors.successGreen;
-      case DocumentWorkflowFilter.rejected:
+      case DocumentListStatusFilter.rejected:
         return AppColors.errorRed;
     }
   }
@@ -346,7 +389,10 @@ class DocumentModel {
     required this.createdAt,
     required this.updatedAt,
     this.fileKey,
+    this.fileUrl,
+    this.documentTypeId,
     this.generatedAt,
+    this.adminComment,
     this.reviewNote,
     this.reviewedAt,
     this.reviewedBy,
@@ -359,9 +405,12 @@ class DocumentModel {
   final String studentId;
   final DocumentType documentType;
   final String? fileKey;
+  final String? fileUrl;
+  final String? documentTypeId;
   final DocumentStatus status;
   final DateTime requestedAt;
   final DateTime? generatedAt;
+  final String? adminComment;
   final String? reviewNote;
   final DateTime? reviewedAt;
   final String? reviewedBy;
@@ -373,26 +422,24 @@ class DocumentModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  bool get isReady => status == DocumentStatus.ready;
-  bool get hasFailed => status == DocumentStatus.failed;
+  bool get isReady => status == DocumentStatus.approved;
+  bool get hasFailed => status == DocumentStatus.rejected;
 
-  /// Polling: pending (e.g. admin request) or upload pending verification (has file).
-  bool get isPollable =>
-      status == DocumentStatus.pending ||
-      (status == DocumentStatus.processing &&
-          (fileKey != null && fileKey!.trim().isNotEmpty));
-
-  /// PROCESSING without a file is not a valid server state; treat as pending in UI.
-  DocumentStatus get displayStatus {
-    if (status == DocumentStatus.processing &&
-        (fileKey == null || fileKey!.trim().isEmpty)) {
-      return DocumentStatus.pending;
-    }
-    return status;
+  String? get rejectionReason {
+    final combined = (adminComment ?? reviewNote)?.trim();
+    if (combined == null || combined.isEmpty) return null;
+    return combined;
   }
 
+  /// Polling while a file is under admin review.
+  bool get isPollable =>
+      status == DocumentStatus.pending &&
+      (fileKey != null && fileKey!.trim().isNotEmpty);
+
+  DocumentStatus get displayStatus => status;
+
   bool get isAwaitingAdminVerification =>
-      status == DocumentStatus.processing &&
+      status == DocumentStatus.pending &&
       (fileKey != null && fileKey!.trim().isNotEmpty);
 
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
@@ -401,11 +448,14 @@ class DocumentModel {
       studentId: json['student_id'] as String,
       documentType: DocumentTypeX.fromString(json['document_type'] as String?),
       fileKey: json['file_key'] as String?,
+      fileUrl: json['file_url'] as String?,
+      documentTypeId: json['document_type_id'] as String?,
       status: DocumentStatusX.fromString(json['status'] as String?),
       requestedAt: DateTime.parse(json['requested_at'] as String),
       generatedAt: json['generated_at'] != null
           ? DateTime.tryParse(json['generated_at'] as String)
           : null,
+      adminComment: json['admin_comment'] as String?,
       reviewNote: json['review_note'] as String?,
       reviewedAt: json['reviewed_at'] != null
           ? DateTime.tryParse(json['reviewed_at'] as String)
@@ -424,7 +474,9 @@ class DocumentModel {
   DocumentModel copyWith({
     DocumentStatus? status,
     String? fileKey,
+    String? fileUrl,
     DateTime? generatedAt,
+    String? adminComment,
     String? reviewNote,
     DateTime? reviewedAt,
     String? reviewedBy,
@@ -437,9 +489,12 @@ class DocumentModel {
       studentId: studentId,
       documentType: documentType,
       fileKey: fileKey ?? this.fileKey,
+      fileUrl: fileUrl ?? this.fileUrl,
+      documentTypeId: documentTypeId,
       status: status ?? this.status,
       requestedAt: requestedAt,
       generatedAt: generatedAt ?? this.generatedAt,
+      adminComment: adminComment ?? this.adminComment,
       reviewNote: reviewNote ?? this.reviewNote,
       reviewedAt: reviewedAt ?? this.reviewedAt,
       reviewedBy: reviewedBy ?? this.reviewedBy,

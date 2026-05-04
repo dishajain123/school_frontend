@@ -67,15 +67,15 @@ class ExamSeriesNotifier extends Notifier<ExamSeriesState> {
 
   Future<ExamSeriesModel?> createSeries({
     required String name,
-    required String standardId,
-    String? academicYearId,
+    required String examId,
+    String? section,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final series = await ref.read(examRepositoryProvider).createSeries(
             name: name,
-            standardId: standardId,
-            academicYearId: academicYearId,
+            examId: examId,
+            section: section,
           );
       state = state.copyWith(isLoading: false, createdSeries: series);
       return series;

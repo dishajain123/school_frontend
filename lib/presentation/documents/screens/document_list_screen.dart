@@ -3,9 +3,9 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
@@ -18,6 +18,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/document_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../data/repositories/student_repository.dart';
+import '../utils/student_parent_request_catalog.dart';
 import '../widgets/document_filter_bar.dart';
 import '../widgets/document_tile.dart';
 import 'request_document_sheet.dart';
@@ -32,7 +33,7 @@ class DocumentListScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
-  DocumentWorkflowFilter _workflowFilter = DocumentWorkflowFilter.all;
+  DocumentListStatusFilter _statusFilter = DocumentListStatusFilter.all;
   String? _resolvedStudentId;
   bool _isRequestSheetOpen = false;
 
@@ -78,22 +79,22 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
 
     await ref.read(documentProvider.notifier).load(
           _resolvedStudentId,
-          workflow: _workflowFilter,
+          statusFilter: _statusFilter,
         );
   }
 
   Future<void> _refresh() async {
     await ref.read(documentProvider.notifier).load(
           _resolvedStudentId,
-          workflow: _workflowFilter,
+          statusFilter: _statusFilter,
         );
   }
 
-  void _onWorkflowFilterChanged(DocumentWorkflowFilter w) {
-    setState(() => _workflowFilter = w);
+  void _onStatusFilterChanged(DocumentListStatusFilter w) {
+    setState(() => _statusFilter = w);
     ref.read(documentProvider.notifier).load(
           _resolvedStudentId,
-          workflow: w,
+          statusFilter: w,
         );
   }
 
@@ -101,7 +102,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   bool _canOpenUpload(DocumentModel doc) {
     if ((doc.fileKey ?? '').trim().isEmpty) return false;
     return doc.isReady ||
-        doc.status == DocumentStatus.processing ||
+        doc.status == DocumentStatus.pending ||
         doc.hasFailed;
   }
 
@@ -137,10 +138,6 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface50,
       appBar: _buildAppBar(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: (canRequest || canUpload)
-          ? _buildFab(context, state, canRequest, canUpload)
-          : null,
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: AppColors.navyDeep,
@@ -165,11 +162,28 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                   AppDimensions.space8,
                 ),
                 child: DocumentFilterBar(
-                  selected: _workflowFilter,
-                  onSelected: _onWorkflowFilterChanged,
+                  selected: _statusFilter,
+                  onSelected: _onStatusFilterChanged,
                 ),
               ),
             ),
+            if (canRequest || canUpload)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimensions.pageHorizontal,
+                    0,
+                    AppDimensions.pageHorizontal,
+                    AppDimensions.space8,
+                  ),
+                  child: _buildQuickActionSelector(
+                    context,
+                    state,
+                    canRequest: canRequest,
+                    canUpload: canUpload,
+                  ),
+                ),
+              ),
             if (_resolvedStudentId != null)
               SliverToBoxAdapter(
                 child: Padding(
@@ -219,7 +233,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                   AppDimensions.pageHorizontal,
                   AppDimensions.space8,
                   AppDimensions.pageHorizontal,
-                  120,
+                  AppDimensions.space20,
                 ),
                 sliver: SliverList.separated(
                   itemCount: filtered.length,
@@ -236,6 +250,34 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                               ? () => _handleDownload(context, doc)
                               : null,
                         ),
+                        if (canUpload &&
+                            (doc.status == DocumentStatus.rejected ||
+                                doc.status ==
+                                    DocumentStatus.notUploaded) &&
+                            (user.role == UserRole.student ||
+                                user.role == UserRole.parent))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: OutlinedButton.icon(
+                              onPressed: state.isUploading
+                                  ? null
+                                  : () => _pickAndUpload(
+                                        context,
+                                        preselectedType: doc.documentType,
+                                      ),
+                              icon: Icon(
+                                doc.status == DocumentStatus.rejected
+                                    ? Icons.upload_rounded
+                                    : Icons.upload_file_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                doc.status == DocumentStatus.rejected
+                                    ? 'Re-upload'
+                                    : 'Upload required',
+                              ),
+                            ),
+                          ),
                         if (canVerify && _isVerifiable(doc))
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -270,7 +312,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                             ),
                           ),
                         if (canVerify &&
-                            doc.status == DocumentStatus.processing &&
+                            doc.status == DocumentStatus.pending &&
                             !_isVerifiable(doc))
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -317,165 +359,70 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     );
   }
 
-  Widget _buildFab(
+  Widget _buildQuickActionSelector(
     BuildContext context,
-    DocumentState state,
-    bool canRequest,
-    bool canUpload,
-  ) {
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom +
-        kBottomNavigationBarHeight +
-        8;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final maxWidth = screenWidth - (AppDimensions.space16 * 2);
-    final isCompactMobile = screenWidth < 380;
-
-    if (canRequest && !canUpload) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: AppDimensions.space8 + bottomInset),
-        child: SizedBox(
-          width: maxWidth.clamp(0, 420).toDouble(),
-          child: _requestFab(context, state),
-        ),
-      );
-    }
-    if (!canRequest && canUpload) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: AppDimensions.space8 + bottomInset),
-        child: SizedBox(
-          width: maxWidth.clamp(0, 420).toDouble(),
-          child: FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: state.isUploading ? null : () => _pickAndUpload(context),
-            backgroundColor: AppColors.navyDeep,
-            foregroundColor: AppColors.white,
-            icon: state.isUploading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.white),
+    DocumentState state, {
+    required bool canRequest,
+    required bool canUpload,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.space8),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        border: Border.all(color: AppColors.surface200),
+      ),
+      child: Row(
+        children: [
+          if (canUpload)
+            Expanded(
+              child: SizedBox(
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      state.isUploading ? null : () => _pickAndUpload(context),
+                  icon: state.isUploading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_file_rounded, size: 16),
+                  label: Text(state.isUploading ? 'Uploading…' : 'Upload Document'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.navyDeep,
+                    side: const BorderSide(color: AppColors.surface200),
+                    backgroundColor: AppColors.surface50,
+                    textStyle: AppTypography.labelMedium.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  )
-                : const Icon(Icons.upload_file_rounded),
-            label: Text(
-              state.isUploading ? 'Uploading…' : 'Upload Document',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppDimensions.space8 + bottomInset),
-      child: SizedBox(
-        width: maxWidth.clamp(0, 420).toDouble(),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.navyDeep.withValues(alpha: 0.1),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FloatingActionButton.extended(
-                    heroTag: null,
-                    onPressed:
-                        state.isUploading ? null : () => _pickAndUpload(context),
-                    backgroundColor: AppColors.navyDeep,
-                    foregroundColor: AppColors.white,
-                    icon: state.isUploading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(AppColors.white),
-                            ),
-                          )
-                        : const Icon(Icons.upload_file_rounded),
-                    label: Text(isCompactMobile ? 'Upload' : 'Upload Document'),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppDimensions.space8),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FloatingActionButton.extended(
-                    heroTag: 'request-doc-fab',
-                    onPressed:
-                        state.isRequesting ? null : () => _showRequestSheet(context),
-                    backgroundColor: state.isRequesting
-                        ? AppColors.goldPrimary.withValues(alpha: 0.7)
-                        : AppColors.goldPrimary,
+          if (canUpload && canRequest) const SizedBox(width: AppDimensions.space8),
+          if (canRequest)
+            Expanded(
+                  child: SizedBox(
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      state.isRequesting ? null : () => _showRequestSheet(context),
+                  icon: const Icon(Icons.description_outlined, size: 16),
+                  label: Text(
+                      state.isRequesting ? 'Sending…' : 'Request Document'),
+                  style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.navyDeep,
-                    icon: state.isRequesting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.navyDeep),
-                            ),
-                          )
-                        : const Icon(Icons.description_outlined),
-                    label: Text(isCompactMobile ? 'Request' : 'Request Document'),
+                    side: const BorderSide(color: AppColors.surface200),
+                    backgroundColor: AppColors.surface50,
+                    textStyle: AppTypography.labelMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _requestFab(
-    BuildContext context,
-    DocumentState state,
-  ) {
-    return FloatingActionButton.extended(
-      heroTag: null,
-      onPressed: state.isRequesting ? null : () => _showRequestSheet(context),
-      backgroundColor: state.isRequesting
-          ? AppColors.goldPrimary.withValues(alpha: 0.7)
-          : AppColors.goldPrimary,
-      foregroundColor: AppColors.navyDeep,
-      elevation: 4,
-      icon: state.isRequesting
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.navyDeep),
-              ),
-            )
-          : const Icon(Icons.add_rounded),
-      label: Text(
-        state.isRequesting ? 'Requesting…' : 'Request Document',
-        style: AppTypography.labelLarge.copyWith(
-          color: AppColors.navyDeep,
-          fontWeight: FontWeight.w600,
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -514,8 +461,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             ),
             const SizedBox(height: AppDimensions.space16),
             Text(
-              _workflowFilter != DocumentWorkflowFilter.all
-                  ? 'No ${_workflowFilter.label} Documents'
+              _statusFilter != DocumentListStatusFilter.all
+                  ? 'No ${_statusFilter.label} Documents'
                   : 'No Documents Yet',
               textAlign: TextAlign.center,
               style: AppTypography.titleSmall.copyWith(
@@ -525,7 +472,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
-              _workflowFilter != DocumentWorkflowFilter.all
+              _statusFilter != DocumentListStatusFilter.all
                   ? 'Try selecting a different filter.'
                   : 'Tap request or upload to add first document.',
               textAlign: TextAlign.center,
@@ -533,11 +480,11 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                 color: AppColors.grey600,
               ),
             ),
-            if (_workflowFilter != DocumentWorkflowFilter.all) ...[
+            if (_statusFilter != DocumentListStatusFilter.all) ...[
               const SizedBox(height: AppDimensions.space16),
               OutlinedButton(
-                onPressed: () => _onWorkflowFilterChanged(
-                  DocumentWorkflowFilter.all,
+                onPressed: () => _onStatusFilterChanged(
+                  DocumentListStatusFilter.all,
                 ),
                 child: const Text('Clear Filter'),
               ),
@@ -584,8 +531,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   }
 
   String _sectionTitle(int count) {
-    if (_workflowFilter != DocumentWorkflowFilter.all) {
-      return '${_workflowFilter.label} ($count)';
+    if (_statusFilter != DocumentListStatusFilter.all) {
+      return '${_statusFilter.label} ($count)';
     }
     return 'All Documents ($count)';
   }
@@ -601,7 +548,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     if (result == null || !result.hasUrl) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result?.status == DocumentStatus.processing
+          content: Text(result?.status == DocumentStatus.pending
               ? 'Document is still under verification. Please wait.'
               : 'Download link not available. Please try again.'),
           backgroundColor: AppColors.warningAmber,
@@ -613,72 +560,43 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       );
       return;
     }
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(doc.documentType.label),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Open or copy this secure document link:'),
-            const SizedBox(height: 8),
-            SelectableText(
-              result!.url!,
-              style: AppTypography.bodySmall.copyWith(fontSize: 12),
-            ),
-          ],
+    final uri = Uri.tryParse(result.url!);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Invalid download link.'),
+          backgroundColor: AppColors.warningAmber,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: result!.url!));
-              if (ctx.mounted) Navigator.of(ctx).pop();
-              if (!mounted) return;
-              messenger?.showSnackBar(
-                const SnackBar(
-                  content: Text('Link copied to clipboard'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: const Text('Copy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+      );
+      return;
+    }
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
     );
+    if (!context.mounted) return;
+    if (!launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Could not open the file. Check your browser or try again.',
+          ),
+          backgroundColor: AppColors.warningAmber,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          ),
+        ),
+      );
+    }
   }
 
-  /// Types the school typically issues or uploads after a parent/student request.
   List<RequiredDocumentModel> _mergedRequestCatalog(DocumentState state) {
-    const adminIssuable = [
-      DocumentType.idCard,
-      DocumentType.reportCard,
-      DocumentType.bonafide,
-      DocumentType.leavingCert,
-      DocumentType.academicCertificate,
-    ];
-    final merged = <RequiredDocumentModel>[];
-    final seen = <String>{};
-    void add(RequiredDocumentModel r) {
-      final key = r.documentType == DocumentType.other
-          ? 'OTHER|${(r.note ?? '').trim()}'
-          : r.documentType.backendValue;
-      if (seen.add(key)) merged.add(r);
-    }
-
-    for (final t in adminIssuable) {
-      add(RequiredDocumentModel(documentType: t));
-    }
-    for (final r in state.requiredDocuments) {
-      add(r);
-    }
-    return merged;
+    return buildStudentParentRequestCatalog(state.requiredDocuments);
   }
 
   Future<void> _showRequestSheet(BuildContext context) async {
@@ -741,7 +659,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return true;
   }
 
-  Future<void> _pickAndUpload(BuildContext context) async {
+  Future<void> _pickAndUpload(
+    BuildContext context, {
+    DocumentType? preselectedType,
+  }) async {
     if (_resolvedStudentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -779,31 +700,39 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       return;
     }
 
-    var selectedDoc = allowedDocs.first;
-    final pickedDoc = await showModalBottomSheet<RequiredDocumentModel>(
-      context: context,
-      useSafeArea: true,
-      builder: (ctx) => ListView(
-        shrinkWrap: true,
-        children: [
-          const ListTile(
-            title: Text('Select Document Type'),
-          ),
-          ...allowedDocs.map(
-            (doc) => ListTile(
-              leading: Icon(doc.documentType.icon, color: doc.documentType.color),
-              title: Text(doc.documentType == DocumentType.other &&
-                      (doc.note ?? '').trim().isNotEmpty
-                  ? doc.note!.trim()
-                  : doc.documentType.label),
-              onTap: () => Navigator.of(ctx).pop(doc),
+    late RequiredDocumentModel selectedDoc;
+    final hasPre = preselectedType != null &&
+        allowedDocs.any((d) => d.documentType == preselectedType);
+    if (hasPre) {
+      selectedDoc =
+          allowedDocs.firstWhere((d) => d.documentType == preselectedType);
+    } else {
+      final pickedDoc = await showModalBottomSheet<RequiredDocumentModel>(
+        context: context,
+        useSafeArea: true,
+        builder: (ctx) => ListView(
+          shrinkWrap: true,
+          children: [
+            const ListTile(
+              title: Text('Select Document Type'),
             ),
-          ),
-        ],
-      ),
-    );
-    if (!context.mounted || pickedDoc == null) return;
-    selectedDoc = pickedDoc;
+            ...allowedDocs.map(
+              (doc) => ListTile(
+                leading:
+                    Icon(doc.documentType.icon, color: doc.documentType.color),
+                title: Text(doc.documentType == DocumentType.other &&
+                        (doc.note ?? '').trim().isNotEmpty
+                    ? doc.note!.trim()
+                    : doc.documentType.label),
+                onTap: () => Navigator.of(ctx).pop(doc),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (!context.mounted || pickedDoc == null) return;
+      selectedDoc = pickedDoc;
+    }
 
     FilePickerResult? picked;
     try {
@@ -907,7 +836,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
           controller: reasonController,
           maxLines: 3,
           decoration: const InputDecoration(
-            hintText: 'Enter rejection reason (optional)',
+            hintText: 'Enter rejection reason (required)',
           ),
         ),
         actions: [
@@ -916,8 +845,11 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () =>
-                Navigator.of(ctx).pop(reasonController.text.trim()),
+            onPressed: () {
+              final r = reasonController.text.trim();
+              if (r.isEmpty) return;
+              Navigator.of(ctx).pop(r);
+            },
             child: const Text('Reject'),
           ),
         ],
@@ -1274,7 +1206,7 @@ class _ProcessingBanner extends StatelessWidget {
       child: Row(
         children: [
           const Icon(
-            Icons.sync_rounded,
+            Icons.schedule_rounded,
             color: AppColors.infoBlue,
             size: AppDimensions.iconSM,
           ),

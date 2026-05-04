@@ -47,9 +47,7 @@ class DocumentTile extends StatelessWidget {
                 _DocumentIcon(
                   type: type,
                   status: status,
-                  showProcessingOverlay: document.status ==
-                          DocumentStatus.processing &&
-                      (document.fileKey ?? '').trim().isNotEmpty,
+                  showProcessingOverlay: false,
                 ),
                 const SizedBox(width: AppDimensions.space12),
 
@@ -86,10 +84,10 @@ class DocumentTile extends StatelessWidget {
                       const SizedBox(height: AppDimensions.space4),
                       _TimestampRow(document: document),
                       if (document.hasFailed &&
-                          (document.reviewNote ?? '').trim().isNotEmpty) ...[
+                          (document.rejectionReason ?? '').trim().isNotEmpty) ...[
                         const SizedBox(height: AppDimensions.space6),
                         Text(
-                          'Admin feedback: ${document.reviewNote!.trim()}',
+                          'Admin feedback: ${document.rejectionReason!.trim()}',
                           style: AppTypography.caption.copyWith(
                             color: AppColors.errorRed,
                           ),
@@ -106,13 +104,16 @@ class DocumentTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _StatusChip(status: status),
+                    _StatusChip(
+                      status: status,
+                      showSpinner: false,
+                    ),
                     if (onDownload != null) ...[
                       const SizedBox(height: AppDimensions.space8),
                       _DownloadButton(onTap: onDownload!),
                     ],
                     if (document.hasFailed &&
-                        (document.reviewNote ?? '').trim().isEmpty) ...[
+                        (document.rejectionReason ?? '').trim().isEmpty) ...[
                       const SizedBox(height: AppDimensions.space8),
                       Text(
                         'Contact admin',
@@ -232,8 +233,9 @@ class _TimestampRow extends StatelessWidget {
 // ── Status Chip ───────────────────────────────────────────────────────────────
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+  const _StatusChip({required this.status, required this.showSpinner});
   final DocumentStatus status;
+  final bool showSpinner;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +251,7 @@ class _StatusChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _AnimatedStatusIcon(status: status),
+          _AnimatedStatusIcon(status: status, showSpinner: showSpinner),
           const SizedBox(width: AppDimensions.space4),
           Text(
             status.label,
@@ -265,12 +267,13 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _AnimatedStatusIcon extends StatelessWidget {
-  const _AnimatedStatusIcon({required this.status});
+  const _AnimatedStatusIcon({required this.status, required this.showSpinner});
   final DocumentStatus status;
+  final bool showSpinner;
 
   @override
   Widget build(BuildContext context) {
-    if (status == DocumentStatus.processing) {
+    if (showSpinner) {
       return SizedBox(
         width: AppDimensions.iconXS,
         height: AppDimensions.iconXS,

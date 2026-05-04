@@ -71,12 +71,12 @@ class DocumentRepository {
 
   Future<DocumentListResponse> listDocuments(
     String? studentId, {
-    DocumentWorkflowFilter workflow = DocumentWorkflowFilter.all,
+    DocumentListStatusFilter statusFilter = DocumentListStatusFilter.all,
   }) async {
     final qp = <String, dynamic>{
       if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
-      if (workflow.statusFilterQueryParam != null)
-        'status_filter': workflow.statusFilterQueryParam,
+      if (statusFilter.statusQueryParam != null)
+        'status': statusFilter.statusQueryParam,
     };
     final response = await _dio.get(
       ApiConstants.documents,

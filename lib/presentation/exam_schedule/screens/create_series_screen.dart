@@ -7,10 +7,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../data/models/exam/exam_series_model.dart';
+import '../../../data/models/result/result_model.dart';
 import '../../../data/models/masters/subject_model.dart';
 import '../../../providers/exam_provider.dart';
 import '../../../providers/masters_provider.dart';
 import '../../../providers/academic_year_provider.dart';
+import '../../../providers/result_provider.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
@@ -33,18 +35,11 @@ class CreateSeriesScreen extends ConsumerStatefulWidget {
 
 class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
     with SingleTickerProviderStateMixin {
-  static const List<String> _examTypes = [
-    'Unit Test',
-    'Mid Term',
-    'Oral Practical',
-    'Final',
-    'Other',
-  ];
-
   // Step 1: Create series
   final _seriesNameController = TextEditingController();
   String? _selectedAcademicYearId;
-  String _selectedExamType = _examTypes.first;
+  String? _selectedExamId;
+  String? _selectedExamName;
   ExamSeriesModel? _createdSeries;
 
   // Step 2: Add entries
@@ -88,13 +83,15 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
             ? _StepOneSeries(
                 key: const ValueKey('step1'),
                 nameController: _seriesNameController,
+                standardId: widget.standardId,
                 selectedAcademicYearId: _selectedAcademicYearId,
                 onAcademicYearSelected: (id) =>
                     setState(() => _selectedAcademicYearId = id),
-                examTypes: _examTypes,
-                selectedExamType: _selectedExamType,
-                onExamTypeSelected: (value) =>
-                    setState(() => _selectedExamType = value),
+                selectedExamId: _selectedExamId,
+                onExamSelected: (exam) => setState(() {
+                  _selectedExamId = exam.id;
+                  _selectedExamName = exam.name;
+                }),
                 onNext: _handleCreateSeries,
               )
             : _StepTwoEntries(
@@ -111,14 +108,19 @@ class _CreateSeriesScreenState extends ConsumerState<CreateSeriesScreen>
 
   Future<void> _handleCreateSeries() async {
     final name = _seriesNameController.text.trim();
-    final seriesName =
-        name.isEmpty ? _selectedExamType : '$_selectedExamType - $name';
+    if (_selectedExamId == null || _selectedExamId!.trim().isEmpty) {
+      SnackbarUtils.showError(context, 'Please select an exam');
+      return;
+    }
+    final seriesName = name.isEmpty
+        ? (_selectedExamName ?? 'Exam Schedule')
+        : name;
 
     final series =
         await ref.read(examSeriesNotifierProvider.notifier).createSeries(
               name: seriesName,
-              standardId: widget.standardId,
-              academicYearId: _selectedAcademicYearId,
+              examId: _selectedExamId!,
+              section: null,
             );
 
     if (!mounted) return;
@@ -168,25 +170,32 @@ class _StepOneSeries extends ConsumerWidget {
   const _StepOneSeries({
     super.key,
     required this.nameController,
+    required this.standardId,
     required this.selectedAcademicYearId,
     required this.onAcademicYearSelected,
-    required this.examTypes,
-    required this.selectedExamType,
-    required this.onExamTypeSelected,
+    required this.selectedExamId,
+    required this.onExamSelected,
     required this.onNext,
   });
 
   final TextEditingController nameController;
+  final String standardId;
   final String? selectedAcademicYearId;
   final ValueChanged<String> onAcademicYearSelected;
-  final List<String> examTypes;
-  final String selectedExamType;
-  final ValueChanged<String> onExamTypeSelected;
+  final String? selectedExamId;
+  final ValueChanged<ExamModel> onExamSelected;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final yearsAsync = ref.watch(academicYearNotifierProvider);
+    final examsAsync = ref.watch(
+      examListProvider((
+        studentId: null,
+        academicYearId: selectedAcademicYearId,
+        standardId: standardId,
+      )),
+    );
     final isLoading =
         ref.watch(examSeriesNotifierProvider.select((s) => s.isLoading));
 
@@ -218,21 +227,38 @@ class _StepOneSeries extends ConsumerWidget {
           ),
           const SizedBox(height: AppDimensions.space20),
           Text(
-            'Exam Type',
+            'Exam',
             style: AppTypography.labelMedium.copyWith(
               color: AppColors.grey600,
             ),
           ),
           const SizedBox(height: AppDimensions.space8),
-          DropdownButtonFormField<String>(
-            initialValue: selectedExamType,
-            decoration: const InputDecoration(),
-            items: examTypes
-                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                .toList(),
-            onChanged: (value) {
-              if (value != null) onExamTypeSelected(value);
-            },
+          examsAsync.when(
+            data: (exams) => DropdownButtonFormField<String>(
+              value: selectedExamId,
+              hint: const Text('Select exam'),
+              decoration: const InputDecoration(),
+              items: exams
+                  .map((exam) => DropdownMenuItem<String>(
+                        value: exam.id,
+                        child: Text(exam.name),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                for (final exam in exams) {
+                  if (exam.id == value) {
+                    onExamSelected(exam);
+                    break;
+                  }
+                }
+              },
+            ),
+            loading: () => const LinearProgressIndicator(),
+            error: (_, __) => Text(
+              'Failed to load exams',
+              style: AppTypography.bodySmall.copyWith(color: AppColors.errorRed),
+            ),
           ),
           const SizedBox(height: AppDimensions.space20),
           // Academic year selector

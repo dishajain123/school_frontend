@@ -89,7 +89,7 @@ class ResultListScreen extends ConsumerWidget {
             return const AppEmptyState(
               icon: Icons.analytics_outlined,
               title: 'No results yet',
-              subtitle: 'Published exams will appear here.',
+              subtitle: 'Uploaded exam results will appear here.',
             );
           }
 

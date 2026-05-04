@@ -10,6 +10,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/document/document_model.dart';
 import '../../../providers/document_provider.dart';
+import '../utils/student_parent_request_catalog.dart';
 import '../widgets/document_type_card.dart';
 
 class RequestDocumentScreen extends ConsumerStatefulWidget {
@@ -25,7 +26,8 @@ class RequestDocumentScreen extends ConsumerStatefulWidget {
 class _RequestDocumentScreenState
     extends ConsumerState<RequestDocumentScreen>
     with SingleTickerProviderStateMixin {
-  DocumentType? _selected;
+  RequiredDocumentModel? _selected;
+  final TextEditingController _customNameCtrl = TextEditingController();
   late AnimationController _animCtrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
@@ -33,6 +35,12 @@ class _RequestDocumentScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(documentProvider.notifier).load(
+            widget.studentId,
+            statusFilter: DocumentListStatusFilter.all,
+          );
+    });
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -45,6 +53,7 @@ class _RequestDocumentScreenState
 
   @override
   void dispose() {
+    _customNameCtrl.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
@@ -53,6 +62,7 @@ class _RequestDocumentScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(documentProvider);
     final viewPadding = MediaQuery.viewPaddingOf(context);
+    final catalog = buildStudentParentRequestCatalog(state.requiredDocuments);
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
@@ -84,17 +94,56 @@ class _RequestDocumentScreenState
                       const SizedBox(height: AppDimensions.space20),
                       _TypesLabel(),
                       const SizedBox(height: AppDimensions.space12),
-                      ...DocumentType.values.map(
-                        (type) => Padding(
+                      ...catalog.map(
+                        (req) => Padding(
                           padding: const EdgeInsets.only(
                               bottom: AppDimensions.space12),
                           child: DocumentTypeCard(
-                            type: type,
-                            isSelected: _selected == type,
-                            onTap: () => setState(() => _selected = type),
+                            type: req.documentType,
+                            isSelected: identical(_selected, req),
+                            titleOverride: req.documentType ==
+                                        DocumentType.other &&
+                                    (req.note ?? '').trim().isNotEmpty
+                                ? req.note!.trim()
+                                : null,
+                            descriptionOverride: req.documentType ==
+                                        DocumentType.other &&
+                                    (req.note ?? '').trim().isNotEmpty
+                                ? ((req.note ?? '').toLowerCase().contains('fee'))
+                                    ? 'Official fee receipt or fee statement from the school'
+                                    : 'Requested by your school'
+                                : null,
+                            onTap: () => setState(() {
+                              _selected = req;
+                              if (req.documentType == DocumentType.other) {
+                                _customNameCtrl.text = (req.note ?? '').trim();
+                              } else {
+                                _customNameCtrl.clear();
+                              }
+                            }),
                           ),
                         ),
                       ),
+                      if (_selected?.documentType == DocumentType.other) ...[
+                        const SizedBox(height: AppDimensions.space8),
+                        TextField(
+                          controller: _customNameCtrl,
+                          textInputAction: TextInputAction.done,
+                          decoration: const InputDecoration(
+                            labelText: 'Document name (required)',
+                            hintText:
+                                'e.g. Leaving certificate, Migration certificate',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: AppDimensions.space4),
+                        Text(
+                          'This name is sent to the school so they can prepare the right document.',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 100),
                     ],
                   ),
@@ -115,12 +164,30 @@ class _RequestDocumentScreenState
 
   Future<void> _submit(BuildContext context) async {
     if (_selected == null) return;
+    String? note;
+    if (_selected!.documentType == DocumentType.other) {
+      final text = _customNameCtrl.text.trim();
+      if (text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter the document name you need from the school'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      note = text;
+    }
     final ok = await ref.read(documentProvider.notifier).requestDocument(
           studentId: widget.studentId,
-          documentType: _selected!,
+          documentType: _selected!.documentType,
+          note: note,
         );
     if (!context.mounted) return;
     if (ok) {
+      final label = _selected!.documentType == DocumentType.other
+          ? (note ?? _selected!.documentType.label)
+          : _selected!.documentType.label;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -130,7 +197,7 @@ class _RequestDocumentScreenState
               const SizedBox(width: AppDimensions.space8),
               Expanded(
                 child: Text(
-                  '${_selected!.label} requested! It will be ready shortly.',
+                  '$label requested! The school will process it when ready.',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.white,
                   ),
@@ -255,7 +322,7 @@ class _BottomActionBar extends StatelessWidget {
     required this.onSubmit,
   });
 
-  final DocumentType? selected;
+  final RequiredDocumentModel? selected;
   final bool isLoading;
   final double bottomPadding;
   final VoidCallback onSubmit;
@@ -289,30 +356,32 @@ class _BottomActionBar extends StatelessWidget {
                       vertical: AppDimensions.space8,
                     ),
                     decoration: BoxDecoration(
-                      color: selected!.color.withValues(alpha: 0.08),
+                      color: selected!.documentType.color
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(
                           AppDimensions.radiusSmall),
                       border: Border.all(
-                        color: selected!.color.withValues(alpha: 0.2),
+                        color: selected!.documentType.color
+                            .withValues(alpha: 0.2),
                         width: AppDimensions.borderThin,
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(selected!.icon,
-                            color: selected!.color, size: 16),
+                        Icon(selected!.documentType.icon,
+                            color: selected!.documentType.color, size: 16),
                         const SizedBox(width: AppDimensions.space8),
                         Expanded(
                           child: Text(
-                            'Requesting: ${selected!.label}',
+                            'Requesting: ${selected!.documentType.label}',
                             style: AppTypography.labelMedium.copyWith(
-                              color: selected!.color,
+                              color: selected!.documentType.color,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         Icon(Icons.check_circle_rounded,
-                            color: selected!.color, size: 16),
+                            color: selected!.documentType.color, size: 16),
                       ],
                     ),
                   )
@@ -334,15 +403,7 @@ class _BottomActionBar extends StatelessWidget {
               ),
               onPressed: selected == null || isLoading ? null : onSubmit,
               child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.white),
-                      ),
-                    )
+                  ? Text('Sending…', style: AppTypography.buttonPrimary)
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

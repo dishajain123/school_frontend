@@ -11,11 +11,13 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
+import '../../../data/models/result/result_model.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
 import '../../../data/models/timetable/timetable_model.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/masters_provider.dart';
+import '../../../providers/result_provider.dart';
 import '../../../providers/timetable_provider.dart';
 import '../../../providers/teacher_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
@@ -42,16 +44,9 @@ class UploadTimetableScreen extends ConsumerStatefulWidget {
 
 class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     with SingleTickerProviderStateMixin {
-  static const List<String> _examTypes = [
-    'Unit Test',
-    'Mid Term',
-    'Oral Practical',
-    'Final',
-    'Other',
-  ];
-
   String? _selectedStandardId;
-  String? _selectedExamType;
+  String? _selectedExamId;
+  String? _selectedExamName;
   String? _selectedSection;
   PlatformFile? _pickedFile;
   Uint8List? _pickedBytes;
@@ -118,8 +113,8 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
       return;
     }
     if (widget.examMode &&
-        (_selectedExamType == null || _selectedExamType!.trim().isEmpty)) {
-      SnackbarUtils.showError(context, 'Please select exam timetable type');
+        (_selectedExamId == null || _selectedExamId!.trim().isEmpty)) {
+      SnackbarUtils.showError(context, 'Please select exam');
       return;
     }
 
@@ -167,8 +162,8 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     }
 
     String? overrideFileName;
-    if (widget.examMode && _selectedExamType != null) {
-      final cleanType = _selectedExamType!
+    if (widget.examMode && _selectedExamName != null) {
+      final cleanType = _selectedExamName!
           .toLowerCase()
           .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
           .replaceAll(RegExp(r'_+'), '_')
@@ -230,6 +225,15 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
             standardId: _selectedStandardId!,
             academicYearId: activeYear?.id,
           )));
+    final examsAsync = _selectedStandardId == null
+        ? const AsyncData<List<ExamModel>>(<ExamModel>[])
+        : ref.watch(
+            examListProvider((
+              studentId: null,
+              academicYearId: activeYear?.id,
+              standardId: _selectedStandardId,
+            )),
+          );
 
     final mergedSections = <String>{
       ...studentSectionsAsync.valueOrNull?.map((s) => s.trim().toUpperCase()) ??
@@ -314,6 +318,8 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                                         .toList(),
                                     onChanged: (id) => setState(() {
                                       _selectedStandardId = id;
+                                      _selectedExamId = null;
+                                      _selectedExamName = null;
                                       _selectedSection = null;
                                     }),
                                   );
@@ -334,6 +340,8 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                                   .toList(),
                               onChanged: (id) => setState(() {
                                 _selectedStandardId = id;
+                                _selectedExamId = null;
+                                _selectedExamName = null;
                                 _selectedSection = null;
                               }),
                             );
@@ -341,26 +349,41 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                         ),
                         const SizedBox(height: 16),
                         if (widget.examMode) ...[
-                          _FieldLabel('Exam Timetable Type'),
+                          _FieldLabel('Exam'),
                           const SizedBox(height: 8),
-                          _StyledDropdown<String>(
-                            hint: 'Select exam type',
-                            value: _selectedExamType,
-                            items: _examTypes
-                                .map(
-                                  (type) => DropdownMenuItem(
-                                    value: type,
-                                    child: Text(
-                                      type,
-                                      style: AppTypography.bodyMedium.copyWith(
-                                        color: AppColors.grey800,
+                          examsAsync.when(
+                            loading: () => AppLoading.card(height: 46),
+                            error: (_, __) =>
+                                _InlineError('Could not load exams'),
+                            data: (exams) => _StyledDropdown<String>(
+                              hint: 'Select exam',
+                              value: _selectedExamId,
+                              items: exams
+                                  .map(
+                                    (exam) => DropdownMenuItem(
+                                      value: exam.id,
+                                      child: Text(
+                                        exam.name,
+                                        style:
+                                            AppTypography.bodyMedium.copyWith(
+                                          color: AppColors.grey800,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) =>
-                                setState(() => _selectedExamType = value),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedExamId = value;
+                                  final selected = exams.where(
+                                    (e) => e.id == value,
+                                  );
+                                  _selectedExamName = selected.isEmpty
+                                      ? null
+                                      : selected.first.name;
+                                });
+                              },
+                            ),
                           ),
                           const SizedBox(height: 16),
                         ],

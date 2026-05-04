@@ -5,7 +5,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/document/document_model.dart';
 
-/// Chips for GET /documents `status_filter` workflow buckets (matches backend).
+/// Chips for GET /documents `status` (backend DocumentStatus).
 class DocumentFilterBar extends StatelessWidget {
   const DocumentFilterBar({
     super.key,
@@ -13,15 +13,16 @@ class DocumentFilterBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  final DocumentWorkflowFilter selected;
-  final ValueChanged<DocumentWorkflowFilter> onSelected;
+  final DocumentListStatusFilter selected;
+  final ValueChanged<DocumentListStatusFilter> onSelected;
 
-  static const List<DocumentWorkflowFilter> _options = [
-    DocumentWorkflowFilter.all,
-    DocumentWorkflowFilter.requested,
-    DocumentWorkflowFilter.pending,
-    DocumentWorkflowFilter.approved,
-    DocumentWorkflowFilter.rejected,
+  static const List<DocumentListStatusFilter> _options = [
+    DocumentListStatusFilter.all,
+    DocumentListStatusFilter.notUploaded,
+    DocumentListStatusFilter.requested,
+    DocumentListStatusFilter.pending,
+    DocumentListStatusFilter.approved,
+    DocumentListStatusFilter.rejected,
   ];
 
   @override
@@ -40,7 +41,7 @@ class DocumentFilterBar extends StatelessWidget {
               color: _options[i].color,
               onTap: () => onSelected(
                 selected == _options[i]
-                    ? DocumentWorkflowFilter.all
+                    ? DocumentListStatusFilter.all
                     : _options[i],
               ),
             ),

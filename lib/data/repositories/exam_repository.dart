@@ -15,13 +15,13 @@ class ExamRepository {
   // ── POST /exam-schedule ────────────────────────────────────────────────────
   Future<ExamSeriesModel> createSeries({
     required String name,
-    required String standardId,
-    String? academicYearId,
+    required String examId,
+    String? section,
   }) async {
     final body = <String, dynamic>{
       'name': name,
-      'standard_id': standardId,
-      if (academicYearId != null) 'academic_year_id': academicYearId,
+      'exam_id': examId,
+      if (section != null && section.trim().isNotEmpty) 'section': section.trim().toUpperCase(),
     };
     final response = await _dio.post(_base, data: body);
     return ExamSeriesModel.fromJson(response.data as Map<String, dynamic>);

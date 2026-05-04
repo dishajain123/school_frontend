@@ -173,7 +173,8 @@ abstract final class AppTheme {
             const Color(0x0D0B1F3A), // shadow1 color
           ),
           minimumSize: WidgetStateProperty.all(
-            const Size(double.infinity, AppDimensions.buttonHeight),
+            // Avoid forcing infinite width globally; let parent layout decide width.
+            const Size(0, AppDimensions.buttonHeight),
           ),
           padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
@@ -215,7 +216,8 @@ abstract final class AppTheme {
           }),
           elevation: WidgetStateProperty.all(0),
           minimumSize: WidgetStateProperty.all(
-            const Size(double.infinity, AppDimensions.buttonHeight),
+            // Avoid forcing infinite width globally; let parent layout decide width.
+            const Size(0, AppDimensions.buttonHeight),
           ),
           padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: AppDimensions.space16),

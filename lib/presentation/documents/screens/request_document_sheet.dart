@@ -27,6 +27,13 @@ class RequestDocumentSheet extends ConsumerStatefulWidget {
 
 class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
   RequiredDocumentModel? _selected;
+  final TextEditingController _customNameCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _customNameCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,16 +91,20 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                       size: 18, color: AppColors.navyDeep),
                 ),
                 const SizedBox(width: AppDimensions.space12),
-                Column(
+                Expanded(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Request Document',
                         style: AppTypography.headlineSmall),
                     Text(
                       'Ask the school to issue or upload it (e.g. ID card, report card)',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodySmall,
                     ),
                   ],
+                  ),
                 ),
               ],
             ),
@@ -125,16 +136,51 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                       child: DocumentTypeCard(
                         type: req.documentType,
                         isSelected: identical(_selected, req),
-                        titleOverride: req.documentType == DocumentType.other
-                            ? req.note
-                            : null,
-                        descriptionOverride: req.documentType == DocumentType.other
-                            ? 'Custom document requested by school'
-                            : null,
-                        onTap: () => setState(() => _selected = req),
+                        titleOverride:
+                            req.documentType == DocumentType.other &&
+                                    (req.note ?? '').trim().isNotEmpty
+                                ? req.note!.trim()
+                                : null,
+                        descriptionOverride:
+                            req.documentType == DocumentType.other &&
+                                    (req.note ?? '').trim().isNotEmpty
+                                ? ((req.note ?? '').toLowerCase().contains('fee'))
+                                    ? 'Official fee receipt or fee statement from the school'
+                                    : 'Requested by your school'
+                                : null,
+                        onTap: () => setState(() {
+                          _selected = req;
+                          if (req.documentType == DocumentType.other) {
+                            _customNameCtrl.text = (req.note ?? '').trim();
+                          } else {
+                            _customNameCtrl.clear();
+                          }
+                        }),
                       ),
                     ),
                   ),
+                  if (_selected?.documentType == DocumentType.other) ...[
+                    const SizedBox(height: AppDimensions.space8),
+                    TextField(
+                      controller: _customNameCtrl,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        labelText: 'Document name (required)',
+                        hintText: 'e.g. Leaving certificate, Migration certificate',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.space4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'This custom name will be visible to school admin.',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -156,21 +202,26 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
             ),
             child: Row(
               children: [
-                SizedBox(
-                  height: AppDimensions.buttonHeight,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(null),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.grey600,
-                      side: const BorderSide(color: AppColors.surface200),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimensions.radiusMedium),
+                Expanded(
+                  child: SizedBox(
+                    height: AppDimensions.buttonHeight,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(null),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.grey600,
+                        side: const BorderSide(color: AppColors.surface200),
+                        // Override global infinite min width for Row layouts.
+                        minimumSize:
+                            const Size(0, AppDimensions.buttonHeight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusMedium),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.space16),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.space20),
+                      child: const Text('Cancel'),
                     ),
-                    child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.space12),
@@ -184,6 +235,8 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.navyDeep,
                         foregroundColor: AppColors.white,
+                        minimumSize:
+                            const Size(0, AppDimensions.buttonHeight),
                         disabledBackgroundColor:
                             AppColors.navyDeep.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
@@ -192,14 +245,9 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
                         ),
                       ),
                       child: state.isRequesting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.white),
-                              ),
+                          ? Text(
+                              'Sending…',
+                              style: AppTypography.buttonPrimary,
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -223,12 +271,25 @@ class _RequestDocumentSheetState extends ConsumerState<RequestDocumentSheet> {
 
   Future<void> _submit(BuildContext context) async {
     if (_selected == null) return;
+    final selectedType = _selected!.documentType;
+    String? customNote;
+    if (selectedType == DocumentType.other) {
+      final text = _customNameCtrl.text.trim();
+      if (text.isEmpty) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Please enter custom document name'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      customNote = text;
+    }
     final ok = await ref.read(documentProvider.notifier).requestDocument(
           studentId: widget.studentId,
-          documentType: _selected!.documentType,
-          note: _selected!.documentType == DocumentType.other
-              ? _selected!.note
-              : null,
+          documentType: selectedType,
+          note: customNote,
         );
     if (ok) {
       if (!context.mounted) return;
