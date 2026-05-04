@@ -120,8 +120,7 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen>
     if (user.role == UserRole.principal || user.role == UserRole.staffAdmin) {
       return false;
     }
-    return user.hasPermission('teacher_assignment:manage') ||
-        user.role == UserRole.superadmin;
+    return user.hasPermission('teacher_assignment:manage');
   }
 
   Future<void> _openAssignSheet(TeacherModel teacher) async {

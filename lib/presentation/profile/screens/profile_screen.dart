@@ -481,8 +481,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   String _roleLabel(String role) {
     switch (role) {
-      case 'SUPERADMIN':
-        return 'Super Admin';
       case 'PRINCIPAL':
         return 'Principal';
       case 'STAFF_ADMIN':

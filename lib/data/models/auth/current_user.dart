@@ -1,7 +1,6 @@
 enum UserRole {
-  superadmin,
-  principal,
   staffAdmin,
+  principal,
   trustee,
   teacher,
   student,
@@ -11,12 +10,10 @@ enum UserRole {
 extension UserRoleX on UserRole {
   String get backendValue {
     switch (this) {
-      case UserRole.superadmin:
-        return 'SUPERADMIN';
-      case UserRole.principal:
-        return 'PRINCIPAL';
       case UserRole.staffAdmin:
         return 'STAFF_ADMIN';
+      case UserRole.principal:
+        return 'PRINCIPAL';
       case UserRole.trustee:
         return 'TRUSTEE';
       case UserRole.teacher:
@@ -31,12 +28,13 @@ extension UserRoleX on UserRole {
   static UserRole fromBackend(String? value) {
     final normalized = (value ?? '').trim().toUpperCase();
     switch (normalized) {
+      // Legacy JWT role string from older DB rows; treat as staff admin.
       case 'SUPERADMIN':
-        return UserRole.superadmin;
-      case 'PRINCIPAL':
-        return UserRole.principal;
+        return UserRole.staffAdmin;
       case 'STAFF_ADMIN':
         return UserRole.staffAdmin;
+      case 'PRINCIPAL':
+        return UserRole.principal;
       case 'TRUSTEE':
         return UserRole.trustee;
       case 'TEACHER':
@@ -54,9 +52,7 @@ extension UserRoleX on UserRole {
 /// Coarse UI gates aligned with [RoleEnum] in the API and admin console in-school users.
 extension UserRoleSchoolAdmin on UserRole {
   bool get isSchoolScopedAdmin =>
-      this == UserRole.superadmin ||
-      this == UserRole.principal ||
-      this == UserRole.staffAdmin;
+      this == UserRole.principal || this == UserRole.staffAdmin;
 
   bool get isSchoolScopedAdminOrTrustee =>
       isSchoolScopedAdmin || this == UserRole.trustee;

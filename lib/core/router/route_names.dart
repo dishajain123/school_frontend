@@ -9,6 +9,9 @@ class RouteNames {
   static const String verifyOtp = '/verify-otp';
   static const String resetPassword = '/reset-password';
 
+  /// Staff Admin — use web console (mobile shows this screen only).
+  static const String staffUseWebConsole = '/staff-use-web-console';
+
   // Shell (bottom nav)
   static const String dashboard = '/dashboard';
   static const String profile = '/profile';

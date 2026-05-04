@@ -48,7 +48,6 @@ class FeeDashboardScreen extends ConsumerWidget {
       default:
         final isLeadership = user.role == UserRole.principal ||
             user.role == UserRole.trustee ||
-            user.role == UserRole.superadmin ||
             user.role == UserRole.staffAdmin;
 
         if (isLeadership && (studentId == null || studentId!.isEmpty)) {

@@ -5,8 +5,7 @@ import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/document/document_model.dart';
 
-/// Horizontal scrollable chip row for filtering documents by status.
-/// "All" chip shown first; tapping a selected chip deselects it.
+/// Chips for GET /documents `status_filter` workflow buckets (matches backend).
 class DocumentFilterBar extends StatelessWidget {
   const DocumentFilterBar({
     super.key,
@@ -14,8 +13,16 @@ class DocumentFilterBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  final DocumentStatus? selected;
-  final ValueChanged<DocumentStatus?> onSelected;
+  final DocumentWorkflowFilter selected;
+  final ValueChanged<DocumentWorkflowFilter> onSelected;
+
+  static const List<DocumentWorkflowFilter> _options = [
+    DocumentWorkflowFilter.all,
+    DocumentWorkflowFilter.requested,
+    DocumentWorkflowFilter.pending,
+    DocumentWorkflowFilter.approved,
+    DocumentWorkflowFilter.rejected,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -24,29 +31,20 @@ class DocumentFilterBar extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          // All chip
-          _Chip(
-            label: 'All',
-            icon: Icons.list_rounded,
-            isSelected: selected == null,
-            color: AppColors.navyDeep,
-            onTap: () => onSelected(null),
-          ),
-          const SizedBox(width: AppDimensions.space8),
-
-          // Status chips
-          ...DocumentStatus.values.map(
-            (s) => Padding(
-              padding: const EdgeInsets.only(right: AppDimensions.space8),
-              child: _Chip(
-                label: s.label,
-                icon: s.icon,
-                isSelected: selected == s,
-                color: s.color,
-                onTap: () => onSelected(selected == s ? null : s),
+          for (var i = 0; i < _options.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppDimensions.space8),
+            _Chip(
+              label: _options[i].label,
+              icon: _options[i].icon,
+              isSelected: selected == _options[i],
+              color: _options[i].color,
+              onTap: () => onSelected(
+                selected == _options[i]
+                    ? DocumentWorkflowFilter.all
+                    : _options[i],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

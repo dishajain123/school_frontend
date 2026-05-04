@@ -187,8 +187,10 @@ extension DocumentStatusX on DocumentStatus {
       case 'PROCESSING':
         return DocumentStatus.processing;
       case 'READY':
+      case 'VERIFIED':
         return DocumentStatus.ready;
       case 'FAILED':
+      case 'REJECTED':
         return DocumentStatus.failed;
       default:
         return DocumentStatus.pending;
@@ -265,6 +267,68 @@ extension DocumentStatusX on DocumentStatus {
 
   bool get isPollable =>
       this == DocumentStatus.pending || this == DocumentStatus.processing;
+}
+
+// ── DocumentWorkflowFilter ────────────────────────────────────────────────────
+// Matches backend GET /documents?status_filter= (DocumentWorkflowFilter).
+
+enum DocumentWorkflowFilter {
+  all,
+  requested,
+  pending,
+  approved,
+  rejected,
+}
+
+extension DocumentWorkflowFilterX on DocumentWorkflowFilter {
+  /// Omit query param when "all" so the server default applies.
+  String? get statusFilterQueryParam =>
+      this == DocumentWorkflowFilter.all ? null : name;
+
+  String get label {
+    switch (this) {
+      case DocumentWorkflowFilter.all:
+        return 'All';
+      case DocumentWorkflowFilter.requested:
+        return 'Requested';
+      case DocumentWorkflowFilter.pending:
+        return 'Pending';
+      case DocumentWorkflowFilter.approved:
+        return 'Approved';
+      case DocumentWorkflowFilter.rejected:
+        return 'Rejected';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case DocumentWorkflowFilter.all:
+        return Icons.list_rounded;
+      case DocumentWorkflowFilter.requested:
+        return Icons.mark_email_unread_outlined;
+      case DocumentWorkflowFilter.pending:
+        return Icons.sync_rounded;
+      case DocumentWorkflowFilter.approved:
+        return Icons.check_circle_outline_rounded;
+      case DocumentWorkflowFilter.rejected:
+        return Icons.error_outline_rounded;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case DocumentWorkflowFilter.all:
+        return AppColors.navyDeep;
+      case DocumentWorkflowFilter.requested:
+        return AppColors.warningAmber;
+      case DocumentWorkflowFilter.pending:
+        return AppColors.infoBlue;
+      case DocumentWorkflowFilter.approved:
+        return AppColors.successGreen;
+      case DocumentWorkflowFilter.rejected:
+        return AppColors.errorRed;
+    }
+  }
 }
 
 // ── DocumentModel ─────────────────────────────────────────────────────────────

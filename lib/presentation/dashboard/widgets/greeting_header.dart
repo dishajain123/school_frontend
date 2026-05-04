@@ -162,8 +162,6 @@ class _RoleBadge extends StatelessWidget {
 
   String get _label {
     switch (role) {
-      case UserRole.superadmin:
-        return 'Super Admin';
       case UserRole.principal:
         return 'Principal';
       case UserRole.staffAdmin:

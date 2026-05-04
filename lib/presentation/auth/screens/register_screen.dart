@@ -464,8 +464,6 @@ String _staticRoleLabel(UserRole role) {
       return 'Parent';
     case UserRole.principal:
       return 'Principal';
-    case UserRole.superadmin:
-      return 'Superadmin';
     case UserRole.staffAdmin:
       return 'Staff Admin';
     case UserRole.trustee:

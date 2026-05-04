@@ -69,12 +69,18 @@ class DocumentRepository {
   // Permission: document:generate
   // Backend enforces RBAC — STUDENT sees only own, PARENT sees only child's
 
-  Future<DocumentListResponse> listDocuments([String? studentId]) async {
+  Future<DocumentListResponse> listDocuments(
+    String? studentId, {
+    DocumentWorkflowFilter workflow = DocumentWorkflowFilter.all,
+  }) async {
+    final qp = <String, dynamic>{
+      if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
+      if (workflow.statusFilterQueryParam != null)
+        'status_filter': workflow.statusFilterQueryParam,
+    };
     final response = await _dio.get(
       ApiConstants.documents,
-      queryParameters: {
-        if (studentId != null && studentId.isNotEmpty) 'student_id': studentId,
-      },
+      queryParameters: qp.isEmpty ? null : qp,
     );
     return DocumentListResponse.fromJson(response.data as Map<String, dynamic>);
   }

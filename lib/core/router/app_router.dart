@@ -79,9 +79,7 @@ import '../../presentation/documents/screens/document_list_screen.dart';
 import '../../presentation/complaints/screens/complaint_list_screen.dart';
 import '../../presentation/complaints/screens/create_complaint_screen.dart';
 import '../../presentation/complaints/screens/complaint_detail_screen.dart';
-import '../../presentation/superadmin/screens/schools_list_screen.dart';
-import '../../presentation/superadmin/screens/school_detail_screen.dart';
-import '../../presentation/superadmin/screens/create_school_screen.dart';
+import '../../presentation/auth/screens/staff_use_web_console_screen.dart';
 import '../../presentation/settings/screens/school_settings_screen.dart';
 import '../../presentation/audit/screens/audit_logs_screen.dart';
 import '../../data/models/announcement/announcement_model.dart';
@@ -91,7 +89,6 @@ import '../../data/models/student/student_model.dart';
 import '../../data/models/parent/parent_model.dart';
 import '../../data/models/chat/conversation_model.dart';
 import '../../data/models/complaint/complaint_model.dart';
-import '../../data/models/school/school_model.dart';
 import '../../providers/auth_provider.dart';
 import 'route_names.dart';
 
@@ -115,8 +112,6 @@ class PlaceholderScreen extends StatelessWidget {
 
 String _roleToBackendValue(UserRole role) {
   switch (role) {
-    case UserRole.superadmin:
-      return 'SUPERADMIN';
     case UserRole.principal:
       return 'PRINCIPAL';
     case UserRole.staffAdmin:
@@ -145,6 +140,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           authState.currentUser?.enrollmentPending ?? false;
       final profileCreated = authState.currentUser?.profileCreated ?? false;
       final shouldBlockForOnboarding = enrollmentPending && !profileCreated;
+      final staffOnly =
+          isLoggedIn && authState.currentUser?.role == UserRole.staffAdmin;
 
       final publicRoutes = {
         RouteNames.splash,
@@ -159,9 +156,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (!isLoggedIn && !publicRoutes.contains(loc)) {
         return RouteNames.login;
       }
+      if (staffOnly && loc != RouteNames.staffUseWebConsole) {
+        return RouteNames.staffUseWebConsole;
+      }
+      if (!isLoggedIn && loc == RouteNames.staffUseWebConsole) {
+        return RouteNames.login;
+      }
       // Always leave splash after auth initialization completes.
       if (loc == RouteNames.splash && authState.isInitialized) {
         if (!isLoggedIn) return RouteNames.login;
+        if (authState.currentUser?.role == UserRole.staffAdmin) {
+          return RouteNames.staffUseWebConsole;
+        }
         return shouldBlockForOnboarding
             ? RouteNames.enrollmentPending
             : RouteNames.dashboard;
@@ -180,6 +186,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           publicRoutes.contains(loc) &&
           loc != RouteNames.splash &&
           loc != RouteNames.enrollmentPending) {
+        if (authState.currentUser?.role == UserRole.staffAdmin) {
+          return RouteNames.staffUseWebConsole;
+        }
         return RouteNames.dashboard;
       }
       return null;
@@ -223,6 +232,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final token = extra?['resetToken'] as String? ?? '';
           return ResetPasswordScreen(resetToken: token);
         },
+      ),
+      GoRoute(
+        path: RouteNames.staffUseWebConsole,
+        builder: (_, __) => const StaffUseWebConsoleScreen(),
       ),
 
       // ── Shell (bottom nav) ────────────────────────────────────────────────
@@ -754,34 +767,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   complaintId: state.pathParameters['id']!,
                   initialComplaint: state.extra as ComplaintModel?,
                 ),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: RouteNames.schools,
-            builder: (_, __) => const SchoolsListScreen(),
-            routes: [
-              GoRoute(
-                path: 'create',
-                builder: (_, __) => const CreateSchoolScreen(),
-              ),
-              GoRoute(
-                path: ':id',
-                builder: (context, state) => SchoolDetailScreen(
-                  schoolId: state.pathParameters['id']!,
-                  initialSchool: state.extra as SchoolModel?,
-                ),
-                routes: [
-                  GoRoute(
-                    path: 'edit',
-                    builder: (context, state) {
-                      final school = state.extra as SchoolModel?;
-                      return CreateSchoolScreen(
-                        existingSchool: school,
-                      );
-                    },
-                  ),
-                ],
               ),
             ],
           ),

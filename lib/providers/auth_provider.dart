@@ -116,7 +116,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
       }
       if (token == null || token.isEmpty) {
-        if (cachedUser != null && cachedUser.role != UserRole.superadmin) {
+        if (cachedUser != null && cachedUser.role != UserRole.staffAdmin) {
           state = AuthState(
             status: AuthStatus.authenticated,
             currentUser: cachedUser,
@@ -128,7 +128,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       // Keep existing session on app refresh/restart even if /auth/me is slow.
-      if (cachedUser != null && cachedUser.role != UserRole.superadmin) {
+      if (cachedUser != null && cachedUser.role != UserRole.staffAdmin) {
         state = AuthState(
           status: AuthStatus.authenticated,
           currentUser: cachedUser,
@@ -136,11 +136,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final user = await _authRepo.getMe().timeout(const Duration(seconds: 8));
-      if (user.role == UserRole.superadmin) {
-        await _clearLocalData();
-        state = const AuthState(status: AuthStatus.unauthenticated);
-        return;
-      }
       await _persistUser(user);
       state = AuthState(status: AuthStatus.authenticated, currentUser: user);
     } on TimeoutException {
@@ -193,15 +188,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       final user = await _authRepo.getMe();
-      if (user.role == UserRole.superadmin) {
-        await _clearLocalData();
-        state = const AuthState(
-          status: AuthStatus.error,
-          error:
-              'Super Admin accounts are only available in Admin Console, not in the mobile app.',
-        );
-        return;
-      }
       await _persistUser(user);
 
       state = AuthState(

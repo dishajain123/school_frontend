@@ -32,7 +32,7 @@ class DocumentListScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
-  DocumentStatus? _statusFilter;
+  DocumentWorkflowFilter _workflowFilter = DocumentWorkflowFilter.all;
   String? _resolvedStudentId;
   bool _isRequestSheetOpen = false;
 
@@ -76,16 +76,25 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       _resolvedStudentId = null;
     }
 
-    await ref.read(documentProvider.notifier).load(_resolvedStudentId);
+    await ref.read(documentProvider.notifier).load(
+          _resolvedStudentId,
+          workflow: _workflowFilter,
+        );
   }
 
   Future<void> _refresh() async {
-    await ref.read(documentProvider.notifier).load(_resolvedStudentId);
+    await ref.read(documentProvider.notifier).load(
+          _resolvedStudentId,
+          workflow: _workflowFilter,
+        );
   }
 
-  List<DocumentModel> _filtered(List<DocumentModel> docs) {
-    if (_statusFilter == null) return docs;
-    return docs.where((d) => d.status == _statusFilter).toList();
+  void _onWorkflowFilterChanged(DocumentWorkflowFilter w) {
+    setState(() => _workflowFilter = w);
+    ref.read(documentProvider.notifier).load(
+          _resolvedStudentId,
+          workflow: w,
+        );
   }
 
   /// Open uploaded file from storage (pending verification, approved, or rejected).
@@ -120,7 +129,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         canManage && (user?.role.isSchoolScopedAdmin ?? false);
 
     final state = ref.watch(documentProvider);
-    final filtered = _filtered(state.documents);
+    final filtered = state.documents;
     final hasPendingVerification = state.documents.any(
       (d) => d.isAwaitingAdminVerification,
     );
@@ -156,8 +165,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                   AppDimensions.space8,
                 ),
                 child: DocumentFilterBar(
-                  selected: _statusFilter,
-                  onSelected: (s) => setState(() => _statusFilter = s),
+                  selected: _workflowFilter,
+                  onSelected: _onWorkflowFilterChanged,
                 ),
               ),
             ),
@@ -505,8 +514,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             ),
             const SizedBox(height: AppDimensions.space16),
             Text(
-              _statusFilter != null
-                  ? 'No ${_statusFilter!.label} Documents'
+              _workflowFilter != DocumentWorkflowFilter.all
+                  ? 'No ${_workflowFilter.label} Documents'
                   : 'No Documents Yet',
               textAlign: TextAlign.center,
               style: AppTypography.titleSmall.copyWith(
@@ -516,7 +525,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             ),
             const SizedBox(height: AppDimensions.space8),
             Text(
-              _statusFilter != null
+              _workflowFilter != DocumentWorkflowFilter.all
                   ? 'Try selecting a different filter.'
                   : 'Tap request or upload to add first document.',
               textAlign: TextAlign.center,
@@ -524,10 +533,12 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                 color: AppColors.grey600,
               ),
             ),
-            if (_statusFilter != null) ...[
+            if (_workflowFilter != DocumentWorkflowFilter.all) ...[
               const SizedBox(height: AppDimensions.space16),
               OutlinedButton(
-                onPressed: () => setState(() => _statusFilter = null),
+                onPressed: () => _onWorkflowFilterChanged(
+                  DocumentWorkflowFilter.all,
+                ),
                 child: const Text('Clear Filter'),
               ),
             ],
@@ -573,8 +584,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   }
 
   String _sectionTitle(int count) {
-    if (_statusFilter != null) {
-      return '${_statusFilter!.label} ($count)';
+    if (_workflowFilter != DocumentWorkflowFilter.all) {
+      return '${_workflowFilter.label} ($count)';
     }
     return 'All Documents ($count)';
   }

@@ -16,25 +16,8 @@ class ShellTabItem {
 }
 
 abstract final class RoleShellConfig {
-  static const List<ShellTabItem> superadminTabs = [
-    ShellTabItem(
-      icon: Icons.business_outlined,
-      activeIcon: Icons.business,
-      label: 'Schools',
-      rootPath: RouteNames.schools,
-    ),
-    ShellTabItem(
-      icon: Icons.tune_outlined,
-      activeIcon: Icons.tune,
-      label: 'Settings',
-      rootPath: RouteNames.schoolSettings,
-    ),
-    ShellTabItem(
-      icon: Icons.photo_library_outlined,
-      activeIcon: Icons.photo_library,
-      label: 'Gallery',
-      rootPath: RouteNames.galleryAlbums,
-    ),
+  /// Fallback if a Staff Admin route ever renders the shell (normally redirected away).
+  static const List<ShellTabItem> staffAdminTabs = [
     ShellTabItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
@@ -234,8 +217,8 @@ abstract final class RoleShellConfig {
 
   static List<ShellTabItem> tabsForRole(String role) {
     switch (role.toUpperCase()) {
-      case 'SUPERADMIN':
-        return superadminTabs;
+      case 'STAFF_ADMIN':
+        return staffAdminTabs;
       case 'PRINCIPAL':
         return principalTabs;
       case 'TRUSTEE':

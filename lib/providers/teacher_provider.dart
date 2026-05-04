@@ -269,7 +269,7 @@ final teacherAssignmentsByTeacherProvider =
     final activeYearId = ref.watch(activeYearProvider)?.id;
     final repo = ref.read(teacherClassSubjectRepositoryProvider);
 
-    // Principals/superadmins should browse the selected teacher;
+    // Principals/staff admins should browse the selected teacher;
     // teachers can still see only their own assignments through /mine.
     if (user?.role == UserRole.teacher) {
       return repo.getMyAssignments(academicYearId: activeYearId);

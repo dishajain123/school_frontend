@@ -6,8 +6,6 @@ import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../data/models/auth/current_user.dart';
-import '../../../providers/auth_provider.dart';
 import '../../../providers/notification_provider.dart';
 import 'app_badge.dart';
 
@@ -110,12 +108,7 @@ class AppAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       context.pop();
                       return;
                     }
-                    final role = ref.read(currentUserProvider)?.role;
-                    if (role == UserRole.superadmin) {
-                      context.go(RouteNames.schools);
-                    } else {
-                      context.go(RouteNames.dashboard);
-                    }
+                    context.go(RouteNames.dashboard);
                   },
             )
           : null,

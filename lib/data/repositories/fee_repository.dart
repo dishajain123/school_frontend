@@ -137,7 +137,7 @@ class FeeRepository {
   }
 
   // ── GET /fees/analytics ────────────────────────────────────────────────────
-  // Permission: Principal/Trustee/Superadmin
+  // Permission: Principal/Trustee/Staff Admin
 
   Future<Map<String, dynamic>> getAnalytics({
     String? academicYearId,

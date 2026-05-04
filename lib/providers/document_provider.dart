@@ -14,6 +14,7 @@ class DocumentState {
     this.documents = const [],
     this.requiredDocuments = const [],
     this.requiredStatus = const [],
+    this.listWorkflow = DocumentWorkflowFilter.all,
     this.isLoading = false,
     this.isRequesting = false,
     this.isUploading = false,
@@ -24,6 +25,7 @@ class DocumentState {
   final List<DocumentModel> documents;
   final List<RequiredDocumentModel> requiredDocuments;
   final List<RequiredDocumentStatusModel> requiredStatus;
+  final DocumentWorkflowFilter listWorkflow;
   final bool isLoading;
   final bool isRequesting;
   final bool isUploading;
@@ -34,6 +36,7 @@ class DocumentState {
     List<DocumentModel>? documents,
     List<RequiredDocumentModel>? requiredDocuments,
     List<RequiredDocumentStatusModel>? requiredStatus,
+    DocumentWorkflowFilter? listWorkflow,
     bool? isLoading,
     bool? isRequesting,
     bool? isUploading,
@@ -45,6 +48,7 @@ class DocumentState {
       documents: documents ?? this.documents,
       requiredDocuments: requiredDocuments ?? this.requiredDocuments,
       requiredStatus: requiredStatus ?? this.requiredStatus,
+      listWorkflow: listWorkflow ?? this.listWorkflow,
       isLoading: isLoading ?? this.isLoading,
       isRequesting: isRequesting ?? this.isRequesting,
       isUploading: isUploading ?? this.isUploading,
@@ -69,13 +73,20 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
 
   // ── Load list ─────────────────────────────────────────────────────────────
 
-  Future<void> load([String? studentId]) async {
+  Future<void> load(
+    String? studentId, {
+    DocumentWorkflowFilter workflow = DocumentWorkflowFilter.all,
+  }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final result = await _repo.listDocuments(studentId);
+      final result = await _repo.listDocuments(
+        studentId,
+        workflow: workflow,
+      );
       state = state.copyWith(
         documents: result.items,
         requiredStatus: result.requiredDocuments,
+        listWorkflow: workflow,
         isLoading: false,
       );
       await _loadRequirementsSilently();
@@ -254,7 +265,10 @@ class DocumentNotifier extends AutoDisposeNotifier<DocumentState> {
 
   Future<void> _pollDocuments(String studentId) async {
     try {
-      final result = await _repo.listDocuments(studentId);
+      final result = await _repo.listDocuments(
+        studentId,
+        workflow: state.listWorkflow,
+      );
       state = state.copyWith(
         documents: result.items,
         requiredStatus: result.requiredDocuments,

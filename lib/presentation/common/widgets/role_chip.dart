@@ -26,12 +26,6 @@ class RoleChip extends StatelessWidget {
   _RoleStyle get _style => _roleStyles[role] ?? _roleStyles[UserRole.student]!;
 
   static final Map<UserRole, _RoleStyle> _roleStyles = {
-    UserRole.superadmin: _RoleStyle(
-      label: 'Super Admin',
-      icon: Icons.admin_panel_settings_rounded,
-      bg: const Color(0xFFF0F0FF),
-      fg: const Color(0xFF4040C0),
-    ),
     UserRole.principal: _RoleStyle(
       label: 'Principal',
       icon: Icons.school_rounded,
