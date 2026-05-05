@@ -62,11 +62,10 @@ import '../../presentation/results/screens/report_card_screen.dart';
 import '../../presentation/results/screens/principal_results_distribution_screen.dart';
 import '../../presentation/results/screens/enter_results_screen.dart';
 import '../../presentation/exam_schedule/screens/exam_schedule_list_screen.dart';
-import '../../presentation/exam_schedule/screens/exam_schedule_table_screen.dart';
 import '../../presentation/behaviour/screens/behaviour_log_list_screen.dart';
 import '../../presentation/behaviour/screens/create_behaviour_log_screen.dart';
 import '../../presentation/reports/screens/principal_report_details_screen.dart';
-import '../../presentation/timetable/screens/timetable_view_screen.dart';
+import '../../presentation/timetable/screens/timetable_route_gate.dart';
 import '../../presentation/timetable/screens/upload_timetable_screen.dart';
 import '../../presentation/leave/screens/leave_list_screen.dart';
 import '../../presentation/leave/screens/apply_leave_screen.dart';
@@ -547,48 +546,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: RouteNames.timetable,
-            builder: (_, __) => const TimetableViewScreen(),
+            builder: (context, state) {
+              final q = state.uri.queryParameters;
+              final tabRaw = (q['tab'] ?? 'class').toLowerCase().trim();
+              final examTab = tabRaw == 'exam' || tabRaw == 'exam_schedule';
+              return TimetableRouteGate(
+                initialTabIndex: examTab ? 1 : 0,
+                standardId: q['standard_id'],
+                section: q['section'],
+                academicYearId: q['academic_year_id'],
+              );
+            },
           ),
           GoRoute(
             path: RouteNames.uploadTimetable,
             builder: (context, state) {
               final standardId = state.uri.queryParameters['standard_id'];
               final section = state.uri.queryParameters['section'];
+              final examId = state.uri.queryParameters['exam_id'];
+              final examMode =
+                  state.uri.queryParameters['exam_mode'] == 'true';
               return UploadTimetableScreen(
                 initialStandardId: standardId,
                 initialSection: section,
+                initialExamId: examId,
+                examMode: examMode,
               );
             },
           ),
           GoRoute(
             path: RouteNames.examSchedules,
             builder: (_, __) => const ExamScheduleListScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.examScheduleTable,
-            builder: (context, state) {
-              final extra = state.extra as Map<String, dynamic>?;
-              final standardId = (extra?['standard_id'] as String?) ??
-                  state.uri.queryParameters['standard_id'] ??
-                  '';
-              final seriesId = (extra?['series_id'] as String?) ??
-                  state.uri.queryParameters['series_id'];
-              if (standardId.isEmpty) {
-                return const PlaceholderScreen(
-                  'Class is required to view exam schedule',
-                  showBack: true,
-                );
-              }
-              return ExamScheduleTableScreen(
-                standardId: standardId,
-                seriesId: seriesId,
-              );
-            },
-          ),
-          GoRoute(
-            path: RouteNames.createExamSeries,
-            builder: (_, __) =>
-                const PlaceholderScreen('Create Exam Series', showBack: true),
           ),
           GoRoute(
             path: RouteNames.results,

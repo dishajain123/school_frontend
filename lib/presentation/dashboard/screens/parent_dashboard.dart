@@ -295,10 +295,10 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
         color: AppColors.infoBlue,
         onTap: () => context.go(RouteNames.timetable),
       ),
-      // Row 3 (Academic + Support): Exams, Documents, Complaints, Classroom
+      // Row 3 (Academic + Support): Exam schedule, Documents, Complaints, Classroom
       QuickActionItem(
-        icon: Icons.quiz_outlined,
-        label: 'Exams',
+        icon: Icons.picture_as_pdf_outlined,
+        label: 'Exam schedule',
         color: AppColors.subjectHistory,
         onTap: () => context.go(RouteNames.examSchedules),
       ),

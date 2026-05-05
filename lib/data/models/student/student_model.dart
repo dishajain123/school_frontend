@@ -1,4 +1,5 @@
 import '../auth/current_user.dart';
+import '../parent/parent_model.dart';
 
 class StudentParentSummary {
   const StudentParentSummary({
@@ -25,6 +26,18 @@ class StudentParentSummary {
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       occupation: json['occupation'] as String?,
+    );
+  }
+
+  /// When GET /students/:id omits nested `parent` but the student has a [ParentModel].
+  factory StudentParentSummary.fromParentProfile(ParentModel p) {
+    return StudentParentSummary(
+      id: p.id,
+      relation: p.relation.backendValue,
+      fullName: p.user.fullName,
+      email: p.user.email,
+      phone: p.user.phone,
+      occupation: p.occupation,
     );
   }
 }
@@ -199,6 +212,7 @@ class StudentModel {
     DateTime? dateOfBirth,
     DateTime? admissionDate,
     bool? isPromoted,
+    StudentParentSummary? parent,
   }) {
     return StudentModel(
       id: id,
@@ -213,6 +227,13 @@ class StudentModel {
       admissionNumber: admissionNumber,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       admissionDate: admissionDate ?? this.admissionDate,
+      email: email,
+      phone: phone,
+      standardName: standardName,
+      academicYearName: academicYearName,
+      user: user,
+      parent: parent ?? this.parent,
+      behaviourSummary: behaviourSummary,
       isPromoted: isPromoted ?? this.isPromoted,
       createdAt: createdAt,
       updatedAt: updatedAt,

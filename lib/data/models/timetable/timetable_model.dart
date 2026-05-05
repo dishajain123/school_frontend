@@ -2,6 +2,7 @@ class TimetableModel {
   const TimetableModel({
     required this.id,
     required this.standardId,
+    this.examId,
     this.section,
     required this.academicYearId,
     required this.fileKey,
@@ -17,6 +18,7 @@ class TimetableModel {
 
   final String id;
   final String standardId;
+  final String? examId;
   final String? section;
   final String academicYearId;
   final String fileKey;
@@ -33,6 +35,7 @@ class TimetableModel {
     return TimetableModel(
       id: json['id'] as String,
       standardId: json['standard_id'] as String,
+      examId: json['exam_id'] as String?,
       section: json['section'] as String?,
       academicYearId: json['academic_year_id'] as String,
       fileKey: json['file_key'] as String,

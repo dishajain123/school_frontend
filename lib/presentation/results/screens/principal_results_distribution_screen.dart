@@ -91,6 +91,67 @@ class _PrincipalResultsDistributionScreenState
     _selectedExamId = widget.initialExamId;
   }
 
+  Future<void> _refreshPrincipalResultsData() async {
+    final activeYear = ref.read(activeYearProvider);
+    final activeYearId = activeYear?.id;
+    final currentUser = ref.read(currentUserProvider);
+    final isTeacher = currentUser?.role == UserRole.teacher;
+
+    ref.invalidate(academicYearNotifierProvider);
+
+    if (activeYearId != null && activeYearId.isNotEmpty) {
+      ref.invalidate(standardsProvider(activeYearId));
+      if (isTeacher) {
+        ref.invalidate(myTeacherAssignmentsProvider(activeYearId));
+        ref.invalidate(
+          examListProvider((
+            studentId: null,
+            academicYearId: activeYearId,
+            standardId: null,
+          )),
+        );
+      }
+    }
+
+    final standardId = _selectedStandardId;
+    if (standardId != null &&
+        standardId.isNotEmpty &&
+        activeYearId != null &&
+        activeYearId.isNotEmpty) {
+      ref.invalidate(
+        resultSectionsProvider((
+          standardId: standardId,
+          academicYearId: activeYearId,
+        )),
+      );
+      ref.invalidate(
+        examListProvider((
+          studentId: null,
+          academicYearId: activeYearId,
+          standardId: standardId,
+        )),
+      );
+      ref.invalidate(
+        _studentsByClassSectionProvider((
+          standardId: standardId,
+          section: _selectedSection,
+          academicYearId: activeYearId,
+        )),
+      );
+    }
+
+    final examId = _selectedExamId;
+    if (examId != null && examId.isNotEmpty) {
+      ref.invalidate(
+        examDistributionProvider((
+          examId: examId,
+          section: _selectedSection,
+          studentId: _selectedStudentId,
+        )),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeYear = ref.watch(activeYearProvider);
@@ -169,9 +230,30 @@ class _PrincipalResultsDistributionScreenState
 
     return AppScaffold(
       appBar: AppAppBar(
-        title: 'Results Distribution',
+        title: isTeacher ? 'Results' : 'Results Distribution',
         showBack: true,
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: () => _refreshPrincipalResultsData(),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
+            tooltip:
+                'Class timetable for this class/year (same file for every exam)',
+            onPressed: selectedStandardId == null || activeYearId == null
+                ? null
+                : () {
+                    context.push(
+                      RouteNames.timetableForExamClass(
+                        standardId: selectedStandardId,
+                        academicYearId: activeYearId,
+                        section: _selectedSection,
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.schedule_outlined),
+          ),
           if (isTeacher)
             IconButton(
               tooltip: 'Enter Marks',
@@ -226,7 +308,9 @@ class _PrincipalResultsDistributionScreenState
             onExamChanged: (value) => setState(() => _selectedExamId = value),
             onStudentChanged: (value) =>
                 setState(() => _selectedStudentId = value),
-            onCreateExam: (selectedStandardId == null || activeYearId == null)
+            onCreateExam: isTeacher ||
+                    selectedStandardId == null ||
+                    activeYearId == null
                 ? null
                 : () async {
                     final created = await _openCreateExamDialog(
@@ -254,11 +338,12 @@ class _PrincipalResultsDistributionScreenState
               error: (e, _) => AppErrorState(message: e.toString()),
               data: (exams) {
                 if (selectedStandardId != null && exams.isEmpty) {
-                  return const AppEmptyState(
+                  return AppEmptyState(
                     icon: Icons.assessment_outlined,
                     title: 'No exams found',
-                    subtitle:
-                        'Create principal-defined exams for this class first.',
+                    subtitle: isTeacher
+                        ? 'No exams are set up for this class in the active academic year yet. Exams created in the admin console appear here automatically.'
+                        : 'Create principal-defined exams for this class first.',
                   );
                 }
 
@@ -450,7 +535,7 @@ class _PrincipalResultsDistributionScreenState
                       );
                     },
                     icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                    label: const Text('View / Upload Report Card'),
+                    label: const Text('Download / upload report card'),
                   ),
                 ),
                 const SizedBox(height: 10),

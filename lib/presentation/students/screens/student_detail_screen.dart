@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/student/student_model.dart';
+import '../../../data/repositories/parent_repository.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/student_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
@@ -48,9 +49,21 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen>
       _error = null;
     });
     try {
-      final student = await ref
+      var student = await ref
           .read(studentNotifierProvider.notifier)
           .getById(widget.studentId);
+      if (student.parent == null && student.parentId.isNotEmpty) {
+        try {
+          final parent = await ref
+              .read(parentRepositoryProvider)
+              .getById(student.parentId);
+          student = student.copyWith(
+            parent: StudentParentSummary.fromParentProfile(parent),
+          );
+        } catch (_) {
+          // Keep student without parent summary if parent fetch fails.
+        }
+      }
       if (mounted) setState(() => _student = student);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());

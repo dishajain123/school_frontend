@@ -112,10 +112,10 @@ class TeacherDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.behaviourLogs),
       ),
       QuickActionItem(
-        icon: Icons.photo_library_outlined,
-        label: 'Gallery',
-        color: AppColors.subjectPhysics,
-        onTap: () => context.go(RouteNames.galleryAlbums),
+        icon: Icons.schedule_outlined,
+        label: 'Timetable',
+        color: AppColors.infoBlue,
+        onTap: () => context.go(RouteNames.timetable),
       ),
     ];
 

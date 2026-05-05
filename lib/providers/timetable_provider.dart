@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,11 +11,22 @@ typedef TimetableParams = ({
   String standardId,
   String? academicYearId,
   String? section,
+  String? examId,
 });
 
 typedef TimetableSectionsParams = ({
   String standardId,
   String? academicYearId,
+});
+
+/// Resolves exam-schedule PDFs the same way staff see them on [UploadTimetableScreen]:
+/// tries active year, series year, optional/required section, exam-specific vs class-wide.
+typedef ExamScheduleTimetableParams = ({
+  String standardId,
+  String? primaryAcademicYearId,
+  String? fallbackAcademicYearId,
+  String? section,
+  String? examId,
 });
 
 // ── Read provider ─────────────────────────────────────────────────────────────
@@ -30,6 +42,7 @@ final timetableProvider =
         standardId: params.standardId,
         academicYearId: params.academicYearId,
         section: params.section,
+        examId: params.examId,
       ),
 );
 
@@ -39,6 +52,68 @@ final timetableSectionsProvider =
         standardId: params.standardId,
         academicYearId: params.academicYearId,
       ),
+);
+
+/// Exam schedule / hub: finds any uploaded PDF that applies (upload parity).
+final examScheduleTimetableProvider =
+    FutureProvider.autoDispose.family<TimetableModel?, ExamScheduleTimetableParams>(
+  (ref, p) async {
+    final repo = ref.read(timetableRepositoryProvider);
+
+    Future<TimetableModel?> attempt({
+      required String? academicYearId,
+      required String? section,
+      required String? examId,
+    }) async {
+      try {
+        final t = await repo.getTimetable(
+          standardId: p.standardId,
+          academicYearId: academicYearId,
+          section: section,
+          examId: examId,
+        );
+        final url = t.fileUrl?.trim();
+        if (url != null && url.isNotEmpty) return t;
+      } on DioException catch (e) {
+        final code = e.response?.statusCode;
+        if (code != 404 && code != 422) rethrow;
+      }
+      return null;
+    }
+
+    final py = p.primaryAcademicYearId?.trim();
+    final fy = p.fallbackAcademicYearId?.trim();
+    final yearOrder = <String?>[];
+    if (py != null && py.isNotEmpty) yearOrder.add(py);
+    if (fy != null && fy.isNotEmpty && fy != py) yearOrder.add(fy);
+    yearOrder.add(null);
+
+    final sec = p.section?.trim();
+    final normalizedSection =
+        (sec != null && sec.isNotEmpty) ? sec : null;
+    final ex = p.examId?.trim();
+    final normalizedExam = (ex != null && ex.isNotEmpty) ? ex : null;
+
+    final tried = <String>{};
+    for (final y in yearOrder) {
+      for (final tuple in <({String? s, String? e})>[
+        (s: normalizedSection, e: normalizedExam),
+        (s: null, e: normalizedExam),
+        (s: normalizedSection, e: null),
+        (s: null, e: null),
+      ]) {
+        final key = '${y ?? ''}|${tuple.s ?? ''}|${tuple.e ?? ''}';
+        if (!tried.add(key)) continue;
+        final hit = await attempt(
+          academicYearId: y,
+          section: tuple.s,
+          examId: tuple.e,
+        );
+        if (hit != null) return hit;
+      }
+    }
+    return null;
+  },
 );
 
 // ── Upload state ──────────────────────────────────────────────────────────────
@@ -78,6 +153,7 @@ class TimetableUploadNotifier extends Notifier<TimetableUploadState> {
     required PlatformFile file,
     String? academicYearId,
     String? section,
+    String? examId,
     String? overrideFileName,
   }) async {
     state = state.copyWith(
@@ -92,12 +168,14 @@ class TimetableUploadNotifier extends Notifier<TimetableUploadState> {
         file: file,
         academicYearId: academicYearId,
         section: section,
+        examId: examId,
         overrideFileName: overrideFileName,
       );
       state = state.copyWith(isUploading: false, result: uploaded);
       // Bust the read-cache so view screens pick up the new file
       ref.invalidate(timetableProvider);
       ref.invalidate(timetableSectionsProvider);
+      ref.invalidate(examScheduleTimetableProvider);
       return true;
     } catch (e) {
       state = state.copyWith(isUploading: false, error: e.toString());
@@ -142,6 +220,7 @@ class TimetableDeleteNotifier extends Notifier<TimetableDeleteState> {
     required String standardId,
     String? academicYearId,
     String? section,
+    String? examId,
   }) async {
     state = state.copyWith(isDeleting: true, clearError: true);
     try {
@@ -150,10 +229,12 @@ class TimetableDeleteNotifier extends Notifier<TimetableDeleteState> {
         standardId: standardId,
         academicYearId: academicYearId,
         section: section,
+        examId: examId,
       );
       state = state.copyWith(isDeleting: false);
       ref.invalidate(timetableProvider);
       ref.invalidate(timetableSectionsProvider);
+      ref.invalidate(examScheduleTimetableProvider);
       return true;
     } catch (e) {
       state = state.copyWith(isDeleting: false, error: e.toString());

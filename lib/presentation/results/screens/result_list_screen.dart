@@ -20,7 +20,7 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 import 'principal_results_distribution_screen.dart';
 
-class ResultListScreen extends ConsumerWidget {
+class ResultListScreen extends ConsumerStatefulWidget {
   const ResultListScreen({
     super.key,
     this.studentId,
@@ -29,27 +29,81 @@ class ResultListScreen extends ConsumerWidget {
   final String? studentId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ResultListScreen> createState() => _ResultListScreenState();
+}
+
+class _ResultListScreenState extends ConsumerState<ResultListScreen> {
+  /// `null` = all academic years (parents/students can browse history).
+  String? _yearFilterId;
+
+  Future<void> _refreshResultsData() async {
+    final currentUser = ref.read(currentUserProvider);
+    ref.invalidate(academicYearNotifierProvider);
+    if (currentUser?.role == UserRole.parent) {
+      ref.invalidate(childrenNotifierProvider);
+    }
+    if (currentUser?.role == UserRole.student) {
+      ref.invalidate(currentStudentIdProvider);
+    }
+    final resolvedStudentId = widget.studentId ??
+        (currentUser?.role == UserRole.parent
+            ? ref.read(selectedChildProvider)?.id
+            : ref.read(currentStudentIdProvider).valueOrNull);
+    if (resolvedStudentId != null && resolvedStudentId.isNotEmpty) {
+      ref.invalidate(
+        examListProvider((
+          studentId: resolvedStudentId,
+          academicYearId: _yearFilterId,
+          standardId: null,
+        )),
+      );
+    }
+  }
+
+  List<Widget> _resultsAppBarActions() {
+    return [
+      IconButton(
+        tooltip: 'Refresh',
+        icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+        onPressed: () => _refreshResultsData(),
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     if (currentUser?.role == UserRole.teacher) {
       return const PrincipalResultsDistributionScreen();
     }
     final selectedChild = ref.watch(selectedChildProvider);
     final currentStudentIdAsync = ref.watch(currentStudentIdProvider);
-    final activeYear = ref.watch(activeYearProvider);
     final isStudentOrParent = currentUser?.role == UserRole.student ||
         currentUser?.role == UserRole.parent;
 
-    final resolvedStudentId = studentId ??
+    final resolvedStudentId = widget.studentId ??
         (currentUser?.role == UserRole.parent
             ? selectedChild?.id
             : currentStudentIdAsync.valueOrNull);
+
+    if (currentUser?.role == UserRole.student &&
+        currentStudentIdAsync.isLoading) {
+      return AppScaffold(
+        appBar: AppAppBar(
+          title: 'Results',
+          showBack: true,
+          actions: _resultsAppBarActions(),
+        ),
+        body: AppLoading.fullPage(),
+      );
+    }
 
     if (resolvedStudentId == null || resolvedStudentId.isEmpty) {
       return AppScaffold(
         appBar: AppAppBar(
           title: 'Results',
           showBack: true,
+          actions: _resultsAppBarActions(),
           onBackPressed: currentUser?.role == UserRole.parent
               ? () => context.go(RouteNames.dashboard)
               : null,
@@ -64,68 +118,116 @@ class ResultListScreen extends ConsumerWidget {
 
     final params = (
       studentId: resolvedStudentId,
-      academicYearId: isStudentOrParent ? null : activeYear?.id,
+      academicYearId: _yearFilterId,
       standardId: null,
     );
 
     final examsAsync = ref.watch(examListProvider(params));
+    final yearsAsync = ref.watch(academicYearNotifierProvider);
+    final bottomPad =
+        MediaQuery.viewPaddingOf(context).bottom + 24;
 
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Results',
         showBack: true,
+        actions: _resultsAppBarActions(),
         onBackPressed: currentUser?.role == UserRole.parent
             ? () => context.go(RouteNames.dashboard)
             : null,
       ),
-      body: examsAsync.when(
-        loading: _buildShimmer,
-        error: (e, _) => AppErrorState(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(examListProvider(params)),
-        ),
-        data: (exams) {
-          if (exams.isEmpty) {
-            return const AppEmptyState(
-              icon: Icons.analytics_outlined,
-              title: 'No results yet',
-              subtitle: 'Uploaded exam results will appear here.',
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(examListProvider(params)),
-            color: AppColors.navyDeep,
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-              itemCount: exams.length,
-              itemBuilder: (context, index) {
-                final exam = exams[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ExamCard(
-                    exam: exam,
-                    onTap: () => context.push(
-                      RouteNames.reportCard,
-                      extra: {
-                        'studentId': resolvedStudentId,
-                        'examId': exam.id,
-                      },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isStudentOrParent)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: yearsAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (years) {
+                  return DropdownButtonFormField<String?>(
+                    isExpanded: true,
+                    value: _yearFilterId,
+                    decoration: const InputDecoration(
+                      labelText: 'Academic year',
+                      border: OutlineInputBorder(),
+                      isDense: true,
                     ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All years'),
+                      ),
+                      ...years.map(
+                        (y) => DropdownMenuItem<String?>(
+                          value: y.id,
+                          child: Text(y.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => _yearFilterId = v),
+                  );
+                },
+              ),
+            ),
+          Expanded(
+            child: examsAsync.when(
+              loading: _buildShimmer,
+              error: (e, _) => AppErrorState(
+                message: e.toString(),
+                onRetry: () => _refreshResultsData(),
+              ),
+              data: (exams) {
+                if (exams.isEmpty) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16, 24, 16, bottomPad),
+                    child: const AppEmptyState(
+                      icon: Icons.analytics_outlined,
+                      title: 'No results yet',
+                      subtitle:
+                          'Published marks or uploaded report cards will appear here.',
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: _refreshResultsData,
+                  color: AppColors.navyDeep,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPad),
+                    itemCount: exams.length,
+                    itemBuilder: (context, index) {
+                      final exam = exams[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _ExamCard(
+                          exam: exam,
+                          onTap: () => context.push(
+                            RouteNames.reportCard,
+                            extra: {
+                              'studentId': resolvedStudentId,
+                              'examId': exam.id,
+                            },
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildShimmer() {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
       itemCount: 5,
       itemBuilder: (_, __) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
@@ -149,64 +251,90 @@ class _ExamCard extends StatelessWidget {
     return Material(
       color: AppColors.white,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.navyDeep.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.navyDeep.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.assignment_turned_in_outlined,
-                  size: 18,
-                  color: AppColors.navyDeep,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      exam.name,
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.navyDeep,
-                        fontWeight: FontWeight.w700,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navyDeep.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.navyDeep.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: 18,
+                          color: AppColors.navyDeep,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _dateRangeLabel(exam),
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.grey500,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exam.name,
+                              style: AppTypography.titleMedium.copyWith(
+                                color: AppColors.navyDeep,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _dateRangeLabel(exam),
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.grey500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              const Icon(
+            ),
+            IconButton(
+              tooltip: 'Class timetable (daily)',
+              onPressed: () {
+                context.push(
+                  RouteNames.timetableForExamClass(
+                    standardId: exam.standardId,
+                    academicYearId: exam.academicYearId,
+                  ),
+                );
+              },
+              icon: Icon(
+                Icons.schedule_outlined,
+                color: AppColors.navyDeep.withValues(alpha: 0.85),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.grey400,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

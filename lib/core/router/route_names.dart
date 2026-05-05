@@ -108,11 +108,24 @@ class RouteNames {
   static const String timetable = '/timetable';
   static const String uploadTimetable = '/timetable/upload';
 
+  /// Class timetable file is shared by all exams for that class/year/section.
+  static String timetableForExamClass({
+    required String standardId,
+    required String academicYearId,
+    String? section,
+  }) {
+    final q = <String, String>{
+      'tab': 'class',
+      'standard_id': standardId,
+      'academic_year_id': academicYearId,
+      if (section != null && section.trim().isNotEmpty)
+        'section': section.trim(),
+    };
+    return Uri(path: timetable, queryParameters: q).toString();
+  }
+
   // Exam Schedules
   static const String examSchedules = '/exam-schedules';
-  static const String examScheduleTable = '/exam-schedule/table';
-  static const String createExamSeries = '/exam-schedule/create';
-
   // Results
   static const String results = '/results';
   static const String principalResultsDistribution = '/results/distribution';

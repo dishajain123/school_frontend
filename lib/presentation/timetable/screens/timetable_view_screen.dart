@@ -19,6 +19,7 @@ import '../../../providers/masters_provider.dart';
 import '../../../providers/parent_provider.dart';
 import '../../../providers/student_provider.dart';
 import '../../../providers/teacher_provider.dart';
+import '../../../providers/timetable_hub_ui_provider.dart';
 import '../../../providers/timetable_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_empty_state.dart';
@@ -27,6 +28,76 @@ import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
 import '../widgets/timetable_placeholder.dart';
 import '../widgets/timetable_viewer.dart';
+
+/// School registry (admin) + any section keys from existing timetable rows.
+List<String> _mergeRegistryAndTimetableSections(
+  List<String> registry,
+  List<String> fromTimetable,
+) {
+  final out = <String>[];
+  bool has(String x) =>
+      out.any((e) => e.toUpperCase() == x.trim().toUpperCase());
+  for (final s in registry) {
+    final t = s.trim();
+    if (t.isNotEmpty && !has(t)) out.add(t);
+  }
+  for (final s in fromTimetable) {
+    final t = s.trim();
+    if (t.isNotEmpty && !has(t)) out.add(t);
+  }
+  out.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return out;
+}
+
+/// Teachers only see sections they are assigned to for the selected class;
+/// assignment labels are included even if the registry list lags.
+List<String> _sectionsForTeacher(
+  List<String> mergedSchoolSections,
+  List<TeacherClassSubjectModel> assignments,
+  String standardId,
+) {
+  final allowedRaw = assignments
+      .where((a) => a.standardId == standardId)
+      .map((a) => a.section.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (allowedRaw.isEmpty) return const [];
+
+  final out = <String>[];
+  void addDistinct(String s) {
+    final t = s.trim();
+    if (t.isEmpty) {
+      return;
+    }
+    if (!allowedRaw.any((a) => a.toUpperCase() == t.toUpperCase())) {
+      return;
+    }
+    if (!out.any((e) => e.toUpperCase() == t.toUpperCase())) {
+      out.add(t);
+    }
+  }
+
+  for (final s in mergedSchoolSections) {
+    addDistinct(s);
+  }
+  for (final a in allowedRaw) {
+    addDistinct(a);
+  }
+  out.sort((x, y) => x.toLowerCase().compareTo(y.toLowerCase()));
+  return out;
+}
+
+String? _canonicalSectionPickerValue(
+  String? selected,
+  List<String> options,
+) {
+  if (selected == null || selected.trim().isEmpty) return null;
+  final want = selected.trim();
+  for (final o in options) {
+    if (o.toUpperCase() == want.toUpperCase()) return o;
+  }
+  return null;
+}
 
 final _myStudentProfileProvider =
     FutureProvider.autoDispose<StudentModel?>((ref) async {
@@ -43,19 +114,30 @@ final _myStudentProfileProvider =
 class TimetableViewScreen extends ConsumerWidget {
   /// Pass [standardId] to view a specific class (PRINCIPAL/TEACHER use case).
   /// When null the screen resolves standardId from the viewer's role context.
+  /// [academicYearId] (e.g. from exam deep-link) overrides active academic year.
   const TimetableViewScreen({
     super.key,
     this.standardId,
     this.section,
+    this.academicYearId,
+    this.embedInHub = false,
   });
 
   final String? standardId;
   final String? section;
+  final String? academicYearId;
+
+  /// When [true], rendered inside [TimetableHubScreen] without a duplicate app bar.
+  final bool embedInHub;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final activeYear = ref.watch(activeYearProvider);
+    final resolvedYearId = (academicYearId != null &&
+            academicYearId!.trim().isNotEmpty)
+        ? academicYearId!.trim()
+        : activeYear?.id;
     final canUpload = currentUser != null &&
         (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
@@ -70,7 +152,8 @@ class TimetableViewScreen extends ConsumerWidget {
     // STUDENT — scope to own standard
     if (currentUser.role == UserRole.student) {
       return _StudentTimetableView(
-        academicYearId: activeYear?.id,
+        academicYearId: resolvedYearId,
+        embedInHub: embedInHub,
       );
     }
 
@@ -78,15 +161,17 @@ class TimetableViewScreen extends ConsumerWidget {
     if (currentUser.role == UserRole.parent) {
       return _ParentTimetableView(
         section: section,
-        academicYearId: activeYear?.id,
+        academicYearId: resolvedYearId,
+        embedInHub: embedInHub,
       );
     }
 
     return _AdminTimetableView(
       initialStandardId: standardId,
       initialSection: section,
-      academicYearId: activeYear?.id,
+      academicYearId: resolvedYearId,
       canUpload: canUpload,
+      embedInHub: embedInHub,
     );
   }
 }
@@ -97,12 +182,14 @@ class _AdminTimetableView extends ConsumerStatefulWidget {
     required this.canUpload,
     this.initialStandardId,
     this.initialSection,
+    this.embedInHub = false,
   });
 
   final String? initialStandardId;
   final String? initialSection;
   final String? academicYearId;
   final bool canUpload;
+  final bool embedInHub;
 
   @override
   ConsumerState<_AdminTimetableView> createState() =>
@@ -136,12 +223,21 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
   Widget build(BuildContext context) {
     final standardsAsync = ref.watch(standardsProvider(widget.academicYearId));
     final currentUser = ref.watch(currentUserProvider);
-    final teacherAssignmentsAsync = (currentUser?.role == UserRole.teacher)
+    final isTeacher = currentUser?.role == UserRole.teacher;
+    final teacherAssignmentsAsync = isTeacher
         ? ref.watch(teacherAssignmentsByTeacherProvider(currentUser!.id))
         : const AsyncData<List<TeacherClassSubjectModel>>(
             <TeacherClassSubjectModel>[],
           );
-    final sectionsAsync = _selectedStandardId == null
+    final registryAsync = _selectedStandardId == null
+        ? const AsyncData<List<String>>(<String>[])
+        : ref.watch(
+            sectionsByStandardProvider((
+              standardId: _selectedStandardId,
+              academicYearId: widget.academicYearId,
+            )),
+          );
+    final timetableSecAsync = _selectedStandardId == null
         ? const AsyncData<List<String>>(<String>[])
         : ref.watch(
             timetableSectionsProvider((
@@ -149,126 +245,25 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
               academicYearId: widget.academicYearId,
             )),
           );
-    final safeSelectedSection =
-        sectionsAsync.valueOrNull?.contains(_selectedSection) == true
-            ? _selectedSection
-            : null;
 
-    return AppScaffold(
-      appBar: AppAppBar(
-        title: 'Timetable',
-        showBack: true,
-        actions: [
-          if (_loadedStandardId != null)
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
-              tooltip: 'Refresh',
-              onPressed: () {
-                ref.invalidate(
-                  timetableProvider((
-                    standardId: _loadedStandardId!,
-                    academicYearId: widget.academicYearId,
-                    section: _loadedSection,
-                  )),
-                );
-              },
-            ),
-          if (widget.canUpload)
-            IconButton(
-              icon: const Icon(Icons.upload_file_outlined,
-                  color: AppColors.white),
-              tooltip: 'Upload timetable',
-              onPressed: () async {
-                final uri = Uri(
-                  path: '/timetable/upload',
-                  queryParameters: {
-                    if (_selectedStandardId != null)
-                      'standard_id': _selectedStandardId!,
-                    if (_selectedSection != null &&
-                        _selectedSection!.trim().isNotEmpty)
-                      'section': _selectedSection!,
-                  },
-                );
-                await context.push(uri.toString());
-                if (_loadedStandardId != null) {
-                  ref.invalidate(
-                    timetableProvider((
-                      standardId: _loadedStandardId!,
-                      academicYearId: widget.academicYearId,
-                      section: _loadedSection,
-                    )),
-                  );
-                }
-              },
-            ),
-          if (widget.canUpload && _loadedStandardId != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: AppColors.white),
-              tooltip: 'Remove timetable',
-              onPressed: () async {
-                final standardId = _loadedStandardId;
-                if (standardId == null) return;
+    if (widget.embedInHub) {
+      final next = TimetableHubClassActions(
+        academicYearId: widget.academicYearId,
+        canUpload: widget.canUpload,
+        selectedStandardId: _selectedStandardId,
+        selectedSection: _selectedSection,
+        loadedStandardId: _loadedStandardId,
+        loadedSection: _loadedSection,
+      );
+      if (next != ref.read(timetableHubClassActionsProvider)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ref.read(timetableHubClassActionsProvider.notifier).state = next;
+        });
+      }
+    }
 
-                final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (dialogContext) => AlertDialog(
-                        title: const Text('Remove timetable?'),
-                        content: Text(
-                          _loadedSection == null || _loadedSection!.isEmpty
-                              ? 'This will remove the class timetable for the selected academic year.'
-                              : 'This will remove timetable for section ${_loadedSection!}.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.of(dialogContext).pop(false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () =>
-                                Navigator.of(dialogContext).pop(true),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.errorRed,
-                            ),
-                            child: const Text('Remove'),
-                          ),
-                        ],
-                      ),
-                    ) ??
-                    false;
-
-                if (!confirm) return;
-
-                final success =
-                    await ref.read(timetableDeleteProvider.notifier).delete(
-                          standardId: standardId,
-                          academicYearId: widget.academicYearId,
-                          section: _loadedSection,
-                        );
-                if (!context.mounted) return;
-
-                if (success) {
-                  SnackbarUtils.showSuccess(context, 'Timetable removed');
-                  ref.invalidate(
-                    timetableProvider((
-                      standardId: standardId,
-                      academicYearId: widget.academicYearId,
-                      section: _loadedSection,
-                    )),
-                  );
-                } else {
-                  final error = ref.read(timetableDeleteProvider).error;
-                  SnackbarUtils.showError(
-                    context,
-                    error ?? 'Failed to remove timetable',
-                  );
-                }
-              },
-            ),
-        ],
-      ),
-      body: Column(
+    final bodyColumn = Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -323,21 +318,61 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                   },
                 ),
                 const SizedBox(height: AppDimensions.space12),
-                sectionsAsync.when(
+                registryAsync.when(
                   loading: () => AppLoading.card(height: 52),
-                  error: (_, __) => _SectionFilterField(
-                    sections: const [],
-                    value: _selectedSection,
-                    enabled: _selectedStandardId != null,
-                    onChanged: (_) {},
+                  error: (e, _) => _FilterError(
+                    message: 'Could not load sections: $e',
                   ),
-                  data: (sections) => _SectionFilterField(
-                    sections: sections,
-                    value: safeSelectedSection,
-                    enabled: _selectedStandardId != null,
-                    onChanged: (value) =>
-                        setState(() => _selectedSection = value),
-                  ),
+                  data: (registry) {
+                    final fromTt =
+                        timetableSecAsync.valueOrNull ?? const <String>[];
+                    final merged =
+                        _mergeRegistryAndTimetableSections(registry, fromTt);
+                    if (isTeacher) {
+                      return teacherAssignmentsAsync.when(
+                        loading: () => AppLoading.card(height: 52),
+                        error: (e, _) => _FilterError(message: e.toString()),
+                        data: (assignments) {
+                          final sid = _selectedStandardId;
+                          if (sid == null || sid.isEmpty) {
+                            return _SectionFilterField(
+                              sections: const [],
+                              value: null,
+                              enabled: false,
+                              onChanged: (_) {},
+                            );
+                          }
+                          final sections = _sectionsForTeacher(
+                            merged,
+                            assignments,
+                            sid,
+                          );
+                          final safe = _canonicalSectionPickerValue(
+                            _selectedSection,
+                            sections,
+                          );
+                          return _SectionFilterField(
+                            sections: sections,
+                            value: safe,
+                            enabled: true,
+                            onChanged: (value) =>
+                                setState(() => _selectedSection = value),
+                          );
+                        },
+                      );
+                    }
+                    final safe = _canonicalSectionPickerValue(
+                      _selectedSection,
+                      merged,
+                    );
+                    return _SectionFilterField(
+                      sections: merged,
+                      value: safe,
+                      enabled: _selectedStandardId != null,
+                      onChanged: (value) =>
+                          setState(() => _selectedSection = value),
+                    );
+                  },
                 ),
                 const SizedBox(height: AppDimensions.space12),
                 SizedBox(
@@ -374,7 +409,131 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
                   ),
           ),
         ],
+    );
+
+    if (widget.embedInHub) {
+      return bodyColumn;
+    }
+
+    return AppScaffold(
+      appBar: AppAppBar(
+        title: 'Timetable',
+        showBack: true,
+        actions: [
+          if (_loadedStandardId != null)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+              tooltip: 'Refresh',
+              onPressed: () {
+                ref.invalidate(
+                  timetableProvider((
+                    standardId: _loadedStandardId!,
+                    academicYearId: widget.academicYearId,
+                    section: _loadedSection,
+                    examId: null,
+                  )),
+                );
+              },
+            ),
+          if (widget.canUpload)
+            IconButton(
+              icon: const Icon(Icons.upload_file_outlined,
+                  color: AppColors.white),
+              tooltip: 'Upload timetable',
+              onPressed: () async {
+                final uri = Uri(
+                  path: '/timetable/upload',
+                  queryParameters: {
+                    if (_selectedStandardId != null)
+                      'standard_id': _selectedStandardId!,
+                    if (_selectedSection != null &&
+                        _selectedSection!.trim().isNotEmpty)
+                      'section': _selectedSection!,
+                  },
+                );
+                await context.push(uri.toString());
+                if (_loadedStandardId != null) {
+                  ref.invalidate(
+                    timetableProvider((
+                      standardId: _loadedStandardId!,
+                      academicYearId: widget.academicYearId,
+                      section: _loadedSection,
+                      examId: null,
+                    )),
+                  );
+                }
+              },
+            ),
+          if (widget.canUpload && _loadedStandardId != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.white),
+              tooltip: 'Remove timetable',
+              onPressed: () async {
+                final standardId = _loadedStandardId;
+                if (standardId == null) return;
+
+                final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: const Text('Remove timetable?'),
+                        content: Text(
+                          _loadedSection == null || _loadedSection!.isEmpty
+                              ? 'This will remove the class timetable for the selected academic year.'
+                              : 'This will remove timetable for section ${_loadedSection!}.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.errorRed,
+                            ),
+                            child: const Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+
+                if (!confirm) return;
+
+                final success =
+                    await ref.read(timetableDeleteProvider.notifier).delete(
+                          standardId: standardId,
+                          academicYearId: widget.academicYearId,
+                          section: _loadedSection,
+                          examId: null,
+                        );
+                if (!context.mounted) return;
+
+                if (success) {
+                  SnackbarUtils.showSuccess(context, 'Timetable removed');
+                  ref.invalidate(
+                    timetableProvider((
+                      standardId: standardId,
+                      academicYearId: widget.academicYearId,
+                      section: _loadedSection,
+                      examId: null,
+                    )),
+                  );
+                } else {
+                  final error = ref.read(timetableDeleteProvider).error;
+                  SnackbarUtils.showError(
+                    context,
+                    error ?? 'Failed to remove timetable',
+                  );
+                }
+              },
+            ),
+        ],
       ),
+      body: bodyColumn,
     );
   }
 }
@@ -382,63 +541,97 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
 // ── Student-scoped view ───────────────────────────────────────────────────────
 
 class _StudentTimetableView extends ConsumerWidget {
-  const _StudentTimetableView({this.academicYearId});
+  const _StudentTimetableView({
+    this.academicYearId,
+    this.embedInHub = false,
+  });
   final String? academicYearId;
+  final bool embedInHub;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentAsync = ref.watch(_myStudentProfileProvider);
 
     return studentAsync.when(
-      loading: () => AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: AppLoading.fullPage(),
-      ),
-      error: (e, _) => AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: AppErrorState(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(_myStudentProfileProvider),
-        ),
-      ),
+      loading: () => embedInHub
+          ? AppLoading.fullPage()
+          : AppScaffold(
+              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              body: AppLoading.fullPage(),
+            ),
+      error: (e, _) => embedInHub
+          ? AppErrorState(
+              message: e.toString(),
+              onRetry: () => ref.invalidate(_myStudentProfileProvider),
+            )
+          : AppScaffold(
+              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              body: AppErrorState(
+                message: e.toString(),
+                onRetry: () => ref.invalidate(_myStudentProfileProvider),
+              ),
+            ),
       data: (student) {
         if (student == null) {
-          return AppScaffold(
-            appBar: const AppAppBar(title: 'Timetable', showBack: true),
-            body: AppEmptyState(
-              icon: Icons.schedule_outlined,
-              title: 'Class not found',
-              subtitle: 'Your class information is not available yet.',
-            ),
-          );
+          return embedInHub
+              ? const AppEmptyState(
+                  icon: Icons.schedule_outlined,
+                  title: 'Class not found',
+                  subtitle:
+                      'Your class information is not available yet.',
+                )
+              : AppScaffold(
+                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+                  body: AppEmptyState(
+                    icon: Icons.schedule_outlined,
+                    title: 'Class not found',
+                    subtitle:
+                        'Your class information is not available yet.',
+                  ),
+                );
         }
         if (student.standardId == null) {
-          return AppScaffold(
-            appBar: const AppAppBar(title: 'Timetable', showBack: true),
-            body: AppEmptyState(
-              icon: Icons.schedule_outlined,
-              title: 'Class not found',
-              subtitle: 'Your class information is not available yet.',
-            ),
-          );
+          return embedInHub
+              ? const AppEmptyState(
+                  icon: Icons.schedule_outlined,
+                  title: 'Class not found',
+                  subtitle:
+                      'Your class information is not available yet.',
+                )
+              : AppScaffold(
+                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+                  body: AppEmptyState(
+                    icon: Icons.schedule_outlined,
+                    title: 'Class not found',
+                    subtitle:
+                        'Your class information is not available yet.',
+                  ),
+                );
         }
         final studentSection = student.section?.trim();
         if (studentSection == null || studentSection.isEmpty) {
-          return AppScaffold(
-            appBar: const AppAppBar(title: 'Timetable', showBack: true),
-            body: AppEmptyState(
-              icon: Icons.schedule_outlined,
-              title: 'Section not assigned',
-              subtitle:
-                  'Your section is not assigned yet, so timetable cannot be shown.',
-            ),
-          );
+          return embedInHub
+              ? const AppEmptyState(
+                  icon: Icons.schedule_outlined,
+                  title: 'Section not assigned',
+                  subtitle:
+                      'Your section is not assigned yet, so timetable cannot be shown.',
+                )
+              : AppScaffold(
+                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+                  body: AppEmptyState(
+                    icon: Icons.schedule_outlined,
+                    title: 'Section not assigned',
+                    subtitle:
+                        'Your section is not assigned yet, so timetable cannot be shown.',
+                  ),
+                );
         }
         return _TimetableContent(
           standardId: student.standardId!,
-          // Always enforce own section for students.
           section: studentSection,
           academicYearId: academicYearId,
+          embedInHub: embedInHub,
         );
       },
     );
@@ -448,41 +641,60 @@ class _StudentTimetableView extends ConsumerWidget {
 // ── Parent-scoped view ────────────────────────────────────────────────────────
 
 class _ParentTimetableView extends ConsumerWidget {
-  const _ParentTimetableView({this.section, this.academicYearId});
+  const _ParentTimetableView({
+    this.section,
+    this.academicYearId,
+    this.embedInHub = false,
+  });
   final String? section;
   final String? academicYearId;
+  final bool embedInHub;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedChild = ref.watch(selectedChildProvider);
 
     if (selectedChild == null) {
-      return AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: AppEmptyState(
-          icon: Icons.schedule_outlined,
-          title: 'No child selected',
-          subtitle:
-              'Select a linked child from dashboard to view their timetable.',
-        ),
-      );
+      return embedInHub
+          ? const AppEmptyState(
+              icon: Icons.schedule_outlined,
+              title: 'No child selected',
+              subtitle:
+                  'Select a linked child from dashboard to view their timetable.',
+            )
+          : AppScaffold(
+              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              body: AppEmptyState(
+                icon: Icons.schedule_outlined,
+                title: 'No child selected',
+                subtitle:
+                    'Select a linked child from dashboard to view their timetable.',
+              ),
+            );
     }
 
     if (selectedChild.standardId == null) {
-      return AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: AppEmptyState(
-          icon: Icons.schedule_outlined,
-          title: 'Class not found',
-          subtitle: 'Child class information is not available yet.',
-        ),
-      );
+      return embedInHub
+          ? const AppEmptyState(
+              icon: Icons.schedule_outlined,
+              title: 'Class not found',
+              subtitle: 'Child class information is not available yet.',
+            )
+          : AppScaffold(
+              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              body: AppEmptyState(
+                icon: Icons.schedule_outlined,
+                title: 'Class not found',
+                subtitle: 'Child class information is not available yet.',
+              ),
+            );
     }
 
     return _TimetableContent(
       standardId: selectedChild.standardId!,
       section: section ?? selectedChild.section,
       academicYearId: academicYearId,
+      embedInHub: embedInHub,
     );
   }
 }
@@ -494,16 +706,19 @@ class _TimetableContent extends ConsumerWidget {
     required this.standardId,
     this.section,
     this.academicYearId,
+    this.embedInHub = false,
   });
 
   final String standardId;
   final String? section;
   final String? academicYearId;
+  final bool embedInHub;
 
   TimetableParams get _params => (
         standardId: standardId,
         academicYearId: academicYearId,
         section: section,
+        examId: null,
       );
 
   @override
@@ -512,6 +727,17 @@ class _TimetableContent extends ConsumerWidget {
     final canUpload = currentUser != null &&
         (currentUser.role.isSchoolScopedAdmin ||
             currentUser.role == UserRole.teacher);
+    final dataBody = _TimetableDataBody(
+      standardId: standardId,
+      section: section,
+      academicYearId: academicYearId,
+      canUpload: canUpload,
+    );
+
+    if (embedInHub) {
+      return dataBody;
+    }
+
     return AppScaffold(
       appBar: AppAppBar(
         title: 'Timetable',
@@ -536,12 +762,30 @@ class _TimetableContent extends ConsumerWidget {
             ),
         ],
       ),
-      body: _TimetableDataBody(
-        standardId: standardId,
-        section: section,
-        academicYearId: academicYearId,
-        canUpload: canUpload,
-      ),
+      body: dataBody,
+    );
+  }
+}
+
+/// Scrollable content with at least the viewport height so empty/error UIs
+/// do not cause bottom overflow inside hub [Expanded] + bottom navigation.
+class _ScrollableMinHeight extends StatelessWidget {
+  const _ScrollableMinHeight({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
@@ -563,6 +807,7 @@ class _TimetableDataBody extends ConsumerWidget {
         standardId: standardId,
         academicYearId: academicYearId,
         section: section,
+        examId: null,
       );
 
   @override
@@ -575,28 +820,39 @@ class _TimetableDataBody extends ConsumerWidget {
         if (msg.contains('404') ||
             msg.toLowerCase().contains('timetable') ||
             msg.contains('Not Found')) {
-          return TimetablePlaceholder(
-            canUpload: canUpload,
+          return _ScrollableMinHeight(
+            child: TimetablePlaceholder(
+              canUpload: canUpload,
+            ),
           );
         }
-        return AppErrorState(
-          message: msg,
-          onRetry: () => ref.invalidate(timetableProvider(_params)),
+        return _ScrollableMinHeight(
+          child: AppErrorState(
+            message: msg,
+            onRetry: () => ref.invalidate(timetableProvider(_params)),
+          ),
         );
       },
       data: (timetable) {
         if (timetable.fileUrl == null) {
-          return TimetablePlaceholder(
-            canUpload: canUpload,
+          return _ScrollableMinHeight(
+            child: TimetablePlaceholder(
+              canUpload: canUpload,
+            ),
           );
         }
-        return Column(
-          children: [
-            _TimetableMetaBar(timetable: timetable),
-            Expanded(
-              child: TimetableViewer(timetable: timetable),
-            ),
-          ],
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.pageHorizontal,
+          ),
+          child: Column(
+            children: [
+              _TimetableMetaBar(timetable: timetable),
+              Expanded(
+                child: TimetableViewer(timetable: timetable),
+              ),
+            ],
+          ),
         );
       },
     );

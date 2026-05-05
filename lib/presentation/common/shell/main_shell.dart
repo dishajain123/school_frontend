@@ -91,10 +91,14 @@ class _MainShellState extends ConsumerState<MainShell>
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
+      // ShellRoute pages (nested Scaffolds) must get tight max height/width or
+      // some screens (e.g. exam schedule) lay out with zero body height.
       body: SafeArea(
         bottom: true,
         top: false,
-        child: widget.child,
+        child: SizedBox.expand(
+          child: widget.child,
+        ),
       ),
       extendBody: true,
       bottomNavigationBar: SlideTransition(

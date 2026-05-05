@@ -478,6 +478,56 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
     }
   }
 
+  Future<void> _refreshEnterResultsData() async {
+    final activeYear = ref.read(activeYearProvider);
+    ref.invalidate(academicYearNotifierProvider);
+    if (activeYear != null) {
+      ref.invalidate(myTeacherAssignmentsProvider(activeYear.id));
+    }
+
+    final resolvedExamId = _selectedExamId ?? widget.examId;
+    final resolvedStandardId = _selectedStandardId ?? widget.standardId;
+    final resolvedSection = _selectedSection ?? widget.section;
+
+    if (resolvedStandardId != null &&
+        resolvedStandardId.isNotEmpty &&
+        activeYear != null) {
+      ref.invalidate(
+        examListProvider((
+          studentId: null,
+          academicYearId: activeYear.id,
+          standardId: resolvedStandardId,
+        )),
+      );
+    }
+
+    if (resolvedExamId != null &&
+        resolvedExamId.isNotEmpty &&
+        resolvedStandardId != null &&
+        resolvedStandardId.isNotEmpty) {
+      ref.invalidate(
+        _examSetupProvider((
+          examId: resolvedExamId,
+          standardId: resolvedStandardId,
+          section: resolvedSection,
+        )),
+      );
+      ref.invalidate(
+        _existingMarksProvider((
+          examId: resolvedExamId,
+          section: resolvedSection,
+        )),
+      );
+      ref.invalidate(
+        examDistributionProvider((
+          examId: resolvedExamId,
+          section: resolvedSection,
+          studentId: null,
+        )),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
@@ -527,6 +577,13 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
           title: 'Enter Results',
           showBack: true,
           onBackPressed: () => context.go(RouteNames.dashboard),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh',
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+              onPressed: () => _refreshEnterResultsData(),
+            ),
+          ],
         ),
         body: _SelectionPanel(
           assignmentsAsync: assignmentsAsync,
@@ -596,6 +653,13 @@ class _EnterResultsScreenState extends ConsumerState<EnterResultsScreen>
             _selectedSection = null;
           });
         },
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+            onPressed: () => _refreshEnterResultsData(),
+          ),
+        ],
       ),
       body: examSetupAsync.when(
         loading: _buildShimmer,

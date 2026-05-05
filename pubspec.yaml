@@ -54,6 +54,7 @@ dependencies:
 
   # Icons (extended material icons)
   cupertino_icons: ^1.0.8
+  pdfx: ^2.9.2
 
 dev_dependencies:
   flutter_test:

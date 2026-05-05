@@ -18,12 +18,17 @@ class TimetableRepository {
     required String standardId,
     String? academicYearId,
     String? section,
+    String? examId,
   }) async {
+    final year = academicYearId?.trim();
+    final sec = section?.trim();
+    final ex = examId?.trim();
     final response = await _dio.get(
       '$_base/$standardId',
       queryParameters: {
-        if (academicYearId != null) 'academic_year_id': academicYearId,
-        if (section != null) 'section': section,
+        if (year != null && year.isNotEmpty) 'academic_year_id': year,
+        if (sec != null && sec.isNotEmpty) 'section': sec,
+        if (ex != null && ex.isNotEmpty) 'exam_id': ex,
       },
     );
     return TimetableModel.fromJson(response.data as Map<String, dynamic>);
@@ -36,6 +41,7 @@ class TimetableRepository {
     required PlatformFile file,
     String? academicYearId,
     String? section,
+    String? examId,
     String? overrideFileName,
   }) async {
     final fileName =
@@ -57,10 +63,14 @@ class TimetableRepository {
       throw Exception('Selected file has no readable bytes/path');
     }
 
+    final y = academicYearId?.trim();
+    final sec = section?.trim();
+    final ex = examId?.trim();
     final formData = FormData.fromMap({
       'standard_id': standardId,
-      if (academicYearId != null) 'academic_year_id': academicYearId,
-      if (section != null) 'section': section,
+      if (y != null && y.isNotEmpty) 'academic_year_id': y,
+      if (sec != null && sec.isNotEmpty) 'section': sec,
+      if (ex != null && ex.isNotEmpty) 'exam_id': ex,
       'file': multipartFile,
     });
 
@@ -76,12 +86,17 @@ class TimetableRepository {
     required String standardId,
     String? academicYearId,
     String? section,
+    String? examId,
   }) async {
+    final y = academicYearId?.trim();
+    final sec = section?.trim();
+    final ex = examId?.trim();
     await _dio.delete(
       '$_base/$standardId',
       queryParameters: {
-        if (academicYearId != null) 'academic_year_id': academicYearId,
-        if (section != null) 'section': section,
+        if (y != null && y.isNotEmpty) 'academic_year_id': y,
+        if (sec != null && sec.isNotEmpty) 'section': sec,
+        if (ex != null && ex.isNotEmpty) 'exam_id': ex,
       },
     );
   }

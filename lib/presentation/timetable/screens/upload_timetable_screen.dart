@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/result/result_model.dart';
@@ -24,17 +23,21 @@ import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_loading.dart';
 import '../../common/widgets/app_scaffold.dart';
+import '../widgets/timetable_compact_preview.dart';
 
 class UploadTimetableScreen extends ConsumerStatefulWidget {
   const UploadTimetableScreen({
     super.key,
     this.initialStandardId,
     this.initialSection,
+    this.initialExamId,
     this.examMode = false,
   });
 
   final String? initialStandardId;
   final String? initialSection;
+  /// Class examination schedule PDF — distinct from daily class timetable.
+  final String? initialExamId;
   final bool examMode;
 
   @override
@@ -62,6 +65,10 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
     final initialSection = widget.initialSection?.trim();
     if (initialSection != null && initialSection.isNotEmpty) {
       _selectedSection = initialSection.toUpperCase();
+    }
+    final initialExam = widget.initialExamId?.trim();
+    if (initialExam != null && initialExam.isNotEmpty) {
+      _selectedExamId = initialExam;
     }
 
     _animCtrl = AnimationController(
@@ -131,6 +138,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                 standardId: _selectedStandardId!,
                 academicYearId: activeYear?.id,
                 section: section,
+                examId: widget.examMode ? _selectedExamId : null,
               )).future,
             )
             .then<TimetableModel?>((value) => value)
@@ -176,6 +184,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
           file: _pickedFile!,
           academicYearId: activeYear?.id,
           section: section,
+          examId: widget.examMode ? _selectedExamId : null,
           overrideFileName: overrideFileName,
         );
 
@@ -253,6 +262,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                   standardId: _selectedStandardId!,
                   academicYearId: activeYear?.id,
                   section: safeSelectedSection,
+                  examId: widget.examMode ? _selectedExamId : null,
                 )))
                 .whenData((value) => value);
 
@@ -460,59 +470,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                             if (existing == null) {
                               return const SizedBox.shrink();
                             }
-                            return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.green.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Already uploaded: ${existing.fileName}',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Open this first to avoid duplicate upload.',
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: AppColors.grey600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Uploaded by ${existing.uploadedByName?.trim().isNotEmpty == true ? existing.uploadedByName!.trim() : 'Staff'} on ${DateFormatter.formatDateTime(existing.updatedAt)}',
-                                    style: AppTypography.caption.copyWith(
-                                      color: AppColors.grey500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: existing.fileUrl == null
-                                          ? null
-                                          : () => _showOpenDialog(
-                                                context,
-                                                existing.fileUrl!,
-                                              ),
-                                      icon: const Icon(
-                                          Icons.open_in_new_rounded,
-                                          size: 16),
-                                      label: const Text('Open Existing File'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
+                            return TimetableCompactPreview(timetable: existing);
                           },
                         ),
                         _pickedFile == null
@@ -554,30 +512,6 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
       ),
     );
   }
-}
-
-void _showOpenDialog(BuildContext context, String url) {
-  showDialog<void>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Open Timetable'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Copy and open this link in your browser:'),
-          const SizedBox(height: 8),
-          SelectableText(url),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
 }
 
 class _FormCard extends StatelessWidget {

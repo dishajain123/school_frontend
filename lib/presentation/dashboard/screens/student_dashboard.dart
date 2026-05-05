@@ -94,8 +94,8 @@ class StudentDashboard extends ConsumerWidget {
         onTap: () => context.go(RouteNames.results),
       ),
       QuickActionItem(
-        icon: Icons.quiz_outlined,
-        label: 'Exams',
+        icon: Icons.picture_as_pdf_outlined,
+        label: 'Exam schedule',
         color: AppColors.subjectHistory,
         onTap: () => context.go(RouteNames.examSchedules),
       ),
@@ -251,9 +251,9 @@ class _StudentStatsGrid extends StatelessWidget {
             const SizedBox(width: AppDimensions.space12),
             Expanded(
               child: StatCard(
-                label: 'Upcoming Exams',
+                label: 'Exam schedule',
                 value: (stats?.upcomingExams ?? 0).toString(),
-                icon: Icons.quiz_outlined,
+                icon: Icons.picture_as_pdf_outlined,
                 iconColor: AppColors.subjectPhysics,
                 isLoading: isLoading,
                 onTap: () => context.go(RouteNames.examSchedules),

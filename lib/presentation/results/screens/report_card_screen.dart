@@ -1,19 +1,20 @@
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/router/route_names.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/result_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
+import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_error_state.dart';
+import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_loading.dart';
 
 class ReportCardScreen extends ConsumerWidget {
@@ -77,6 +78,11 @@ class ReportCardScreen extends ConsumerWidget {
             ? () => context.go(RouteNames.dashboard)
             : null,
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.white),
+            onPressed: () => ref.invalidate(reportCardProvider(params)),
+          ),
           if (canUpload)
             TextButton.icon(
               onPressed: uploadState.isUploading
@@ -102,11 +108,32 @@ class ReportCardScreen extends ConsumerWidget {
       ),
       body: reportAsync.when(
         loading: _buildShimmer,
-        error: (e, _) => AppErrorState(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(reportCardProvider(params)),
-        ),
-        data: (report) => _ReportUrlCard(url: report.url),
+        error: (e, _) {
+          final msg = e.toString().toLowerCase();
+          final looksMissing = msg.contains('404') ||
+              msg.contains('results not found') ||
+              msg.contains('not found');
+          if (looksMissing) {
+            return AppEmptyState(
+              icon: Icons.picture_as_pdf_outlined,
+              title: 'Report card not available yet',
+              subtitle: canUpload
+                  ? 'There is no PDF on file and no marks to generate one yet. '
+                      'Use Upload PDF above, or pull Try again after the office '
+                      'attaches results.'
+                  : 'The school may still be preparing this report card, or '
+                      'marks are not published yet.',
+              actionLabel: 'Try again',
+              onAction: () =>
+                  ref.invalidate(reportCardProvider(params)),
+            );
+          }
+          return AppErrorState(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(reportCardProvider(params)),
+          );
+        },
+        data: (report) => _ReportCardDownloadBody(url: report.url),
       ),
     );
   }
@@ -114,168 +141,88 @@ class ReportCardScreen extends ConsumerWidget {
   Widget _buildShimmer() {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: AppLoading.card(height: 220),
+      child: Center(child: AppLoading.card(height: 160)),
     );
   }
 }
 
-class _ReportUrlCard extends StatelessWidget {
-  const _ReportUrlCard({required this.url});
+/// No in-app PDF preview — download only (student, parent, teacher, principal).
+class _ReportCardDownloadBody extends StatelessWidget {
+  const _ReportCardDownloadBody({required this.url});
 
   final String url;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.navyDeep.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Report Card Link',
-                style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.navyDeep,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The report card is available as a secure link.',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.grey600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.surface200),
-                ),
-                child: SelectableText(
-                  url,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.grey600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => _showPdfPreview(context, url),
-                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                      label: const Text('View PDF'),
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: AppColors.navyDeep.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 44,
+                        color: AppColors.navyDeep,
+                      ),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _downloadPdf(context, url),
-                      icon: const Icon(Icons.download_outlined, size: 16),
-                      label: const Text('Download'),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Report card ready',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.navyDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _showOpenDialog(context, url),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                      label: const Text('Open Link'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap Download to open or save the PDF on your device.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.grey600,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: AppButton.primary(
+                label: 'Download',
+                onTap: () => downloadReportPdf(context, url),
+                icon: Icons.download_outlined,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-Future<void> _downloadPdf(BuildContext context, String url) async {
-  final uri = Uri.tryParse(url);
+Future<void> downloadReportPdf(BuildContext context, String url) async {
+  final uri = Uri.tryParse(url.trim());
   if (uri == null) return;
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  final launched =
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
-    SnackbarUtils.showError(context, 'Unable to open download link');
+    SnackbarUtils.showError(context, 'Unable to start download');
   }
-}
-
-void _showPdfPreview(BuildContext context, String url) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) => Container(
-      height: MediaQuery.of(ctx).size.height * 0.88,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 8),
-            child: Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.surface200,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: SfPdfViewer.network(url),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-void _showOpenDialog(BuildContext context, String url) {
-  showDialog<void>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Open Report Card'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Copy and open this link in your browser:'),
-          const SizedBox(height: 8),
-          SelectableText(
-            url,
-            style: AppTypography.bodySmall.copyWith(fontSize: 12),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
 }
