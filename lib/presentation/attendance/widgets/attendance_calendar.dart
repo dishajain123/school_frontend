@@ -146,13 +146,13 @@ class AttendanceCalendar extends StatelessWidget {
           },
         ),
         const SizedBox(height: 16),
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _LegendItem(color: AppColors.successLight, borderColor: AppColors.successGreen, label: 'Present'),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             _LegendItem(color: AppColors.errorLight, borderColor: AppColors.errorRed, label: 'Absent'),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             _LegendItem(color: AppColors.warningLight, borderColor: AppColors.warningAmber, label: 'Late'),
           ],
         ),

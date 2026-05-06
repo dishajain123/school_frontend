@@ -23,7 +23,7 @@ class UserNotifier extends AsyncNotifier<UserModel?> {
       final updated =
           await ref.read(userRepositoryProvider).updateMe(phone: phone);
       state = AsyncData(updated);
-    } catch (e, st) {
+    } catch (e) {
       state = previous;
       rethrow;
     }

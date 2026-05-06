@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 
 class GradeBadge extends StatelessWidget {
@@ -8,12 +7,12 @@ class GradeBadge extends StatelessWidget {
     super.key,
     required this.percentage,
     this.gradeLetter,
-    this.size = _GradeBadgeSize.medium,
+    this.size = GradeBadgeSize.medium,
   });
 
   final double percentage;
   final String? gradeLetter;
-  final _GradeBadgeSize size;
+  final GradeBadgeSize size;
 
   factory GradeBadge.small({
     Key? key,
@@ -24,7 +23,7 @@ class GradeBadge extends StatelessWidget {
         key: key,
         percentage: percentage,
         gradeLetter: gradeLetter,
-        size: _GradeBadgeSize.small,
+        size: GradeBadgeSize.small,
       );
 
   factory GradeBadge.large({
@@ -36,7 +35,7 @@ class GradeBadge extends StatelessWidget {
         key: key,
         percentage: percentage,
         gradeLetter: gradeLetter,
-        size: _GradeBadgeSize.large,
+        size: GradeBadgeSize.large,
       );
 
   Color get _color {
@@ -68,33 +67,33 @@ class GradeBadge extends StatelessWidget {
 
   double get _fontSize {
     switch (size) {
-      case _GradeBadgeSize.small:
+      case GradeBadgeSize.small:
         return 10;
-      case _GradeBadgeSize.medium:
+      case GradeBadgeSize.medium:
         return 12;
-      case _GradeBadgeSize.large:
+      case GradeBadgeSize.large:
         return 18;
     }
   }
 
   EdgeInsets get _padding {
     switch (size) {
-      case _GradeBadgeSize.small:
+      case GradeBadgeSize.small:
         return const EdgeInsets.symmetric(horizontal: 7, vertical: 3);
-      case _GradeBadgeSize.medium:
+      case GradeBadgeSize.medium:
         return const EdgeInsets.symmetric(horizontal: 10, vertical: 5);
-      case _GradeBadgeSize.large:
+      case GradeBadgeSize.large:
         return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
     }
   }
 
   double get _borderRadius {
     switch (size) {
-      case _GradeBadgeSize.small:
+      case GradeBadgeSize.small:
         return 8;
-      case _GradeBadgeSize.medium:
+      case GradeBadgeSize.medium:
         return 10;
-      case _GradeBadgeSize.large:
+      case GradeBadgeSize.large:
         return 14;
     }
   }
@@ -107,7 +106,7 @@ class GradeBadge extends StatelessWidget {
         color: _bg,
         borderRadius: BorderRadius.circular(_borderRadius),
         border: Border.all(color: _color.withValues(alpha: 0.35), width: 1.2),
-        boxShadow: size == _GradeBadgeSize.large
+        boxShadow: size == GradeBadgeSize.large
             ? [
                 BoxShadow(
                   color: _color.withValues(alpha: 0.2),
@@ -130,4 +129,4 @@ class GradeBadge extends StatelessWidget {
   }
 }
 
-enum _GradeBadgeSize { small, medium, large }
+enum GradeBadgeSize { small, medium, large }

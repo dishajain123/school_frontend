@@ -213,7 +213,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Amount
-                    _SectionLabel(label: 'Payment Amount'),
+                    const _SectionLabel(label: 'Payment Amount'),
                     const SizedBox(height: 10),
                     _AmountField(
                       controller: _amountCtrl,
@@ -222,7 +222,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                     const SizedBox(height: 20),
 
                     // Payment Mode
-                    _SectionLabel(label: 'Payment Method'),
+                    const _SectionLabel(label: 'Payment Method'),
                     const SizedBox(height: 10),
                     _PaymentModeGrid(
                       selected: _selectedMode,
@@ -231,7 +231,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                     const SizedBox(height: 20),
 
                     // Payment Date
-                    _SectionLabel(label: 'Payment Date'),
+                    const _SectionLabel(label: 'Payment Date'),
                     const SizedBox(height: 10),
                     _DatePickerTile(
                       date: _paymentDate,
@@ -241,7 +241,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                     const SizedBox(height: 20),
 
                     // Reference Number
-                    _SectionLabel(label: 'Transaction Reference (optional)'),
+                    const _SectionLabel(label: 'Transaction Reference (optional)'),
                     const SizedBox(height: 10),
                     AppTextField(
                       label: '',
@@ -250,7 +250,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                       keyboardType: TextInputType.text,
                     ),
                     const SizedBox(height: 20),
-                    _SectionLabel(label: 'Transaction Notes / Ref (optional)'),
+                    const _SectionLabel(label: 'Transaction Notes / Ref (optional)'),
                     const SizedBox(height: 10),
                     AppTextField(
                       label: '',

@@ -60,7 +60,7 @@ class _TimetablePdfNetworkViewerState extends State<TimetablePdfNetworkViewer> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.picture_as_pdf_outlined,
                   size: 40,
                   color: AppColors.grey400,

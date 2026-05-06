@@ -406,21 +406,21 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
 
     final standardsAsyncWhen = standardsAsync.when(
       loading: () => AppLoading.card(height: 46),
-      error: (_, __) => _InlineError('Could not load classes'),
+      error: (_, __) => const _InlineError('Could not load classes'),
       data: (standards) {
         if (currentUser?.role == UserRole.parent) {
           final childrenAsync = ref.watch(childrenNotifierProvider);
           return childrenAsync.when(
             loading: () => AppLoading.card(height: 46),
             error: (e, _) =>
-                _InlineError('Could not load children. Pull to refresh.'),
+                const _InlineError('Could not load children. Pull to refresh.'),
             data: (cs) {
               if (cs.isLoading && cs.children.isEmpty) {
                 return AppLoading.card(height: 46);
               }
               final resolved = _resolveScopedStandardId(ref, currentUser);
               if (resolved == null || resolved.isEmpty) {
-                return _InlineError(
+                return const _InlineError(
                   'No class is assigned to your children yet. '
                   'Link a child from the dashboard or ask the school to assign a class.',
                 );
@@ -434,11 +434,11 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
           return profAsync.when(
             loading: () => AppLoading.card(height: 46),
             error: (_, __) =>
-                _InlineError('Could not load your profile. Pull to refresh.'),
+                const _InlineError('Could not load your profile. Pull to refresh.'),
             data: (prof) {
               final pid = prof.standardId?.trim();
               if (pid == null || pid.isEmpty) {
-                return _InlineError(
+                return const _InlineError(
                   'Your class is not set yet. Please contact the school.',
                 );
               }
@@ -449,7 +449,7 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
         if (currentUser?.role == UserRole.teacher) {
           return teacherAssignmentsAsync.when(
             loading: () => AppLoading.card(height: 46),
-            error: (_, __) => _InlineError('Could not load classes'),
+            error: (_, __) => const _InlineError('Could not load classes'),
             data: (assignments) {
               final allowedStandardIds =
                   assignments.map((a) => a.standardId).toSet();
@@ -466,7 +466,7 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
                 });
               }
               if (allowedStandards.isEmpty) {
-                return _InlineError(
+                return const _InlineError(
                   'No assigned classes. Exam schedule classes appear after principal assignment.',
                 );
               }
@@ -573,11 +573,11 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
                       standardsAsyncWhen,
                       const SizedBox(height: 16),
                     ],
-                    _FieldLabel('Exam'),
+                    const _FieldLabel('Exam'),
                     const SizedBox(height: 8),
                     examsAsync.when(
                       loading: () => AppLoading.card(height: 46),
-                      error: (_, __) => _InlineError('Could not load exams'),
+                      error: (_, __) => const _InlineError('Could not load exams'),
                       data: (exams) {
                         if (parentNeedsStudentForExams) {
                           return _InlineError(
@@ -617,7 +617,7 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
                     ),
                     if (!scopedRole) ...[
                       const SizedBox(height: 16),
-                      _FieldLabel('Section (optional)'),
+                      const _FieldLabel('Section (optional)'),
                       const SizedBox(height: 8),
                       _StyledDropdown<String?>(
                         hint: sid == null
@@ -653,7 +653,7 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
                       ),
                     ],
                     const SizedBox(height: 16),
-                    _FieldLabel('Academic Year'),
+                    const _FieldLabel('Academic Year'),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -695,14 +695,14 @@ class _ExamScheduleContentState extends ConsumerState<_ExamScheduleContent> {
                             : 'Select a class above to load exams and view PDFs',
                       )
                     else if (parentNeedsStudentForExams)
-                      AppEmptyState(
+                      const AppEmptyState(
                         icon: Icons.people_outline,
                         title: 'Link your child',
                         subtitle:
                             'We need a linked student to load exams. Use the dashboard to link a child, then refresh.',
                       )
                     else if (_selectedExamId == null)
-                      AppEmptyState(
+                      const AppEmptyState(
                         icon: Icons.quiz_outlined,
                         title: 'Choose an exam',
                         subtitle:
@@ -777,7 +777,7 @@ class _ExamPdfPreviewCard extends ConsumerWidget {
         if (timetable == null ||
             timetable.fileUrl == null ||
             timetable.fileUrl!.trim().isEmpty) {
-          return AppEmptyState(
+          return const AppEmptyState(
             icon: Icons.picture_as_pdf_outlined,
             title: 'No PDF for this selection',
             subtitle:

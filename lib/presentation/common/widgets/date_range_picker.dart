@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import 'app_button.dart';
 
 /// A premium inline date range picker widget.
 ///
@@ -200,7 +199,7 @@ class _AppDateRangePickerState extends State<AppDateRangePicker> {
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.info_outline_rounded,
                 size: 12,
                 color: AppColors.grey400,

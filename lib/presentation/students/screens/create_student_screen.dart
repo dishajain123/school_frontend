@@ -132,18 +132,23 @@ class _CreateStudentScreenState extends ConsumerState<CreateStudentScreen>
     try {
       if (isEditing) {
         final payload = <String, dynamic>{};
-        if (_sectionController.text.trim().isNotEmpty)
+        if (_sectionController.text.trim().isNotEmpty) {
           payload['section'] = _sectionController.text.trim();
-        if (_rollNumberController.text.trim().isNotEmpty)
+        }
+        if (_rollNumberController.text.trim().isNotEmpty) {
           payload['roll_number'] = _rollNumberController.text.trim();
-        if (_selectedStandard != null)
+        }
+        if (_selectedStandard != null) {
           payload['standard_id'] = _selectedStandard!.id;
-        if (_dateOfBirth != null)
+        }
+        if (_dateOfBirth != null) {
           payload['date_of_birth'] =
               DateFormatter.formatDateForApi(_dateOfBirth!);
-        if (_admissionDate != null)
+        }
+        if (_admissionDate != null) {
           payload['admission_date'] =
               DateFormatter.formatDateForApi(_admissionDate!);
+        }
         await ref
             .read(studentNotifierProvider.notifier)
             .updateStudent(widget.existing!.id, payload);
@@ -172,18 +177,23 @@ class _CreateStudentScreenState extends ConsumerState<CreateStudentScreen>
           'admission_number': _admissionNumberController.text.trim(),
           'parent_id': parentId,
         };
-        if (_sectionController.text.trim().isNotEmpty)
+        if (_sectionController.text.trim().isNotEmpty) {
           payload['section'] = _sectionController.text.trim();
-        if (_rollNumberController.text.trim().isNotEmpty)
+        }
+        if (_rollNumberController.text.trim().isNotEmpty) {
           payload['roll_number'] = _rollNumberController.text.trim();
-        if (_selectedStandard != null)
+        }
+        if (_selectedStandard != null) {
           payload['standard_id'] = _selectedStandard!.id;
-        if (_dateOfBirth != null)
+        }
+        if (_dateOfBirth != null) {
           payload['date_of_birth'] =
               DateFormatter.formatDateForApi(_dateOfBirth!);
-        if (_admissionDate != null)
+        }
+        if (_admissionDate != null) {
           payload['admission_date'] =
               DateFormatter.formatDateForApi(_admissionDate!);
+        }
         await ref.read(studentNotifierProvider.notifier).create(payload);
         if (mounted) {
           SnackbarUtils.showSuccess(context, 'Student created successfully.');
@@ -417,7 +427,7 @@ class _CreateStudentScreenState extends ConsumerState<CreateStudentScreen>
                         title: 'Academic Details',
                         icon: Icons.school_outlined,
                         children: [
-                          _FieldLabel('Standard'),
+                          const _FieldLabel('Standard'),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -481,7 +491,7 @@ class _CreateStudentScreenState extends ConsumerState<CreateStudentScreen>
                         title: 'Personal Details',
                         icon: Icons.person_outline_rounded,
                         children: [
-                          _FieldLabel('Date of Birth'),
+                          const _FieldLabel('Date of Birth'),
                           const SizedBox(height: 8),
                           _DatePickerField(
                             value: _dateOfBirth,
@@ -489,7 +499,7 @@ class _CreateStudentScreenState extends ConsumerState<CreateStudentScreen>
                             onTap: () => _pickDate(true),
                           ),
                           const SizedBox(height: 16),
-                          _FieldLabel('Admission Date'),
+                          const _FieldLabel('Admission Date'),
                           const SizedBox(height: 8),
                           _DatePickerField(
                             value: _admissionDate,

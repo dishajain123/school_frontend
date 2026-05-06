@@ -65,8 +65,9 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         child: child!,
       ),
     );
-    if (picked != null)
+    if (picked != null) {
       ref.read(markAttendanceProvider.notifier).setDate(picked);
+    }
   }
 
   Future<void> _submit(List<String> studentIds) async {
@@ -268,7 +269,7 @@ class _ExpandedFilters extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _FieldLabel(label: 'Date'),
+          const _FieldLabel(label: 'Date'),
           const SizedBox(height: 8),
           _DatePickerTile(date: formState.date, onTap: onPickDate),
           const SizedBox(height: 8),
@@ -300,7 +301,7 @@ class _ExpandedFilters extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _FieldLabel(label: 'Class'),
+          const _FieldLabel(label: 'Class'),
           const SizedBox(height: 8),
           _ClassDropdown(
             academicYearId: formState.selectedAcademicYearId,
@@ -310,7 +311,7 @@ class _ExpandedFilters extends ConsumerWidget {
           ),
           if (formState.selectedAssignment != null) ...[
             const SizedBox(height: 16),
-            _FieldLabel(label: 'Subject'),
+            const _FieldLabel(label: 'Subject'),
             const SizedBox(height: 8),
             _SubjectDropdown(
               academicYearId: formState.selectedAcademicYearId,
@@ -487,8 +488,9 @@ class _SubjectDropdown extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (selectedAssignment == null || academicYearId == null)
+    if (selectedAssignment == null || academicYearId == null) {
       return const SizedBox.shrink();
+    }
 
     final assignmentsAsync =
         ref.watch(myTeacherAssignmentsProvider(academicYearId));

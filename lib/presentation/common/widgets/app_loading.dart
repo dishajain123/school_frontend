@@ -4,7 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 
 class AppLoading extends StatelessWidget {
-  const AppLoading._({super.key, required this.child});
+  const AppLoading._({required this.child});
 
   static Widget _shimmer({required Widget child}) {
     return Shimmer.fromColors(
@@ -75,7 +75,7 @@ class AppLoading extends StatelessWidget {
   }
 
   static Widget fullPage() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -85,7 +85,7 @@ class AppLoading extends StatelessWidget {
             child: CircularProgressIndicator.adaptive(
               strokeWidth: 2.5,
               valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.navyMedium),
+                  AlwaysStoppedAnimation<Color>(AppColors.navyMedium),
             ),
           ),
         ],

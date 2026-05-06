@@ -6,7 +6,6 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
 import '../../../data/models/teacher/teacher_class_subject_model.dart';
@@ -19,7 +18,6 @@ import '../../common/widgets/app_scaffold.dart';
 import '../../common/widgets/app_app_bar.dart';
 import '../../common/widgets/app_button.dart';
 import '../../common/widgets/app_text_field.dart';
-import '../../common/widgets/app_loading.dart';
 
 class CreateAssignmentScreen extends ConsumerStatefulWidget {
   final String? editAssignmentId;
@@ -204,7 +202,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                   title: 'Class & Subject',
                   icon: Icons.school_outlined,
                   children: [
-                    _FieldLabel('Academic Year'),
+                    const _FieldLabel('Academic Year'),
                     const SizedBox(height: 8),
                     _DropdownField<dynamic>(
                       hint: 'Select year',
@@ -220,7 +218,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                       },
                     ),
                     const SizedBox(height: 16),
-                    _FieldLabel('Class (Standard)'),
+                    const _FieldLabel('Class (Standard)'),
                     const SizedBox(height: 8),
                     if (isTeacher)
                       _DropdownField<String>(
@@ -239,7 +237,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                         onChanged: (s) => setState(() { _selectedStandardId = s?.id as String?; _selectedSubjectId = null; }),
                       ),
                     const SizedBox(height: 16),
-                    _FieldLabel('Subject'),
+                    const _FieldLabel('Subject'),
                     const SizedBox(height: 8),
                     if (isTeacher)
                       _DropdownField<String>(
@@ -281,7 +279,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                 title: 'Due Date & Attachment',
                 icon: Icons.calendar_today_outlined,
                 children: [
-                  _FieldLabel('Due Date'),
+                  const _FieldLabel('Due Date'),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: _pickDate,
@@ -319,7 +317,7 @@ class _CreateAssignmentScreenState extends ConsumerState<CreateAssignmentScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _FieldLabel('Attachment (optional)'),
+                  const _FieldLabel('Attachment (optional)'),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: _pickFile,

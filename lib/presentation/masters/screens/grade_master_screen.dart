@@ -94,7 +94,7 @@ class _GradeMasterScreenState extends ConsumerState<GradeMasterScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(title: 'Grade Master'),
+      appBar: const AppAppBar(title: 'Grade Master'),
       floatingActionButton: _canManage
           ? FloatingActionButton(
               onPressed: () => _showCreateSheet(),

@@ -182,7 +182,6 @@ class _TeacherScheduleScreenState extends ConsumerState<TeacherScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -201,7 +200,7 @@ class _TeacherScheduleScreenState extends ConsumerState<TeacherScheduleScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DropdownButtonFormField<String>(
-                value: _selectedYearId,
+                initialValue: _selectedYearId,
                 decoration: const InputDecoration(
                   labelText: 'Academic Year',
                   border: OutlineInputBorder(),

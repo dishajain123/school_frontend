@@ -244,7 +244,7 @@ class _CreateParentScreenState extends ConsumerState<CreateParentScreen>
                         title: 'Parent Details',
                         icon: Icons.person_outline_rounded,
                         children: [
-                          _FieldLabel('Relation'),
+                          const _FieldLabel('Relation'),
                           const SizedBox(height: 10),
                           _RelationSelector(
                             selected: _selectedRelation,

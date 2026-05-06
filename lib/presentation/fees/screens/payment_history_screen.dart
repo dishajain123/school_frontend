@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/fee/fee_ledger_model.dart';
 import '../../../data/models/fee/payment_model.dart';
@@ -20,7 +19,6 @@ const _kGreenBg = Color(0xFFE8F5E9);
 const _kOrange = Color(0xFFE65100);
 const _kOrangeBg = Color(0xFFFFF3E0);
 const _kRed = Color(0xFFC62828);
-const _kRedBg = Color(0xFFFFEBEE);
 
 class PaymentHistoryScreen extends ConsumerWidget {
   const PaymentHistoryScreen({

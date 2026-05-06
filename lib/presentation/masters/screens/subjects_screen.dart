@@ -102,7 +102,7 @@ class _SubjectsScreenState extends ConsumerState<SubjectsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(title: 'Subjects'),
+      appBar: const AppAppBar(title: 'Subjects'),
       floatingActionButton: _canManage
           ? FloatingActionButton(
               onPressed: () => _showCreateSheet(),
@@ -356,7 +356,7 @@ class _SubjectFormSheetState extends ConsumerState<_SubjectFormSheet> {
             Text('Standard', style: AppTypography.labelMedium.copyWith(color: AppColors.grey600)),
             const SizedBox(height: AppDimensions.space8),
             DropdownButtonFormField<StandardModel>(
-              value: _selectedStandard,
+              initialValue: _selectedStandard,
               decoration: InputDecoration(
                 contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16, vertical: 14),
                 border: OutlineInputBorder(

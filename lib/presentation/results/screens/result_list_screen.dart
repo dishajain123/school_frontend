@@ -148,7 +148,7 @@ class _ResultListScreenState extends ConsumerState<ResultListScreen> {
                 data: (years) {
                   return DropdownButtonFormField<String?>(
                     isExpanded: true,
-                    value: _yearFilterId,
+                    initialValue: _yearFilterId,
                     decoration: const InputDecoration(
                       labelText: 'Academic year',
                       border: OutlineInputBorder(),
@@ -327,8 +327,8 @@ class _ExamCard extends StatelessWidget {
                 color: AppColors.navyDeep.withValues(alpha: 0.85),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
               child: Icon(
                 Icons.chevron_right_rounded,
                 color: AppColors.grey400,

@@ -121,10 +121,10 @@ class _ParentDetailScreenState extends ConsumerState<ParentDetailScreen>
     }
 
     if (_parent == null) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: AppColors.surface50,
-        appBar: const AppAppBar(title: 'Parent', showBack: true),
-        body: const Center(child: Text('Parent not found.')),
+        appBar: AppAppBar(title: 'Parent', showBack: true),
+        body: Center(child: Text('Parent not found.')),
       );
     }
 
@@ -492,7 +492,7 @@ class _EmptyChildren extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.child_care_rounded,
             size: 32,
             color: AppColors.grey400,
@@ -516,12 +516,10 @@ class _InfoRowData {
     required this.icon,
     required this.label,
     required this.value,
-    this.valueColor,
   });
   final IconData icon;
   final String label;
   final String value;
-  final Color? valueColor;
 }
 
 class _InfoCard extends StatelessWidget {
@@ -606,7 +604,7 @@ class _InfoCard extends StatelessWidget {
                             Text(
                               row.value,
                               style: AppTypography.bodyMedium.copyWith(
-                                color: row.valueColor ?? AppColors.grey800,
+                                color: AppColors.grey800,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

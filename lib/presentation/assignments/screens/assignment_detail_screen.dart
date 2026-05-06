@@ -187,7 +187,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                     const SizedBox(height: 20),
                     if (assignment.description != null &&
                         assignment.description!.isNotEmpty) ...[
-                      _SectionLabel('Description'),
+                      const _SectionLabel('Description'),
                       const SizedBox(height: 8),
                       _ContentCard(
                         child: Text(
@@ -201,7 +201,7 @@ class _AssignmentDetailScreenState extends ConsumerState<AssignmentDetailScreen>
                       const SizedBox(height: 20),
                     ],
                     if (assignment.fileUrl != null) ...[
-                      _SectionLabel('Attachment'),
+                      const _SectionLabel('Attachment'),
                       const SizedBox(height: 8),
                       _AttachmentButton(fileUrl: assignment.fileUrl!),
                       const SizedBox(height: 20),
@@ -552,7 +552,7 @@ class _SubmissionSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionLabel('Submit Assignment'),
+        const _SectionLabel('Submit Assignment'),
         const SizedBox(height: 12),
         AppTextField(
           controller: textCtrl,

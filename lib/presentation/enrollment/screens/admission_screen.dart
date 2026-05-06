@@ -249,7 +249,7 @@ class _AdmissionScreenState extends ConsumerState<AdmissionScreen>
                       const SizedBox(height: 12),
                       // Admission Type picker
                       DropdownButtonFormField<AdmissionType>(
-                        value: _admissionType,
+                        initialValue: _admissionType,
                         decoration: const InputDecoration(
                           labelText: 'Admission Type',
                           border: OutlineInputBorder(),
@@ -331,7 +331,7 @@ class _AdmissionScreenState extends ConsumerState<AdmissionScreen>
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _parentRelation,
+                          initialValue: _parentRelation,
                           decoration: const InputDecoration(
                             labelText: 'Relation',
                             border: OutlineInputBorder(),
@@ -365,7 +365,7 @@ class _AdmissionScreenState extends ConsumerState<AdmissionScreen>
                     children: [
                       // Academic Year
                       DropdownButtonFormField<String>(
-                        value: _selectedYearId,
+                        initialValue: _selectedYearId,
                         decoration: const InputDecoration(
                           labelText: 'Academic Year',
                           border: OutlineInputBorder(),
@@ -387,7 +387,7 @@ class _AdmissionScreenState extends ConsumerState<AdmissionScreen>
                       const SizedBox(height: 12),
                       // Standard (Class)
                       DropdownButtonFormField<String>(
-                        value: _selectedStandardId,
+                        initialValue: _selectedStandardId,
                         decoration: const InputDecoration(
                           labelText: 'Class',
                           border: OutlineInputBorder(),

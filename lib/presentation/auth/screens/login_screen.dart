@@ -100,14 +100,14 @@ class LoginScreen extends ConsumerWidget {
                       topRight: Radius.circular(28),
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
+                  child: const SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
                       AppDimensions.pageHorizontal,
                       AppDimensions.space32,
                       AppDimensions.pageHorizontal,
                       AppDimensions.space32,
                     ),
-                    child: const LoginForm(),
+                    child: LoginForm(),
                   ),
                 ),
               ),

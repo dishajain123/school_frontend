@@ -16,7 +16,7 @@ class AppCard extends StatefulWidget {
     this.boxShadow,
     this.border,
     this.clipBehavior = Clip.antiAlias,
-    _CardVariant variant = _CardVariant.standard,
+    CardVariant variant = CardVariant.standard,
   }) : _variant = variant;
 
   factory AppCard.hero({
@@ -35,7 +35,7 @@ class AppCard extends StatefulWidget {
         backgroundColor: backgroundColor,
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         boxShadow: AppDecorations.shadow2,
-        variant: _CardVariant.hero,
+        variant: CardVariant.hero,
         child: child,
       );
 
@@ -59,7 +59,7 @@ class AppCard extends StatefulWidget {
           color: borderColor ?? AppColors.surface200,
           width: AppDimensions.borderThin,
         ),
-        variant: _CardVariant.outlined,
+        variant: CardVariant.outlined,
         child: child,
       );
 
@@ -81,7 +81,7 @@ class AppCard extends StatefulWidget {
           color: AppColors.surface100,
           width: AppDimensions.borderThin,
         ),
-        variant: _CardVariant.surface,
+        variant: CardVariant.surface,
         child: child,
       );
 
@@ -95,13 +95,13 @@ class AppCard extends StatefulWidget {
   final List<BoxShadow>? boxShadow;
   final BoxBorder? border;
   final Clip clipBehavior;
-  final _CardVariant _variant;
+  final CardVariant _variant;
 
   @override
   State<AppCard> createState() => _AppCardState();
 }
 
-enum _CardVariant { standard, hero, outlined, surface }
+enum CardVariant { standard, hero, outlined, surface }
 
 class _AppCardState extends State<AppCard>
     with SingleTickerProviderStateMixin {
@@ -129,14 +129,14 @@ class _AppCardState extends State<AppCard>
   BorderRadius get _borderRadius =>
       widget.borderRadius ??
       BorderRadius.circular(
-        widget._variant == _CardVariant.hero
+        widget._variant == CardVariant.hero
             ? AppDimensions.radiusLarge
             : 14,
       );
 
   List<BoxShadow> get _shadow =>
       widget.boxShadow ??
-      (widget._variant == _CardVariant.hero
+      (widget._variant == CardVariant.hero
           ? AppDecorations.shadow2
           : [
               BoxShadow(
@@ -147,7 +147,7 @@ class _AppCardState extends State<AppCard>
             ]);
 
   EdgeInsetsGeometry get _defaultPadding => EdgeInsets.all(
-        widget._variant == _CardVariant.hero
+        widget._variant == CardVariant.hero
             ? AppDimensions.space20
             : AppDimensions.space16,
       );

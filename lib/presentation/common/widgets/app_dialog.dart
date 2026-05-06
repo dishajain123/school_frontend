@@ -6,7 +6,6 @@ import 'app_button.dart';
 
 class AppDialog extends StatelessWidget {
   const AppDialog._({
-    super.key,
     required this.title,
     required this.message,
     required this.variant,
@@ -21,7 +20,7 @@ class AppDialog extends StatelessWidget {
 
   final String title;
   final String message;
-  final _DialogVariant variant;
+  final DialogVariant variant;
   final String confirmLabel;
   final String cancelLabel;
   final VoidCallback? onConfirm;
@@ -44,7 +43,7 @@ class AppDialog extends StatelessWidget {
       builder: (_) => AppDialog._(
         title: title,
         message: message,
-        variant: _DialogVariant.confirm,
+        variant: DialogVariant.confirm,
         confirmLabel: confirmLabel,
         cancelLabel: cancelLabel,
         icon: icon,
@@ -66,7 +65,7 @@ class AppDialog extends StatelessWidget {
       builder: (_) => AppDialog._(
         title: title,
         message: message,
-        variant: _DialogVariant.info,
+        variant: DialogVariant.info,
         confirmLabel: okLabel,
         icon: icon,
         iconColor: iconColor,
@@ -88,7 +87,7 @@ class AppDialog extends StatelessWidget {
       builder: (_) => AppDialog._(
         title: title,
         message: message,
-        variant: _DialogVariant.destructive,
+        variant: DialogVariant.destructive,
         confirmLabel: confirmLabel,
         cancelLabel: cancelLabel,
         icon: icon ?? Icons.delete_outline_rounded,
@@ -112,7 +111,7 @@ class AppDialog extends StatelessWidget {
       builder: (_) => AppDialog._(
         title: title,
         message: '',
-        variant: _DialogVariant.custom,
+        variant: DialogVariant.custom,
         confirmLabel: confirmLabel ?? 'OK',
         cancelLabel: cancelLabel ?? 'Cancel',
         onConfirm: onConfirm,
@@ -163,7 +162,7 @@ class AppDialog extends StatelessWidget {
                 fontSize: 17,
               ),
             ),
-            if (variant == _DialogVariant.custom && content != null) ...[
+            if (variant == DialogVariant.custom && content != null) ...[
               const SizedBox(height: AppDimensions.space12),
               content!,
             ] else if (message.isNotEmpty) ...[
@@ -186,7 +185,7 @@ class AppDialog extends StatelessWidget {
 
   Widget _buildActions(BuildContext context) {
     switch (variant) {
-      case _DialogVariant.info:
+      case DialogVariant.info:
         return SizedBox(
           width: double.infinity,
           child: AppButton.primary(
@@ -198,7 +197,7 @@ class AppDialog extends StatelessWidget {
           ),
         );
 
-      case _DialogVariant.confirm:
+      case DialogVariant.confirm:
         return Row(
           children: [
             Expanded(
@@ -223,7 +222,7 @@ class AppDialog extends StatelessWidget {
           ],
         );
 
-      case _DialogVariant.destructive:
+      case DialogVariant.destructive:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -246,7 +245,7 @@ class AppDialog extends StatelessWidget {
           ],
         );
 
-      case _DialogVariant.custom:
+      case DialogVariant.custom:
         return Row(
           children: [
             if (onCancel != null || cancelLabel.isNotEmpty) ...[
@@ -276,4 +275,4 @@ class AppDialog extends StatelessWidget {
   }
 }
 
-enum _DialogVariant { confirm, info, destructive, custom }
+enum DialogVariant { confirm, info, destructive, custom }

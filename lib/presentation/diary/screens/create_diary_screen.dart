@@ -178,7 +178,7 @@ class _CreateDiaryScreenState extends ConsumerState<CreateDiaryScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.co_present_outlined,
+                    const Icon(Icons.co_present_outlined,
                         size: 56, color: AppColors.grey400),
                     const SizedBox(height: AppDimensions.space16),
                     Text(
@@ -296,7 +296,7 @@ class _DiaryForm extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Class selector ──────────────────────────────
-                  _SectionLabel('Class & Section'),
+                  const _SectionLabel('Class & Section'),
                   const SizedBox(height: AppDimensions.space8),
                   _StyledDropdown<String>(
                     hint: 'Select class',
@@ -315,14 +315,14 @@ class _DiaryForm extends StatelessWidget {
                   const SizedBox(height: AppDimensions.space20),
 
                   // ── Subject selector ────────────────────────────
-                  _SectionLabel('Subject'),
+                  const _SectionLabel('Subject'),
                   const SizedBox(height: AppDimensions.space8),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: selectedStandardId == null
-                        ? _DisabledField(hint: 'Select a class first')
+                        ? const _DisabledField(hint: 'Select a class first')
                         : subjects.isEmpty
-                            ? _DisabledField(hint: 'No subjects for this class')
+                            ? const _DisabledField(hint: 'No subjects for this class')
                             : _StyledDropdown<String>(
                                 key: ValueKey(selectedStandardId),
                                 hint: 'Select subject',
@@ -345,7 +345,7 @@ class _DiaryForm extends StatelessWidget {
                   const SizedBox(height: AppDimensions.space20),
 
                   // ── Date picker ─────────────────────────────────
-                  _SectionLabel('Date'),
+                  const _SectionLabel('Date'),
                   const SizedBox(height: AppDimensions.space8),
                   _DatePickerTile(
                     date: selectedDate,
@@ -355,7 +355,7 @@ class _DiaryForm extends StatelessWidget {
                   const SizedBox(height: AppDimensions.space20),
 
                   // ── Topic Covered ───────────────────────────────
-                  _SectionLabel('Topic Covered'),
+                  const _SectionLabel('Topic Covered'),
                   const SizedBox(height: AppDimensions.space8),
                   AppTextField(
                     controller: topicCtrl,
@@ -379,7 +379,7 @@ class _DiaryForm extends StatelessWidget {
                   // ── Homework Note (optional) ────────────────────
                   Row(
                     children: [
-                      _SectionLabel('Homework Note'),
+                      const _SectionLabel('Homework Note'),
                       const SizedBox(width: AppDimensions.space8),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -411,7 +411,7 @@ class _DiaryForm extends StatelessWidget {
                   const SizedBox(height: AppDimensions.space12),
 
                   // Tip banner
-                  _TipBanner(
+                  const _TipBanner(
                     message:
                         'Students and parents in this class will be able to see this diary entry.',
                   ),
@@ -567,7 +567,7 @@ class _TipBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.infoLight,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(color: AppColors.infoBlue.withOpacity(0.25)),
+        border: Border.all(color: AppColors.infoBlue.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -290,7 +290,7 @@ class _TargetFilterBar extends StatelessWidget {
         children: [
           Expanded(
             child: DropdownButtonFormField<String?>(
-              value: selectedRole,
+              initialValue: selectedRole,
               decoration: const InputDecoration(
                 labelText: 'Role',
                 border: OutlineInputBorder(),
@@ -309,7 +309,7 @@ class _TargetFilterBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButtonFormField<String?>(
-              value: selectedStandardId,
+              initialValue: selectedStandardId,
               decoration: const InputDecoration(
                 labelText: 'Class',
                 border: OutlineInputBorder(),

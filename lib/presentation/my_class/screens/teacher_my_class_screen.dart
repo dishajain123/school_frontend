@@ -67,7 +67,7 @@ class _AssignmentContext {
   final String academicYearName;
 
   String get label =>
-      '$subjectName — ${standardName} ${section} ($academicYearName)';
+      '$subjectName — $standardName $section ($academicYearName)';
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -362,10 +362,12 @@ class _TeacherMyClassScreenState extends ConsumerState<TeacherMyClassScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        _goBack();
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _goBack();
+        }
       },
       child: Scaffold(
         backgroundColor: AppColors.surface50,

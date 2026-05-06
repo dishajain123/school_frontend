@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/academic_year/academic_year_model.dart';
@@ -117,7 +116,7 @@ class _RolloverScreenState extends ConsumerState<RolloverScreen>
                   title: 'Year Selection',
                   icon: Icons.swap_horiz_rounded,
                   children: [
-                    _DropdownLabel('Source Year'),
+                    const _DropdownLabel('Source Year'),
                     const SizedBox(height: 8),
                     _YearDropdownField(
                       hint: 'Select source year',
@@ -127,7 +126,7 @@ class _RolloverScreenState extends ConsumerState<RolloverScreen>
                       onChanged: (y) => setState(() => _sourceYear = y),
                     ),
                     const SizedBox(height: 16),
-                    _DropdownLabel('Target Year (optional)'),
+                    const _DropdownLabel('Target Year (optional)'),
                     const SizedBox(height: 4),
                     Text(
                       'Leave blank to use the currently active year.',

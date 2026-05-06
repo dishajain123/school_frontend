@@ -298,9 +298,9 @@ class _TimetableHubScreenState extends ConsumerState<TimetableHubScreen> {
                     academicYearId: widget.academicYearId,
                   ),
                 ),
-                SizedBox.expand(
+                const SizedBox.expand(
                   child: ExamScheduleListScreen(
-                    key: const ValueKey('hub-exam-schedule'),
+                    key: ValueKey('hub-exam-schedule'),
                     embedInHub: true,
                   ),
                 ),

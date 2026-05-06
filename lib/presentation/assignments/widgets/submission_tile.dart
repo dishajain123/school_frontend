@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/assignment/submission_model.dart';
 import '../../common/widgets/app_avatar.dart';
@@ -89,7 +88,7 @@ class SubmissionTile extends StatelessWidget {
                   runSpacing: 5,
                   children: [
                     if (submission.isApproved)
-                      _Badge(label: 'Approved', color: AppColors.successGreen,
+                      const _Badge(label: 'Approved', color: AppColors.successGreen,
                           bg: AppColors.successLight, icon: Icons.verified_rounded),
                     if (submission.isGraded && submission.grade != null)
                       _Badge(label: 'Grade: ${submission.grade}',

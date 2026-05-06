@@ -87,7 +87,7 @@ class _StandardsScreenState extends ConsumerState<StandardsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface50,
-      appBar: AppAppBar(title: 'Class Setup'),
+      appBar: const AppAppBar(title: 'Class Setup'),
       floatingActionButton: _canManage
           ? FloatingActionButton(
               onPressed: () => _showCreateSheet(),

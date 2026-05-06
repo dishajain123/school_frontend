@@ -285,7 +285,7 @@ class DateSeparator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Expanded(
+          const Expanded(
             child: Divider(
               color: AppColors.surface200,
               thickness: 1,
@@ -310,7 +310,7 @@ class DateSeparator extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
+          const Expanded(
             child: Divider(
               color: AppColors.surface200,
               thickness: 1,

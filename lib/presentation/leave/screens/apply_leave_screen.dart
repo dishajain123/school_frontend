@@ -43,8 +43,6 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
     return _toDate!.difference(_fromDate!).inDays + 1;
   }
 
-  String _formatDate(DateTime dt) => DateFormat('dd MMM yyyy').format(dt);
-
   Future<void> _pickFromDate() async {
     final picked = await showDatePicker(
       context: context,

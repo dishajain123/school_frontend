@@ -223,7 +223,7 @@ abstract final class AppDecorations {
   // SECTION HEADER UNDERLINE
   // =========================================================================
 
-  static BoxDecoration get sectionAccent => BoxDecoration(
+  static BoxDecoration get sectionAccent => const BoxDecoration(
         border: Border(
           left: BorderSide(
             color: AppColors.goldPrimary,

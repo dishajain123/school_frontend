@@ -830,7 +830,7 @@ class _TeacherLeaveBalanceCardState extends State<_TeacherLeaveBalanceCard> {
                                   minHeight: 6,
                                   backgroundColor: AppColors.successGreen
                                       .withValues(alpha: 0.15),
-                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                  valueColor: const AlwaysStoppedAnimation<Color>(
                                     AppColors.warningAmber,
                                   ),
                                 ),

@@ -72,7 +72,7 @@ class _LoginFormState extends ConsumerState<LoginForm>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _SectionLabel(label: 'Sign in with'),
+          const _SectionLabel(label: 'Sign in with'),
           const SizedBox(height: 10),
           _TabToggle(
             controller: _tabController,
@@ -158,7 +158,7 @@ class _LoginFormState extends ConsumerState<LoginForm>
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
+              const Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Text(
@@ -169,7 +169,7 @@ class _LoginFormState extends ConsumerState<LoginForm>
                   ),
                 ),
               ),
-              Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
+              const Expanded(child: Divider(color: AppColors.surface200, thickness: 1)),
             ],
           ),
           const SizedBox(height: 16),

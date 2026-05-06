@@ -9,10 +9,7 @@ final secureStorageProvider = Provider<SecureStorage>(
 /// Thin wrapper over [FlutterSecureStorage].
 /// Only tokens and credentials go here.
 class SecureStorage {
-  SecureStorage()
-      : _storage = const FlutterSecureStorage(
-          aOptions: AndroidOptions(encryptedSharedPreferences: true),
-        );
+  SecureStorage() : _storage = const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 

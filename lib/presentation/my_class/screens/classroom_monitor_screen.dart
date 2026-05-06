@@ -213,7 +213,7 @@ class _ClassroomMonitorScreenState
           showBack: true,
           onBackPressed: () => context.go(RouteNames.dashboard),
         ),
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -260,7 +260,7 @@ class _ClassroomMonitorScreenState
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<_Opt>(
-                        value: yearValue,
+                        initialValue: yearValue,
                         decoration: const InputDecoration(
                           labelText: 'Academic Year',
                           isDense: true,
@@ -285,7 +285,7 @@ class _ClassroomMonitorScreenState
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<_Opt>(
-                        value: standardValue,
+                        initialValue: standardValue,
                         decoration: const InputDecoration(
                           labelText: 'Class',
                           isDense: true,
@@ -306,7 +306,7 @@ class _ClassroomMonitorScreenState
                     const SizedBox(width: 10),
                     Expanded(
                       child: DropdownButtonFormField<_Opt>(
-                        value: sectionValue,
+                        initialValue: sectionValue,
                         decoration: const InputDecoration(
                           labelText: 'Section',
                           isDense: true,
@@ -475,7 +475,7 @@ class _SubjectCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.person_outline,
+                      const Icon(Icons.person_outline,
                           size: 13, color: AppColors.grey500),
                       const SizedBox(width: 4),
                       Expanded(
@@ -516,7 +516,7 @@ class _SubjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
+            const Icon(Icons.chevron_right_rounded,
                 color: AppColors.grey400, size: 20),
           ],
         ),

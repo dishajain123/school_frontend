@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/submission_provider.dart';
 import '../../common/widgets/app_button.dart';
@@ -207,7 +206,7 @@ class _GradeBottomSheetState extends ConsumerState<GradeBottomSheet> {
                         style: AppTypography.caption.copyWith(color: AppColors.grey500)),
                     value: _approved,
                     onChanged: _isLoading ? null : (v) => setState(() => _approved = v),
-                    activeColor: AppColors.successGreen,
+                    activeThumbColor: AppColors.successGreen,
                   ),
                 ),
                 const SizedBox(height: 14),

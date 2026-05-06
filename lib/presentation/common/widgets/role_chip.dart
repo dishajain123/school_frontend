@@ -26,41 +26,41 @@ class RoleChip extends StatelessWidget {
   _RoleStyle get _style => _roleStyles[role] ?? _roleStyles[UserRole.student]!;
 
   static final Map<UserRole, _RoleStyle> _roleStyles = {
-    UserRole.principal: _RoleStyle(
+    UserRole.principal: const _RoleStyle(
       label: 'Principal',
       icon: Icons.school_rounded,
-      bg: const Color(0xFFF0F7FF),
+      bg: Color(0xFFF0F7FF),
       fg: AppColors.navyDeep,
     ),
-    UserRole.staffAdmin: _RoleStyle(
+    UserRole.staffAdmin: const _RoleStyle(
       label: 'Staff Admin',
       icon: Icons.admin_panel_settings_outlined,
-      bg: const Color(0xFFE8EAF6),
-      fg: const Color(0xFF3949AB),
+      bg: Color(0xFFE8EAF6),
+      fg: Color(0xFF3949AB),
     ),
-    UserRole.trustee: _RoleStyle(
+    UserRole.trustee: const _RoleStyle(
       label: 'Trustee',
       icon: Icons.account_balance_rounded,
-      bg: const Color(0xFFFFF8E6),
-      fg: const Color(0xFF996600),
+      bg: Color(0xFFFFF8E6),
+      fg: Color(0xFF996600),
     ),
-    UserRole.teacher: _RoleStyle(
+    UserRole.teacher: const _RoleStyle(
       label: 'Teacher',
       icon: Icons.person_rounded,
-      bg: const Color(0xFFE8F5E9),
-      fg: const Color(0xFF2E7D32),
+      bg: Color(0xFFE8F5E9),
+      fg: Color(0xFF2E7D32),
     ),
-    UserRole.parent: _RoleStyle(
+    UserRole.parent: const _RoleStyle(
       label: 'Parent',
       icon: Icons.family_restroom_rounded,
-      bg: const Color(0xFFFCE4EC),
-      fg: const Color(0xFFC62828),
+      bg: Color(0xFFFCE4EC),
+      fg: Color(0xFFC62828),
     ),
-    UserRole.student: _RoleStyle(
+    UserRole.student: const _RoleStyle(
       label: 'Student',
       icon: Icons.menu_book_rounded,
-      bg: const Color(0xFFE3F2FD),
-      fg: const Color(0xFF1565C0),
+      bg: Color(0xFFE3F2FD),
+      fg: Color(0xFF1565C0),
     ),
   };
 

@@ -5,7 +5,6 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../providers/submission_provider.dart';
 import '../../../providers/assignment_provider.dart';
 import '../../common/widgets/app_scaffold.dart';

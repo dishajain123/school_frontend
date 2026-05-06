@@ -297,13 +297,13 @@ class _OverviewTab extends StatelessWidget {
         const SizedBox(height: 16),
 
         // ── Class-wise bar chart ──────────────────────────────────────────
-        _SectionTitle('Class-wise Attendance'),
+        const _SectionTitle('Class-wise Attendance'),
         const SizedBox(height: 10),
         ...dashboard.classStats.map((c) => _ClassBar(stat: c)),
         const SizedBox(height: 16),
 
         // ── Monthly trend chart ───────────────────────────────────────────
-        _SectionTitle('Monthly Trend'),
+        const _SectionTitle('Monthly Trend'),
         const SizedBox(height: 10),
         _TrendChart(items: dashboard.monthlyTrend),
       ],
@@ -637,7 +637,7 @@ class _InsightsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _SectionTitle('Top Absentees'),
+        const _SectionTitle('Top Absentees'),
         const SizedBox(height: 10),
         if (dashboard.topAbsentees.isEmpty)
           Container(
@@ -681,7 +681,7 @@ class _InsightsTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 16),
-        _SectionTitle('Weekly Trend'),
+        const _SectionTitle('Weekly Trend'),
         const SizedBox(height: 10),
         _TrendChart(items: dashboard.weeklyTrend),
       ],

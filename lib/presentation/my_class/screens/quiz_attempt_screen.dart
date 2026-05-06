@@ -207,7 +207,7 @@ class _QuizView extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.errorRed.withOpacity(0.08),
+                    color: AppColors.errorRed.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(error!,
@@ -295,15 +295,23 @@ class _QuestionCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (question.questionType == 'mcq' ||
                 question.questionType == 'true_false')
-              ...(question.options ?? (question.questionType == 'true_false' ? ['True', 'False'] : []))
-                  .map((opt) => RadioListTile<String>(
-                        value: opt,
-                        groupValue: selectedAnswer,
-                        onChanged: (v) => onAnswerChanged(v ?? ''),
-                        title: Text(opt, style: AppTypography.bodySmall),
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ))
+              RadioGroup<String>(
+                groupValue: selectedAnswer,
+                onChanged: (v) => onAnswerChanged(v ?? ''),
+                child: Column(
+                  children: (question.options ??
+                          (question.questionType == 'true_false'
+                              ? ['True', 'False']
+                              : []))
+                      .map((opt) => RadioListTile<String>(
+                            value: opt,
+                            title: Text(opt, style: AppTypography.bodySmall),
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ))
+                      .toList(),
+                ),
+              )
             else
               TextFormField(
                 initialValue: selectedAnswer,
@@ -371,8 +379,8 @@ class _ResultView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   side: BorderSide(
                       color: isCorrect
-                          ? AppColors.successGreen.withOpacity(0.4)
-                          : AppColors.errorRed.withOpacity(0.4))),
+                          ? AppColors.successGreen.withValues(alpha: 0.4)
+                          : AppColors.errorRed.withValues(alpha: 0.4))),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

@@ -33,12 +33,14 @@ class AppButton extends StatefulWidget {
     double? minWidth,
     double? width,
     EdgeInsetsGeometry? padding,
+    BorderRadius? borderRadius,
+    TextStyle? textStyle,
   }) =>
       AppButton._(
         key: key,
         label: label,
         onTap: onTap,
-        variant: _ButtonVariant.primary,
+        variant: ButtonVariant.primary,
         icon: icon,
         isLoading: isLoading,
         isDisabled: isDisabled,
@@ -47,6 +49,8 @@ class AppButton extends StatefulWidget {
         minWidth: minWidth,
         width: width,
         padding: padding,
+        borderRadius: borderRadius,
+        textStyle: textStyle,
       );
 
   factory AppButton.secondary({
@@ -61,12 +65,14 @@ class AppButton extends StatefulWidget {
     double? minWidth,
     double? width,
     EdgeInsetsGeometry? padding,
+    BorderRadius? borderRadius,
+    TextStyle? textStyle,
   }) =>
       AppButton._(
         key: key,
         label: label,
         onTap: onTap,
-        variant: _ButtonVariant.secondary,
+        variant: ButtonVariant.secondary,
         icon: icon,
         isLoading: isLoading,
         isDisabled: isDisabled,
@@ -75,6 +81,8 @@ class AppButton extends StatefulWidget {
         minWidth: minWidth,
         width: width,
         padding: padding,
+        borderRadius: borderRadius,
+        textStyle: textStyle,
       );
 
   factory AppButton.text({
@@ -88,12 +96,13 @@ class AppButton extends StatefulWidget {
     double height = AppDimensions.buttonHeightSm,
     double? width,
     EdgeInsetsGeometry? padding,
+    TextStyle? textStyle,
   }) =>
       AppButton._(
         key: key,
         label: label,
         onTap: onTap,
-        variant: _ButtonVariant.text,
+        variant: ButtonVariant.text,
         icon: icon,
         isLoading: isLoading,
         isDisabled: isDisabled,
@@ -101,6 +110,7 @@ class AppButton extends StatefulWidget {
         height: height,
         width: width,
         padding: padding,
+        textStyle: textStyle,
       );
 
   factory AppButton.icon({
@@ -113,18 +123,22 @@ class AppButton extends StatefulWidget {
     bool fullWidth = true,
     double height = AppDimensions.buttonHeight,
     double? width,
+    BorderRadius? borderRadius,
+    TextStyle? textStyle,
   }) =>
       AppButton._(
         key: key,
         label: label,
         onTap: onTap,
-        variant: _ButtonVariant.primary,
+        variant: ButtonVariant.primary,
         icon: icon,
         isLoading: isLoading,
         isDisabled: isDisabled,
         fullWidth: fullWidth,
         height: height,
         width: width,
+        borderRadius: borderRadius,
+        textStyle: textStyle,
       );
 
   factory AppButton.destructive({
@@ -137,18 +151,20 @@ class AppButton extends StatefulWidget {
     bool fullWidth = true,
     double height = AppDimensions.buttonHeight,
     double? width,
+    BorderRadius? borderRadius,
   }) =>
       AppButton._(
         key: key,
         label: label,
         onTap: onTap,
-        variant: _ButtonVariant.destructive,
+        variant: ButtonVariant.destructive,
         icon: icon,
         isLoading: isLoading,
         isDisabled: isDisabled,
         fullWidth: fullWidth,
         height: height,
         width: width,
+        borderRadius: borderRadius,
       );
 
   factory AppButton.small({
@@ -160,7 +176,9 @@ class AppButton extends StatefulWidget {
     bool isDisabled = false,
     bool fullWidth = false,
     double? width,
-    _ButtonVariant variant = _ButtonVariant.primary,
+    ButtonVariant variant = ButtonVariant.primary,
+    BorderRadius? borderRadius,
+    TextStyle? textStyle,
   }) =>
       AppButton._(
         key: key,
@@ -173,11 +191,13 @@ class AppButton extends StatefulWidget {
         fullWidth: fullWidth,
         width: width,
         height: AppDimensions.buttonHeightSm,
+        borderRadius: borderRadius,
+        textStyle: textStyle,
       );
 
   final String label;
   final VoidCallback? onTap;
-  final _ButtonVariant variant;
+  final ButtonVariant variant;
   final IconData? icon;
   final bool isLoading;
   final bool isDisabled;
@@ -187,13 +207,13 @@ class AppButton extends StatefulWidget {
   final double? width;
   final EdgeInsetsGeometry? padding;
   final BorderRadius? borderRadius;
-  final dynamic textStyle;
+  final TextStyle? textStyle;
 
   @override
   State<AppButton> createState() => _AppButtonState();
 }
 
-enum _ButtonVariant { primary, secondary, text, destructive }
+enum ButtonVariant { primary, secondary, text, destructive }
 
 class _AppButtonState extends State<AppButton>
     with SingleTickerProviderStateMixin {
@@ -259,7 +279,7 @@ class _AppButtonState extends State<AppButton>
 
   Widget _buildStyledButton() {
     switch (widget.variant) {
-      case _ButtonVariant.primary:
+      case ButtonVariant.primary:
         return _PrimaryButton(
           label: widget.label,
           onTap: _isInteractable ? widget.onTap : null,
@@ -272,7 +292,7 @@ class _AppButtonState extends State<AppButton>
           borderRadius: widget.borderRadius,
           textStyle: widget.textStyle,
         );
-      case _ButtonVariant.secondary:
+      case ButtonVariant.secondary:
         return _SecondaryButton(
           label: widget.label,
           onTap: _isInteractable ? widget.onTap : null,
@@ -285,7 +305,7 @@ class _AppButtonState extends State<AppButton>
           borderRadius: widget.borderRadius,
           textStyle: widget.textStyle,
         );
-      case _ButtonVariant.text:
+      case ButtonVariant.text:
         return _TextButton(
           label: widget.label,
           onTap: _isInteractable ? widget.onTap : null,
@@ -296,7 +316,7 @@ class _AppButtonState extends State<AppButton>
           padding: widget.padding,
           textStyle: widget.textStyle,
         );
-      case _ButtonVariant.destructive:
+      case ButtonVariant.destructive:
         return _DestructiveButton(
           label: widget.label,
           onTap: _isInteractable ? widget.onTap : null,

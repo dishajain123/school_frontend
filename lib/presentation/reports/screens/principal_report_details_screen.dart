@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/masters/subject_model.dart';
 import '../../../data/models/student/student_model.dart';
@@ -539,7 +538,7 @@ class _FilterPanel extends StatelessWidget {
                         value: null, child: Text('All Sections')),
                     ...((sectionsAsync.valueOrNull as List?) ?? []).map(
                       (s) => DropdownMenuItem<String?>(
-                          value: s as String, child: Text(s as String)),
+                          value: s as String, child: Text(s)),
                     ),
                   ],
                   onChanged: onSectionChanged,

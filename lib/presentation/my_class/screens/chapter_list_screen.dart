@@ -121,7 +121,7 @@ class _ChapterTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: AppColors.navyMedium.withOpacity(0.1),
+                backgroundColor: AppColors.navyMedium.withValues(alpha: 0.1),
                 child: Text(
                   '$index',
                   style: AppTypography.labelMedium

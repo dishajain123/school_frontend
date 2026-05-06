@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/enrollment/enrollment_model.dart';
@@ -158,7 +157,7 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
 
           // Admission Type
           DropdownButtonFormField<AdmissionType>(
-            value: _admissionType,
+            initialValue: _admissionType,
             decoration: const InputDecoration(
               labelText: 'Admission Type',
               border: OutlineInputBorder(),
@@ -175,7 +174,7 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
 
           // Academic Year
           DropdownButtonFormField<String>(
-            value: selectedYearValue,
+            initialValue: selectedYearValue,
             decoration: const InputDecoration(
               labelText: 'Target Academic Year *',
               border: OutlineInputBorder(),
@@ -199,7 +198,7 @@ class _ReenrollmentScreenState extends ConsumerState<ReenrollmentScreen> {
 
           // Class
           DropdownButtonFormField<String>(
-            value: _selectedStandardId,
+            initialValue: _selectedStandardId,
             decoration: const InputDecoration(
               labelText: 'Class *',
               border: OutlineInputBorder(),

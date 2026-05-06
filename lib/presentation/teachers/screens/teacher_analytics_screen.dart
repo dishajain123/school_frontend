@@ -9,7 +9,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../providers/academic_year_provider.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../common/widgets/app_app_bar.dart';
-import '../../common/widgets/app_card.dart';
 import '../../common/widgets/app_empty_state.dart';
 import '../../common/widgets/app_error_state.dart';
 import '../../common/widgets/app_loading.dart';
@@ -236,7 +235,7 @@ class _HeroBanner extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.navyDeep,
-            AppColors.navyDeep.withOpacity(0.82),
+            AppColors.navyDeep.withValues(alpha: 0.82),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -244,7 +243,7 @@ class _HeroBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withOpacity(0.28),
+            color: AppColors.navyDeep.withValues(alpha: 0.28),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -299,7 +298,7 @@ class _KpiChip extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 20),
@@ -332,7 +331,7 @@ class _KpiDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 50,
-      color: Colors.white.withOpacity(0.15),
+      color: Colors.white.withValues(alpha: 0.15),
     );
   }
 }
@@ -459,12 +458,12 @@ class _FilterPill extends StatelessWidget {
           border: Border.all(
             color: isActive
                 ? AppColors.navyDeep
-                : AppColors.grey800.withOpacity(0.18),
+                : AppColors.grey800.withValues(alpha: 0.18),
           ),
           boxShadow: isActive
               ? [
                   BoxShadow(
-                    color: AppColors.navyDeep.withOpacity(0.18),
+                    color: AppColors.navyDeep.withValues(alpha: 0.18),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   )
@@ -660,7 +659,7 @@ class _AttendanceCard extends StatelessWidget {
                     CircularProgressIndicator(
                       value: pct,
                       strokeWidth: 7,
-                      backgroundColor: progressColor.withOpacity(0.12),
+                      backgroundColor: progressColor.withValues(alpha: 0.12),
                       valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                     ),
                     Text(
@@ -765,7 +764,7 @@ class _MarksCard extends StatelessWidget {
                     CircularProgressIndicator(
                       value: (m.averagePercentage / 100).clamp(0.0, 1.0),
                       strokeWidth: 7,
-                      backgroundColor: avgColor.withOpacity(0.12),
+                      backgroundColor: avgColor.withValues(alpha: 0.12),
                       valueColor: AlwaysStoppedAnimation<Color>(avgColor),
                     ),
                     Text(
@@ -870,7 +869,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -883,7 +882,7 @@ class _SectionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.08),
+              color: accentColor.withValues(alpha: 0.08),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(18)),
             ),
@@ -892,7 +891,7 @@ class _SectionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.14),
+                    color: accentColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 16, color: accentColor),
@@ -950,7 +949,7 @@ class _StatTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -1023,7 +1022,7 @@ class _ProgressMetric extends StatelessWidget {
           child: LinearProgressIndicator(
             value: value,
             minHeight: 7,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
         ),
@@ -1133,7 +1132,7 @@ class _SubjectProgressRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (percentage / 100).clamp(0.0, 1.0),
               minHeight: 5,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -1196,13 +1195,13 @@ class _StackedBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Row(
+        const Row(
           children: [
-            _BarLegend(color: const Color(0xFF10B981), label: '≥75%'),
-            const SizedBox(width: 12),
-            _BarLegend(color: const Color(0xFFF59E0B), label: '40–74%'),
-            const SizedBox(width: 12),
-            _BarLegend(color: const Color(0xFFEF4444), label: '<40%'),
+            _BarLegend(color: Color(0xFF10B981), label: '≥75%'),
+            SizedBox(width: 12),
+            _BarLegend(color: Color(0xFFF59E0B), label: '40–74%'),
+            SizedBox(width: 12),
+            _BarLegend(color: Color(0xFFEF4444), label: '<40%'),
           ],
         ),
       ],

@@ -134,7 +134,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedYearId,
+                  initialValue: selectedYearId,
                   decoration: const InputDecoration(
                     labelText: 'Academic Year',
                     border: OutlineInputBorder(),
@@ -177,10 +177,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               academicYearId: selectedYearId,
                             );
                         if (!mounted) return;
+                        if (!ctx.mounted) return;
                         Navigator.of(ctx).pop();
                         await ref
                             .read(authNotifierProvider.notifier)
                             .initialize();
+                        if (!mounted) return;
                         ref.invalidate(userNotifierProvider);
                         ref.invalidate(parentDashboardStatsProvider);
                         ref.invalidate(childrenNotifierProvider);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/announcement/announcement_model.dart';
@@ -286,7 +285,7 @@ class _CreateAnnouncementScreenState
                           icon: Icons.groups_outlined,
                           children: [
                             DropdownButtonFormField<String?>(
-                              value: _targetRole,
+                              initialValue: _targetRole,
                               decoration: const InputDecoration(
                                 labelText: 'Send To',
                                 border: OutlineInputBorder(),
@@ -311,7 +310,7 @@ class _CreateAnnouncementScreenState
                             if (isTeacher) ...[
                               const SizedBox(height: 16),
                               DropdownButtonFormField<String>(
-                                value: classSectionOptions.any(
+                                initialValue: classSectionOptions.any(
                                   (entry) =>
                                       entry.$1 == _selectedClassSectionKey,
                                 )

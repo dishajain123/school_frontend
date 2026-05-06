@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/snackbar_utils.dart';
@@ -391,7 +390,7 @@ class _JoinDatePicker extends StatelessWidget {
                     ),
                   )
                 else
-                  Icon(Icons.keyboard_arrow_down_rounded,
+                  const Icon(Icons.keyboard_arrow_down_rounded,
                       size: 18, color: AppColors.grey400),
               ],
             ),

@@ -273,7 +273,7 @@ class _TimerText extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.timer_outlined, size: 13, color: AppColors.grey400),
+          const Icon(Icons.timer_outlined, size: 13, color: AppColors.grey400),
           const SizedBox(width: 5),
           RichText(
             text: TextSpan(

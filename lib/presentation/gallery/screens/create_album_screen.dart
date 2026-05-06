@@ -3,7 +3,6 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
 import "../../../core/theme/app_colors.dart";
-import "../../../core/theme/app_dimensions.dart";
 import "../../../core/theme/app_typography.dart";
 import "../../../core/utils/date_formatter.dart";
 import "../../../core/utils/snackbar_utils.dart";
@@ -146,7 +145,7 @@ class _CreateAlbumScreenState extends ConsumerState<CreateAlbumScreen>
                             },
                           ),
                           const SizedBox(height: 16),
-                          _FieldLabel("Event Date"),
+                          const _FieldLabel("Event Date"),
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap: _pickDate,

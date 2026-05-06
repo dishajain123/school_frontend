@@ -580,7 +580,7 @@ class _OverdueAlert extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: _kRed, size: 20),
+          const Icon(Icons.warning_amber_rounded, color: _kRed, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -712,7 +712,7 @@ class _InstallmentCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(
                 children: [
-                  Icon(Icons.event_rounded, size: 13, color: AppColors.grey400),
+                  const Icon(Icons.event_rounded, size: 13, color: AppColors.grey400),
                   const SizedBox(width: 4),
                   Text(
                     'Due: ${_fmtDate(ledger.dueDate!)}',

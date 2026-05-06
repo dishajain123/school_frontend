@@ -87,7 +87,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
   Widget build(BuildContext context) {
     return Container(
       clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.white,
         border: Border(
           top: BorderSide(color: AppColors.surface100, width: 1),
@@ -247,13 +247,13 @@ class _SendButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Center(
             child: isSending
-                ? SizedBox(
+                ? const SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator.adaptive(
                       strokeWidth: 2,
                       valueColor:
-                          const AlwaysStoppedAnimation<Color>(AppColors.white),
+                          AlwaysStoppedAnimation<Color>(AppColors.white),
                     ),
                   )
                 : Icon(

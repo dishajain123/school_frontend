@@ -25,17 +25,11 @@ class _PrincipalAttendanceOverviewScreenState
     extends ConsumerState<PrincipalAttendanceOverviewScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _selectedTab = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() => _selectedTab = _tabController.index);
-      }
-    });
   }
 
   @override

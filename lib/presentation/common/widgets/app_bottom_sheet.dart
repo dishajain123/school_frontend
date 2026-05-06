@@ -50,11 +50,11 @@ class AppBottomSheet extends StatelessWidget {
         title: title,
         titleWidget: titleWidget,
         subtitle: subtitle,
-        child: child,
         actions: actions,
         showDragHandle: showDragHandle,
         maxHeightFraction: maxHeightFraction,
         padding: padding,
+        child: child,
       ),
     );
   }

@@ -287,18 +287,18 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                           : 'Class Selection',
                       icon: Icons.school_outlined,
                       children: [
-                        _FieldLabel('Class'),
+                        const _FieldLabel('Class'),
                         const SizedBox(height: 8),
                         standardsAsync.when(
                           loading: () => AppLoading.card(height: 46),
                           error: (_, __) =>
-                              _InlineError('Could not load classes'),
+                              const _InlineError('Could not load classes'),
                           data: (standards) {
                             if (currentUser?.role == UserRole.teacher) {
                               return teacherAssignmentsAsync.when(
                                 loading: () => AppLoading.card(height: 46),
                                 error: (_, __) =>
-                                    _InlineError('Could not load classes'),
+                                    const _InlineError('Could not load classes'),
                                 data: (assignments) {
                                   final allowedStandardIds = assignments
                                       .map((a) => a.standardId)
@@ -359,12 +359,12 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                         ),
                         const SizedBox(height: 16),
                         if (widget.examMode) ...[
-                          _FieldLabel('Exam'),
+                          const _FieldLabel('Exam'),
                           const SizedBox(height: 8),
                           examsAsync.when(
                             loading: () => AppLoading.card(height: 46),
                             error: (_, __) =>
-                                _InlineError('Could not load exams'),
+                                const _InlineError('Could not load exams'),
                             data: (exams) => _StyledDropdown<String>(
                               hint: 'Select exam',
                               value: _selectedExamId,
@@ -397,7 +397,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                           ),
                           const SizedBox(height: 16),
                         ],
-                        _FieldLabel('Section (optional)'),
+                        const _FieldLabel('Section (optional)'),
                         const SizedBox(height: 8),
                         _StyledDropdown<String?>(
                           hint: _selectedStandardId == null
@@ -432,7 +432,7 @@ class _UploadTimetableScreenState extends ConsumerState<UploadTimetableScreen>
                                   setState(() => _selectedSection = value),
                         ),
                         const SizedBox(height: 16),
-                        _FieldLabel('Academic Year'),
+                        const _FieldLabel('Academic Year'),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(

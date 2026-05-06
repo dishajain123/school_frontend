@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/notification/notification_model.dart';
@@ -215,13 +214,15 @@ class _NotificationInboxScreenState
                     .read(notificationNotifierProvider.notifier)
                     .markRead([notification.id]);
               }
-              
+
+              if (!mounted) return;
+
               // Navigate to related content based on notification type
-              if (notification.type == NotificationType.announcement && 
+              if (notification.type == NotificationType.announcement &&
                   notification.referenceId != null) {
-                if (context.mounted) {
-                  context.go(RouteNames.announcementDetailPath(notification.referenceId!));
-                }
+                context.go(
+                  RouteNames.announcementDetailPath(notification.referenceId!),
+                );
               }
             },
           ),

@@ -193,7 +193,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen>
                     Container(
                       width: 72,
                       height: 72,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.surface100,
                         shape: BoxShape.circle,
                       ),
@@ -328,7 +328,7 @@ class _HomeworkForm extends StatelessWidget {
                     title: 'Class & Subject',
                     icon: Icons.school_outlined,
                     children: [
-                      _FieldLabel('Class & Section'),
+                      const _FieldLabel('Class & Section'),
                       const SizedBox(height: 8),
                       _StyledDropdown<String>(
                         hint: 'Select class',
@@ -344,18 +344,18 @@ class _HomeworkForm extends StatelessWidget {
                         onChanged: onStandardChanged,
                       ),
                       const SizedBox(height: 16),
-                      _FieldLabel('Subject'),
+                      const _FieldLabel('Subject'),
                       const SizedBox(height: 8),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: selectedStandardId == null
-                            ? _DisabledField(
+                            ? const _DisabledField(
                                 hint: 'Select a class first',
-                                key: const ValueKey('no-class'))
+                                key: ValueKey('no-class'))
                             : subjects.isEmpty
-                                ? _DisabledField(
+                                ? const _DisabledField(
                                     hint: 'No subjects for this class',
-                                    key: const ValueKey('no-subject'))
+                                    key: ValueKey('no-subject'))
                                 : _StyledDropdown<String>(
                                     key: ValueKey(selectedStandardId),
                                     hint: 'Select subject',
@@ -495,7 +495,7 @@ class _HomeworkForm extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _InfoBanner(
+                  const _InfoBanner(
                     message:
                         'Students and parents in this class will be notified automatically.',
                   ),

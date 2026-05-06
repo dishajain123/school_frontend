@@ -143,9 +143,9 @@ class TimetableViewScreen extends ConsumerWidget {
             currentUser.role == UserRole.teacher);
 
     if (currentUser == null) {
-      return AppScaffold(
-        appBar: const AppAppBar(title: 'Timetable', showBack: true),
-        body: const Center(child: CircularProgressIndicator()),
+      return const AppScaffold(
+        appBar: AppAppBar(title: 'Timetable', showBack: true),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -395,7 +395,7 @@ class _AdminTimetableViewState extends ConsumerState<_AdminTimetableView> {
           const Divider(height: 1),
           Expanded(
             child: _loadedStandardId == null
-                ? AppEmptyState(
+                ? const AppEmptyState(
                     icon: Icons.schedule_outlined,
                     title: 'Select Class',
                     subtitle:
@@ -580,8 +580,8 @@ class _StudentTimetableView extends ConsumerWidget {
                   subtitle:
                       'Your class information is not available yet.',
                 )
-              : AppScaffold(
-                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              : const AppScaffold(
+                  appBar: AppAppBar(title: 'Timetable', showBack: true),
                   body: AppEmptyState(
                     icon: Icons.schedule_outlined,
                     title: 'Class not found',
@@ -598,8 +598,8 @@ class _StudentTimetableView extends ConsumerWidget {
                   subtitle:
                       'Your class information is not available yet.',
                 )
-              : AppScaffold(
-                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              : const AppScaffold(
+                  appBar: AppAppBar(title: 'Timetable', showBack: true),
                   body: AppEmptyState(
                     icon: Icons.schedule_outlined,
                     title: 'Class not found',
@@ -617,8 +617,8 @@ class _StudentTimetableView extends ConsumerWidget {
                   subtitle:
                       'Your section is not assigned yet, so timetable cannot be shown.',
                 )
-              : AppScaffold(
-                  appBar: const AppAppBar(title: 'Timetable', showBack: true),
+              : const AppScaffold(
+                  appBar: AppAppBar(title: 'Timetable', showBack: true),
                   body: AppEmptyState(
                     icon: Icons.schedule_outlined,
                     title: 'Section not assigned',
@@ -662,8 +662,8 @@ class _ParentTimetableView extends ConsumerWidget {
               subtitle:
                   'Select a linked child from dashboard to view their timetable.',
             )
-          : AppScaffold(
-              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+          : const AppScaffold(
+              appBar: AppAppBar(title: 'Timetable', showBack: true),
               body: AppEmptyState(
                 icon: Icons.schedule_outlined,
                 title: 'No child selected',
@@ -680,8 +680,8 @@ class _ParentTimetableView extends ConsumerWidget {
               title: 'Class not found',
               subtitle: 'Child class information is not available yet.',
             )
-          : AppScaffold(
-              appBar: const AppAppBar(title: 'Timetable', showBack: true),
+          : const AppScaffold(
+              appBar: AppAppBar(title: 'Timetable', showBack: true),
               body: AppEmptyState(
                 icon: Icons.schedule_outlined,
                 title: 'Class not found',

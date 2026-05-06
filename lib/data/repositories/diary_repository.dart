@@ -26,12 +26,15 @@ class DiaryRepository {
       'page_size': pageSize,
     };
     if (date != null && date.isNotEmpty) queryParams['date'] = date;
-    if (standardId != null && standardId.isNotEmpty)
+    if (standardId != null && standardId.isNotEmpty) {
       queryParams['standard_id'] = standardId;
-    if (subjectId != null && subjectId.isNotEmpty)
+    }
+    if (subjectId != null && subjectId.isNotEmpty) {
       queryParams['subject_id'] = subjectId;
-    if (academicYearId != null && academicYearId.isNotEmpty)
+    }
+    if (academicYearId != null && academicYearId.isNotEmpty) {
       queryParams['academic_year_id'] = academicYearId;
+    }
 
     final response = await _dio.get(_base, queryParameters: queryParams);
     return DiaryListResponse.fromJson(response.data as Map<String, dynamic>);

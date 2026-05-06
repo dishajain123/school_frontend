@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/complaint/complaint_model.dart';
@@ -178,7 +177,7 @@ class _CreateComplaintScreenState extends ConsumerState<CreateComplaintScreen>
                               ),
                               Switch.adaptive(
                                 value: _isAnonymous,
-                                activeColor: AppColors.navyDeep,
+                                activeThumbColor: AppColors.navyDeep,
                                 onChanged: (v) =>
                                     setState(() => _isAnonymous = v),
                               ),

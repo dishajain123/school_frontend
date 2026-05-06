@@ -917,7 +917,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                               children: [
                                 Expanded(
                                   child: DropdownButtonFormField<DocumentType>(
-                                    value: entry.value.documentType,
+                                    initialValue: entry.value.documentType,
                                     decoration: const InputDecoration(
                                       labelText: 'Document Type',
                                     ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/auth/current_user.dart';
@@ -396,7 +395,7 @@ class _SettingCardState extends State<_SettingCard> {
             Switch.adaptive(
               value: boolValue,
               onChanged: (value) => widget.onChanged(value.toString()),
-              activeColor: AppColors.navyDeep,
+              activeThumbColor: AppColors.navyDeep,
             ),
             const SizedBox(width: 8),
             Text(

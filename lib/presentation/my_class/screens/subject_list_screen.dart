@@ -132,7 +132,7 @@ class _MyClassSubjectListScreenState
             (y) => prefilledId != null ? y.id == prefilledId : y.isActive,
             orElse: () => years.isNotEmpty
                 ? years.first
-                : _AcademicYear(id: '', name: '', isActive: false),
+                : const _AcademicYear(id: '', name: '', isActive: false),
           );
           _loadingYears = false;
           _resolvedSectionId = widget.initialSectionId;
@@ -273,7 +273,7 @@ class _MyClassSubjectListScreenState
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppColors.warningAmber.withOpacity(0.1),
+              color: AppColors.warningAmber.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   const Icon(Icons.lock_outline,
@@ -382,7 +382,7 @@ class _SubjectCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.navyMedium.withOpacity(0.08),
+                  color: AppColors.navyMedium.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.menu_book_outlined,

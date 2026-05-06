@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/theme/app_dimensions.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/academic_year_provider.dart';
@@ -142,7 +141,7 @@ class _FilterPanel extends ConsumerWidget {
             if (year == null) return AppLoading.listTile();
             return ref.watch(standardsProvider(year.id)).when(
                   data: (standards) => DropdownButtonFormField<String>(
-                    value: selectedStandardId,
+                    initialValue: selectedStandardId,
                     decoration: _inputDecoration('Select class'),
                     items: standards.map((s) => DropdownMenuItem(
                           value: s.id,
@@ -289,10 +288,10 @@ class _TableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface50,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        border: const Border(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(
             bottom: BorderSide(color: AppColors.surface100, width: 1)),
       ),
       child: Row(
